@@ -5,6 +5,7 @@
   "main": "dist/main/main.js",
   "scripts": {
     "dev:vite": "vite",
+    "dev:electron": "tsc -p tsconfig.main.json && VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
     "build:vite": "vite build",
     "build:electron": "tsc -p tsconfig.main.json",
     "build": "npm run build:vite && npm run build:electron",
@@ -22,6 +23,8 @@
   },
   "homepage": "https://github.com/RyanNDao/worklife#readme",
   "devDependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^39.2.0",
     "typescript": "^5.9.3",
