@@ -1,0 +1,34 @@
+{
+  "name": "worklife",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev:vite": "vite",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p tsconfig.main.json",
+    "build": "npm run build:vite && npm run build:electron",
+    "start": "npm run build && electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RyanNDao/worklife.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RyanNDao/worklife/issues"
+  },
+  "homepage": "https://github.com/RyanNDao/worklife#readme",
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^39.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
