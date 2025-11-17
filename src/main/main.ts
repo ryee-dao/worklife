@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
+import { getHostsFileContent, setHostsFileContent } from './hostsFile';
+
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,6 +16,7 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+  setHostsFileContent();
 }
 
 app.whenReady().then(createWindow);
