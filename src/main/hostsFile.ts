@@ -30,7 +30,7 @@ interface ConfigFileContent {
 export const getConfigJsonData = (): ConfigFileData => {
     const filePath = path.join(app.getPath('userData'), configJsonFileName);
     const newConfigData: ConfigFileContent = {
-        "blockedDomains": ["google.com"]
+        "blockedDomains": []
     };
     let fileContent = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : newConfigData;
     return { filePath, fileContent }
@@ -75,7 +75,6 @@ export const setHostsFileContent = () => {
     const hostsFilePath = getHostsFilePath();
     const hostsFileContent = getHostsFileContent();
     const configJsonData = getConfigJsonData();
-    console.log(configJsonData.fileContent.blockedDomains);
     const blockedDomainString = generateBlockedDomainString(configJsonData.fileContent.blockedDomains);
     const beforeConfigJson = hostsFileContent.split(startConfigJsonString)[0];
     const afterConfigJson: string | undefined = hostsFileContent.split(endConfigJsonString)[1];
@@ -108,7 +107,7 @@ const writeHostsFileAndFlushCache_Dev = (hostsFilePath: string, finalHostsFileCo
         return true; // Success - exit early
     } catch (error) {
         // Permission denied - need elevation
-        console.log('Direct write failed, attempting with elevation...');
+        console.log('Direct write failed, try to run with sudo. Attempting now with elevation...', error);
     }
 }
 
