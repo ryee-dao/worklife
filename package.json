@@ -6,7 +6,7 @@
   "scripts": {
     "dev:vite": "vite",
     "dev:electron:watch": "tsc -p tsconfig.main.json -w",
-    "dev:electron:start": "nodemon --watch dist/main --exec 'VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox'",
+    "dev:electron:start": "nodemon --watch dist/main --verbose --exec 'VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox'",
     "dev:debug": "concurrently \"npm run dev:vite\" \"npm run dev:electron:watch\"",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron:watch\" \"npm run dev:electron:start\"",
     "build:vite": "vite build",
