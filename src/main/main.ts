@@ -1,6 +1,13 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { getHostsFileContent, setHostsFileContent } from './hostsFile';
+import { initTimer } from "./timerState";
+
+
+function initApp() {
+  initTimer()
+  createWindow();
+}
 
 
 function createWindow() {
@@ -16,7 +23,7 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
-  setHostsFileContent();
+  // setHostsFileContent();
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(initApp);
