@@ -27,11 +27,12 @@ interface ConfigFileContent {
     blockedDomains: string[]
 }
 
+const newConfigData: ConfigFileContent = {
+    "blockedDomains": []
+};
+
 export const getConfigJsonData = (): ConfigFileData => {
     const filePath = path.join(app.getPath('userData'), configJsonFileName);
-    const newConfigData: ConfigFileContent = {
-        "blockedDomains": []
-    };
     let fileContent = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : newConfigData;
     return { filePath, fileContent }
 }

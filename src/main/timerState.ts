@@ -6,11 +6,7 @@ const checkIntervalMs = 5 * 1000; // 5 seconds
 
 const timerStateFileName = 'timerState.json';
 let timerState: TimerState;
-
 let startTimer: NodeJS.Timeout;
-const stopTimer = () => {
-    clearInterval(startTimer)
-}
 
 interface TimerStateData {
     filePath: string,
@@ -19,35 +15,46 @@ interface TimerStateData {
 
 interface TimerState {
     timeTilBreakMs: number,
-    breakReached: boolean,
+    status: TimerStatus
+}
+
+enum TimerStatus {
+    RUNNING = "RUNNING",
+    PAUSED = "PAUSED",
+    BREAK = "BREAK"
 }
 
 const newTimerData: TimerState = {
     timeTilBreakMs: 60 * 30 * 1000, // 30 minutes
-    breakReached: false,
+    status: TimerStatus.RUNNING
 }
 
 
 export const initTimer = () => {
     loadTimerStateFromFile();
-    startTimer = setInterval(startTimerFunction, checkIntervalMs)
+    startTimer = setInterval(startTimerFunction, checkIntervalMs);
 }
 
 const startTimerFunction = () => {
-    timerState.timeTilBreakMs -= checkIntervalMs
-    if (timerState.timeTilBreakMs <= 0) {
-        timerState.breakReached = true;
-    }
+    timerState.timeTilBreakMs -= checkIntervalMs;
+    timerState.status = timerState.timeTilBreakMs > 0 ? TimerStatus.RUNNING : TimerStatus.BREAK;
     // Write new timer state to file
     fs.writeFileSync(path.join(app.getPath('userData'), timerStateFileName), JSON.stringify(timerState));
     console.log(JSON.stringify(timerState));
 }
 
+const stopTimer = () => {
+    clearInterval(startTimer);
+    timerState.status = TimerStatus.PAUSED;
+    // Write new timer state to file
+    console.log(JSON.stringify(timerState));
+    fs.writeFileSync(path.join(app.getPath('userData'), timerStateFileName), JSON.stringify(timerState));
+}
 
 const getTimerStateData = (): TimerStateData => {
     const filePath = path.join(app.getPath('userData'), timerStateFileName);
     let fileContent = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : undefined;
-    return { filePath, fileContent }
+    return { filePath, fileContent };
 }
 
 const loadTimerStateFromFile = () => {
