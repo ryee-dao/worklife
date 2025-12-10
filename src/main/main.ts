@@ -1,20 +1,28 @@
-import { app, BrowserWindow, Menu, Tray } from "electron";
+import { app, BrowserWindow, Menu, Tray, ipcMain } from "electron";
 import path from "path";
 import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
-import { initTimer, timerEmitter, TimerState } from "./timerState";
+import { initTimer, pauseTimer, startTimer, timerEmitter, TimerState } from "./timerState";
 import { EVENTS } from "../shared/constants";
 import { formatMsToMMSS } from "../shared/utils/time";
 
 let settingsWindow: BrowserWindow | null = null;
+export const appEnvironment: "PROD" | "DEV" = determineEnvironment();
+
+function determineEnvironment() {
+  if (!process.env.VITE_DEV_SERVER_URL) {
+    return "PROD";
+  } else {
+    return "DEV";
+  }
+}
 
 function initApp() {
   initTimer();
   createSettingsWindow();
   createBreakWindow();
-
 }
 
-// Sends timer state to the ipc renderer 
+// Sends timer state to the ipc renderer
 const handleTimerUpdate = (timerState: TimerState) => {
   if (settingsWindow) {
     settingsWindow.webContents.send("timer:update", timerState);
@@ -22,6 +30,10 @@ const handleTimerUpdate = (timerState: TimerState) => {
 };
 timerEmitter.on(EVENTS.TIMER.RUNNING, handleTimerUpdate);
 timerEmitter.on(EVENTS.TIMER.ON_BREAK, handleTimerUpdate);
+timerEmitter.on(EVENTS.TIMER.PAUSED, handleTimerUpdate);
+
+ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
+ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
 
 
 function createSettingsWindow() {
@@ -32,12 +44,12 @@ function createSettingsWindow() {
       preload: path.join(__dirname, "../preload.js"), // Compiled preload file
     },
   });
-  if (process.env.VITE_DEV_SERVER_URL) {
-    settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/dashboard/`);
-  } else {
+  if (appEnvironment === "PROD") {
     settingsWindow.loadFile(
       path.join(__dirname, "../renderer/dashboard/index.html")
     );
+  } else if (appEnvironment === "DEV") {
+    settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/dashboard/`);
   }
 
   settingsWindow.on("close", (event) => {

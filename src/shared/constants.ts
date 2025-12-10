@@ -8,5 +8,7 @@ export const EVENTS = {
   },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
+    TIMER_PAUSE: "timer:pause",
+    TIMER_BEGIN: "timer:begin"
   },
 } as const;

@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import TopTabs from "./TopTabs";
 import Timer from "./Timer";
 import Settings from "./Settings";
@@ -12,6 +12,8 @@ export default function Dashboard() {
       setTimerStateObject(timerState);
     });
   }, []);
+
+
 
 
   return (
