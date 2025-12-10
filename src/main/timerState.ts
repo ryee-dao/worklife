@@ -6,28 +6,34 @@ import { EVENTS } from "../shared/constants";
 import { appEnvironment } from "./main";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
+export type AvailableActions = "start" | "pause" | "skip"
 export interface TimerState {
   currentCountdownMs: number;
   status: TimerStatus;
+  availableActions: AvailableActions[];
 }
 
+interface StoredTimerState {
+  currentCountdownMs: number;
+  status: TimerStatus;
+}
 interface TimerStateData {
   filePath: string;
-  fileContent: TimerState;
+  fileContent: StoredTimerState;
 }
 
 const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
 const timerStateFileName = "timerState.json";
-let timerState: TimerState;
+let timerState: TimerState | StoredTimerState;
 let tickTimer: NodeJS.Timeout,
   emitTimer: NodeJS.Timeout,
   writeTimer: NodeJS.Timeout;
 const newTimerTimeMs = 1 * 60 * 1000;
 const breakTimeMs = 45 * 1000;
 const thresholdTimeMs = 30 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
-const newTimerData: TimerState = {
+const newTimerData: StoredTimerState = {
   currentCountdownMs: newTimerTimeMs,
   status: "RUNNING",
 };
@@ -45,6 +51,14 @@ export const initTimer = () => {
   emitTimer = setInterval(emitTimerStatus, tickIntervalMs); // Emit event every second
 };
 
+const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
+  switch (status) {
+    case "RUNNING": return ["pause"];
+    case "PAUSED": return ["start"];
+    case "BREAK": return [];
+  }
+};
+
 const emitTimerStatus = () => {
   // Given the status, emit the event and the state itself
   const statusMapper: Record<TimerStatus, string> = {
@@ -52,8 +66,13 @@ const emitTimerStatus = () => {
     BREAK: EVENTS.TIMER.ON_BREAK,
     PAUSED: EVENTS.TIMER.PAUSED,
   };
-  console.log('emitting hox', statusMapper[timerState.status])
-  timerEmitter.emit(statusMapper[timerState.status], timerState);
+
+  // Emit along with the state, the available actions
+  const stateWithActions: TimerState = {
+    ...timerState,
+    availableActions: getAvailableActions(timerState.status),
+  };
+  timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
 
 const writeTimerStateToFile = () => {
@@ -77,54 +96,50 @@ const onTick = () => {
 };
 
 const checkTimer = () => {
-  // Handle next events
-  if (timerState.status === "RUNNING") {
-    nextStatus = "BREAK";
-    nextEvent = EVENTS.TIMER.START_BREAK;
-    nextTimerMs = breakTimeMs;
-  } else if (timerState.status === "BREAK") {
-    nextStatus = "RUNNING";
-    nextEvent = EVENTS.TIMER.RUNNING;
-    nextTimerMs = newTimerTimeMs;
-  } else if ((timerState.status = "PAUSED")) {
-  } else {
-    if (appEnvironment === "DEV") {
-      console.warn(`Unhandled timer status: ${timerState.status}`);
-      // Reset status
-      nextStatus = "RUNNING";
-      nextEvent = EVENTS.TIMER.RUNNING;
-      nextTimerMs = newTimerTimeMs;
-    } else {
-      throw new Error(`Unhandled timer status: ${timerState.status}`);
-    }
-  }
-
-  // Tick timer and transition states if countdown is met
+  // Don't tick if paused
+  if (timerState.status === "PAUSED") return;
+  
+  // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
+  
+  // Check for transition
   if (timerState.currentCountdownMs <= 0) {
-    timerState.status = nextStatus;
-    timerEmitter.emit(nextEvent);
-    timerState.currentCountdownMs = newTimerTimeMs;
+    transitionToNextState();
+  }
+};
+
+const transitionToNextState = () => {
+  switch (timerState.status) {
+    case "RUNNING":
+      timerState.status = "BREAK";
+      timerState.currentCountdownMs = breakTimeMs;
+      timerEmitter.emit(EVENTS.TIMER.START_BREAK);
+      break;
+      
+    case "BREAK":
+      timerState.status = "RUNNING";
+      timerState.currentCountdownMs = newTimerTimeMs;
+      timerEmitter.emit(EVENTS.TIMER.RUNNING);
+      break;
+      
+    default:
+      console.warn(`Unexpected transition from: ${timerState.status}`);
   }
 };
 
 export const pauseTimer = () => {
   clearInterval(tickTimer);
   timerState.status = "PAUSED";
-  // Write new timer state to file
-  console.log('pause timer', JSON.stringify(timerState));
-  fs.writeFileSync(
-    path.join(app.getPath("userData"), timerStateFileName),
-    JSON.stringify(timerState)
-  );
-  timerEmitter.emit(EVENTS.TIMER.PAUSED);
+  emitTimerStatus();
+  writeTimerStateToFile()
 };
 
 export const startTimer = () => {
-  console.log('start timer', JSON.stringify(timerState));
+  clearInterval(tickTimer); // Clear any existing tick intervals
   tickTimer = setInterval(onTick, tickIntervalMs);
-  timerEmitter.emit(EVENTS.TIMER.BEGIN);
   timerState.status = "RUNNING";
+  emitTimerStatus();
+  writeTimerStateToFile()
 };
 
 const getTimerStateData = (): TimerStateData => {
@@ -137,7 +152,6 @@ const getTimerStateData = (): TimerStateData => {
 
 const loadTimerStateFromFile = () => {
   let timerData = getTimerStateData();
-  console.log(app.getPath("userData"), JSON.stringify(timerData.fileContent));
   // If no timer data is returned, set new state in file
   if (!timerData.fileContent) {
     fs.writeFileSync(

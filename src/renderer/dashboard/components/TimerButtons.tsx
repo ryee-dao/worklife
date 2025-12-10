@@ -6,14 +6,15 @@ interface TimerButtonProps {
 }
 
 export default function TimerButtons({ timerState }: TimerButtonProps) {
-  const isPaused = timerState.status === "PAUSED";
+  const canPause = timerState.availableActions.includes("pause");
+  const canStart = timerState.availableActions.includes("start");
 
   const changePauseState = () => {
-    if (isPaused) {
-      window.electronAPI.start();
-    } else {
-      window.electronAPI.pause();
+    if (canPause && canStart) {
+      throw new Error("Invalid state");
     }
+    if (canPause) window.electronAPI.pause();
+    if (canStart) window.electronAPI.start();
   };
 
   return (
@@ -21,9 +22,10 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
       <div className="h-full flex justify-center">
         <button
           onClick={changePauseState}
+          disabled={timerState.availableActions.length === 0}
           className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
         >
-          {!isPaused ? (
+          {canPause ? (
             <PauseIcon className="h-2/3 text-green-700" />
           ) : (
             <PlayIcon className="h-2/3 text-green-700 ml-1 lg:ml-4" />

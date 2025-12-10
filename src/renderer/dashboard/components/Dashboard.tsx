@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import TopTabs from "./TopTabs";
 import Timer from "./Timer";
 import Settings from "./Settings";
@@ -12,9 +12,6 @@ export default function Dashboard() {
       setTimerStateObject(timerState);
     });
   }, []);
-
-
-
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col">
