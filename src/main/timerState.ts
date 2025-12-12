@@ -37,7 +37,6 @@ const newTimerData: StoredTimerState = {
   currentCountdownMs: newTimerTimeMs,
   status: "RUNNING",
 };
-let nextStatus: TimerStatus, nextEvent: string, nextTimerMs: number;
 
 export const timerEmitter = new EventEmitter();
 export const initTimer = () => {
@@ -117,6 +116,7 @@ const transitionToNextState = () => {
       break;
       
     case "BREAK":
+      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);

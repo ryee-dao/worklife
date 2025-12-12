@@ -20,17 +20,18 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
   return (
     <div className="grow">
       <div className="h-full flex justify-center">
-        <button
-          onClick={changePauseState}
-          disabled={timerState.availableActions.length === 0}
-          className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
-        >
-          {canPause ? (
-            <PauseIcon className="h-2/3 text-green-700" />
-          ) : (
-            <PlayIcon className="h-2/3 text-green-700 ml-1 lg:ml-4" />
-          )}
-        </button>
+        {(canPause || canStart) && (
+          <button
+            onClick={changePauseState}
+            disabled={timerState.availableActions.length === 0}
+            className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
+          >
+            {canPause && <PauseIcon className="h-2/3 text-green-700" />}
+            {canStart && (
+              <PlayIcon className="h-2/3 text-green-700 ml-1 lg:ml-4" />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
