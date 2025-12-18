@@ -14,6 +14,7 @@ import { formatMsToMMSS } from "../shared/utils/time";
 let settingsWindow: BrowserWindow | null = null;
 let breakWindow: BrowserWindow | null = null;
 
+const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const appEnvironment: "PROD" | "DEV" = determineEnvironment();
 
 function determineEnvironment() {
@@ -30,14 +31,23 @@ function initApp() {
 }
 
 // Sends timer state to the ipc renderer
-const handleTimerUpdate = (timerState: TimerState) => {
-  if (settingsWindow) {
-    settingsWindow.webContents.send("timer:update", timerState);
+const broadcastTimerStateToRenderer = (timerState: TimerState) => {
+  // Send to settings window
+  if (!settingsWindow?.isDestroyed()) {
+    settingsWindow?.webContents.send(
+      EVENTS.IPC_CHANNELS.TIMER_UPDATE,
+      timerState
+    );
   }
+
+  if (!breakWindow?.isDestroyed()) {
+    breakWindow?.webContents.send(EVENTS.IPC_CHANNELS.TIMER_UPDATE, timerState);
+  }
+  // Send to break window
 };
-timerEmitter.on(EVENTS.TIMER.RUNNING, handleTimerUpdate);
-timerEmitter.on(EVENTS.TIMER.ON_BREAK, handleTimerUpdate);
-timerEmitter.on(EVENTS.TIMER.PAUSED, handleTimerUpdate);
+timerEmitter.on(EVENTS.TIMER.RUNNING, broadcastTimerStateToRenderer);
+timerEmitter.on(EVENTS.TIMER.ON_BREAK, broadcastTimerStateToRenderer);
+timerEmitter.on(EVENTS.TIMER.PAUSED, broadcastTimerStateToRenderer);
 timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
 timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
 
@@ -49,7 +59,7 @@ function createSettingsWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, "../preload.js"), // Compiled preload file
+      preload: PRELOAD_PATH, // Compiled preload file
     },
   });
   if (appEnvironment === "PROD") {
@@ -88,11 +98,19 @@ function createSettingsWindow() {
 }
 
 function createBreakWindow() {
-  breakWindow = new BrowserWindow({
-    kiosk: true,
-  });
-  breakWindow.setAlwaysOnTop(true, "pop-up-menu");
+  // breakWindow = new BrowserWindow({
+  //   kiosk: true,
+  //   webPreferences: {
+  //     preload: PRELOAD_PATH, // Compiled preload file
+  //   },
+  // });
+  // breakWindow.setAlwaysOnTop(true, "pop-up-menu");
 
+  breakWindow = new BrowserWindow({
+    webPreferences: {
+      preload: PRELOAD_PATH, // Compiled preload file
+    },
+  });
   if (appEnvironment === "PROD") {
     breakWindow.loadFile(path.join(__dirname, "../renderer/break/index.html"));
   } else if (appEnvironment === "DEV") {

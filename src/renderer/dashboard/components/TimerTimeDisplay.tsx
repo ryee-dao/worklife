@@ -5,7 +5,7 @@ interface TimerTimeDisplayProps {
   timerState: TimerState;
 }
 
-export default function Timer({ timerState }: TimerTimeDisplayProps) {
+export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) {
   const formattedTime = formatMsToMMSS(timerState.currentCountdownMs);
   const hours = formattedTime.split(":")[0];
   const minutes = formattedTime.split(":")[1];

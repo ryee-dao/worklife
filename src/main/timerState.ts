@@ -6,7 +6,7 @@ import { EVENTS } from "../shared/constants";
 import { appEnvironment } from "./main";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
-export type AvailableActions = "start" | "pause" | "skip"
+export type AvailableActions = "start" | "pause" | "skip";
 export interface TimerState {
   currentCountdownMs: number;
   status: TimerStatus;
@@ -31,8 +31,8 @@ let tickTimer: NodeJS.Timeout,
   emitTimer: NodeJS.Timeout,
   writeTimer: NodeJS.Timeout;
 const newTimerTimeMs = 1 * 60 * 1000;
-const breakTimeMs = 45 * 1000;
-const thresholdTimeMs = 30 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
+const breakTimeMs = 30 * 1000;
+const thresholdTimeMs = 10 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const newTimerData: StoredTimerState = {
   currentCountdownMs: newTimerTimeMs,
   status: "RUNNING",
@@ -52,9 +52,12 @@ export const initTimer = () => {
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   switch (status) {
-    case "RUNNING": return ["pause"];
-    case "PAUSED": return ["start"];
-    case "BREAK": return [];
+    case "RUNNING":
+      return ["pause"];
+    case "PAUSED":
+      return ["start"];
+    case "BREAK":
+      return [];
   }
 };
 
@@ -97,10 +100,10 @@ const onTick = () => {
 const checkTimer = () => {
   // Don't tick if paused
   if (timerState.status === "PAUSED") return;
-  
+
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  
+
   // Check for transition
   if (timerState.currentCountdownMs <= 0) {
     transitionToNextState();
@@ -114,14 +117,14 @@ const transitionToNextState = () => {
       timerState.currentCountdownMs = breakTimeMs;
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
-      
+
     case "BREAK":
       timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
       break;
-      
+
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
@@ -131,7 +134,7 @@ export const pauseTimer = () => {
   clearInterval(tickTimer);
   timerState.status = "PAUSED";
   emitTimerStatus();
-  writeTimerStateToFile()
+  writeTimerStateToFile();
 };
 
 export const startTimer = () => {
@@ -139,7 +142,7 @@ export const startTimer = () => {
   tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "RUNNING";
   emitTimerStatus();
-  writeTimerStateToFile()
+  writeTimerStateToFile();
 };
 
 const getTimerStateData = (): TimerStateData => {
