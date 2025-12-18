@@ -14,5 +14,12 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, './dist/renderer'),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        dashboard: path.resolve(__dirname, 'src/renderer/dashboard/index.html'),
+        break: path.resolve(__dirname, 'src/renderer/break/index.html'),
+      }
+    }
   },
+
 });

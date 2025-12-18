@@ -4,15 +4,18 @@
   "description": "",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev:vite": "vite",
-    "dev:electron:watch": "tsc -p tsconfig.main.json -w",
-    "dev:electron:start": "nodemon --watch dist/main --verbose --exec 'VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox'",
-    "dev:debug": "concurrently \"npm run dev:vite\" \"npm run dev:electron:watch\"",
-    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron:watch\" \"npm run dev:electron:start\"",
-    "build:vite": "vite build",
-    "build:electron": "tsc -p tsconfig.main.json",
-    "build": "npm run build:vite && npm run build:electron",
-    "start": "npm run build && electron ."
+    "dev": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
+    "dev:debug": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\"",
+    "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
+    "start": "npm run build && electron .",
+    "_dev:init": "tsc --build tsconfig.main.json && node esbuild.preload.ts",
+    "_dev:vite": "vite",
+    "_dev:electron:watch": "tsc --build tsconfig.main.json -w",
+    "_dev:preload:watch": "node esbuild.preload.ts --watch",
+    "_dev:electron:start": "nodemon --watch dist/main --exec \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
+    "_build:vite": "vite build",
+    "_build:electron": "tsc --build tsconfig.main.json",
+    "_build:preload": "node esbuild.preload.ts"
   },
   "repository": {
     "type": "git",
@@ -30,15 +33,19 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "^39.2.0",
+    "esbuild": "^0.27.1",
     "nodemon": "^3.1.11",
     "typescript": "^5.9.3",
     "vite": "^7.2.2"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.17",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-router": "^7.9.6",
     "sudo-prompt": "^9.2.1",
     "tailwindcss": "^4.1.17"
   }
