@@ -1,4 +1,5 @@
 {
+/* This config file is for the main process */
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
@@ -7,6 +8,7 @@
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
+    "composite": true
   },
-  "include": ["src/main/**/*"],
+  "include": ["src/main/**/*", "src/shared/**/*"],
 }
