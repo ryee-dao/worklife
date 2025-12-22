@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import BreakTimeDisplay from "./BreakTimeDisplay";
 import { TimerState } from "../../../main/timerState";
+import BreakButtons from "./BreakButtons";
 
 export default function BreakWindow() {
   let [timerStateObject, setTimerStateObject] = useState<TimerState>();
@@ -13,15 +14,22 @@ export default function BreakWindow() {
   console.log(JSON.stringify(timerStateObject));
 
   return (
-    <div className="flex flex-col items-center h-screen bg-blue-200">
-      <div className="h-2/3 text-green-600 font-bold flex items-center text-9xl tracking-[.35em]">
+    <div className="flex flex-col items-center h-screen bg-green-200">
+      <div className="h-1/3 text-blue-600 font-bold flex items-end text-9xl lg:text-[12rem] tracking-[.35em]">
         <span>BREAK</span>
       </div>
-      {timerStateObject && (
-        <div className="h-1/3 flex text-blue-800 font-bold text-6xl tracking-widest">
-          <BreakTimeDisplay timerState={timerStateObject}></BreakTimeDisplay>
-        </div>
-      )}
+      <div className="h-2/3 flex-col">
+        {timerStateObject && (
+          <>
+            <div className="h-1/2">
+              <BreakButtons timerState={timerStateObject} />
+            </div>
+            <div className="h-1/2 flex">
+              <BreakTimeDisplay timerState={timerStateObject} />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

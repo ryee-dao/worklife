@@ -30,8 +30,8 @@ let timerState: TimerState | StoredTimerState;
 let tickTimer: NodeJS.Timeout,
   emitTimer: NodeJS.Timeout,
   writeTimer: NodeJS.Timeout;
-const newTimerTimeMs = 1 * 60 * 1000;
-const breakTimeMs = 30 * 1000;
+const newTimerTimeMs = 0.1 * 60 * 1000;
+const breakTimeMs = 90 * 1000;
 const thresholdTimeMs = 10 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const newTimerData: StoredTimerState = {
   currentCountdownMs: newTimerTimeMs,
@@ -42,7 +42,7 @@ export const timerEmitter = new EventEmitter();
 export const initTimer = () => {
   loadTimerStateFromFile();
   // Fallback time delay so break time doesn't start too soon on startup
-  if (timerState.currentCountdownMs <= thresholdTimeMs) {
+  if (timerState.currentCountdownMs <= thresholdTimeMs || timerState.status === "BREAK") {
     timerState.currentCountdownMs = thresholdTimeMs;
     timerState.status = "RUNNING";
   }
@@ -57,7 +57,7 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
     case "PAUSED":
       return ["start"];
     case "BREAK":
-      return [];
+      return ["skip"];
   }
 };
 
@@ -141,6 +141,13 @@ export const startTimer = () => {
   clearInterval(tickTimer); // Clear any existing tick intervals
   tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "RUNNING";
+  emitTimerStatus();
+  writeTimerStateToFile();
+};
+
+export const skipBreak = () => {
+  timerState.status = "BREAK";
+  timerState.currentCountdownMs = 0;
   emitTimerStatus();
   writeTimerStateToFile();
 };
