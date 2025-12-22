@@ -1,7 +1,7 @@
 // Converts ms to "MMM:SS", where M is minute digit
 // Example: 96500 ms (96.5 minutes) => "96:30"
 export function formatMsToMMSS(ms?: number): string {
-  if (!ms) {
+  if (!ms && typeof(ms) !== "number") {
     return "";
   }
   const totalSeconds = Math.floor(ms / 1000);

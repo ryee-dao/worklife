@@ -4,6 +4,7 @@ export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => void;
   pause: () => void;
   start: () => void;
+  skip: () => void;
 }
 
 declare global {

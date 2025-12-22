@@ -4,6 +4,7 @@ import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
 import {
   initTimer,
   pauseTimer,
+  skipBreak,
   startTimer,
   timerEmitter,
   TimerState,
@@ -53,6 +54,8 @@ timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
 
 ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
 ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
+ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
+
 
 function createSettingsWindow() {
   settingsWindow = new BrowserWindow({
