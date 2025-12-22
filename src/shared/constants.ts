@@ -11,5 +11,6 @@ export const EVENTS = {
     TIMER_UPDATE: "timer:update",
     TIMER_PAUSE: "timer:pause",
     TIMER_BEGIN: "timer:begin",
+    TIMER_SKIPBREAK: "timer:skip_break"
   },
 } as const;
