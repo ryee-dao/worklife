@@ -31,6 +31,28 @@ function initApp() {
   createSettingsWindow();
 }
 
+// Check if another instance is running
+const firstAppInstance = app.requestSingleInstanceLock();
+if (!firstAppInstance) {
+  // Another instance exists, quit this one
+  app.quit();
+} else {
+  // This is the first instance, continue normally
+  
+  // When a second instance is opened
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Focus the existing window instead
+    if (settingsWindow) {
+      if (settingsWindow.isMinimized()) settingsWindow.restore();
+      settingsWindow.show();
+      settingsWindow.focus();
+    }
+  });
+  
+  // Start app
+  app.whenReady().then(initApp);
+}
+
 // Sends timer state to the ipc renderer
 const broadcastTimerStateToRenderer = (timerState: TimerState) => {
   // Send to settings window
@@ -127,4 +149,4 @@ function closeBreakWindow() {
   }
 }
 
-app.whenReady().then(initApp);
+
