@@ -1,5 +1,5 @@
-import { TimerState, TimerStatus } from "../../../main/timerState";
-import { formatMsToMMSS } from "../../../shared/utils/time";
+import { TimerState, TimerStatus } from "../../../../main/timerState";
+import { formatMsToMMSS } from "../../../../shared/utils/time";
 
 interface TimerTimeDisplayProps {
   timerState: TimerState;

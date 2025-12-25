@@ -1,9 +1,11 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router";
 import { useEffect, useState } from "react";
 import TopTabs from "./TopTabs";
-import Timer from "./Timer";
-import Settings from "./Settings";
+import Timer from "./timer/Timer";
+import Settings from "./settings/Settings";
 import { TimerState } from "../../../main/timerState";
+import TimeSettings from "./settings/TimeSettings";
+import LimitSettings from "./settings/LimitSettings";
 
 export default function Dashboard() {
   let [timerStateObject, setTimerStateObject] = useState<TimerState>();
@@ -18,8 +20,12 @@ export default function Dashboard() {
       <HashRouter>
         <TopTabs />
         <Routes>
-          <Route path="timer" element={<Timer timerState={timerStateObject}/>}></Route>
-          <Route path="settings" element={<Settings />}></Route>
+          <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<Navigate replace to="/settings/time" />} />
+            <Route path="time" element={<TimeSettings />}/>
+            <Route path="limits" element={<LimitSettings />}/>
+          </Route>
 
           {/* Default route */}
           <Route path="*" element={<Navigate replace to="/timer" />}></Route>

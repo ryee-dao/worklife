@@ -30,9 +30,9 @@ let timerState: TimerState | StoredTimerState;
 let tickTimer: NodeJS.Timeout,
   emitTimer: NodeJS.Timeout,
   writeTimer: NodeJS.Timeout;
-const newTimerTimeMs = 0.1 * 60 * 1000;
-const breakTimeMs = 90 * 1000;
-const thresholdTimeMs = 10 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
+const newTimerTimeMs = 30 * 60 * 1000;
+const breakTimeMs = 45 * 1000;
+const thresholdTimeMs = 5 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const newTimerData: StoredTimerState = {
   currentCountdownMs: newTimerTimeMs,
   status: "RUNNING",
