@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage } from "electron";
 import path from "path";
 import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
 import {
@@ -100,7 +100,8 @@ function createSettingsWindow() {
     settingsWindow!.hide();
   });
 
-  let tray = new Tray(path.join(__dirname, "../assets/dog.png"));
+  const trayImage = nativeImage.createFromPath(path.join(__dirname, "../assets/dog.png"))
+  let tray = new Tray(trayImage.resize({width: 16, height: 16}));
   tray.setToolTip("Work Life");
   const contextMenu = Menu.buildFromTemplate([
     {
