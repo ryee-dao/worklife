@@ -8,7 +8,8 @@
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
-    "composite": true
+    "composite": true,
+    "skipLibCheck": true
   },
   "include": ["src/main/**/*", "src/shared/**/*"],
 }
