@@ -3,6 +3,7 @@ import path from "path";
 import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
 import {
   initTimer,
+  loadTimerConfigsIntoState,
   pauseTimer,
   skipBreak,
   startTimer,
@@ -11,6 +12,7 @@ import {
 } from "./timerState";
 import { EVENTS } from "../shared/constants";
 import { formatMsToMMSS } from "../shared/utils/time";
+import { getTimerSettingsData, updateTimerSettings } from "./settingConfigs";
 
 let settingsWindow: BrowserWindow | null = null;
 let breakWindow: BrowserWindow | null = null;
@@ -78,7 +80,11 @@ ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
 ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
 ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
 
-
+ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER, getTimerSettingsData)
+ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER, (event, config) => {
+  // throw new Error("test error")
+  updateTimerSettings(config);
+})
 function createSettingsWindow() {
   settingsWindow = new BrowserWindow({
     width: 800,

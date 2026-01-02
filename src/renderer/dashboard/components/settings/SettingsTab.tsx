@@ -10,10 +10,10 @@ interface SettingsTabProps {
 
 export default function SettingsTab({ to, text, Icon, additionalClassNames = "" }: SettingsTabProps) {
     return (
-        <NavLink to={to} className={({ isActive }) => `w-full flex px-3 py-2 ${isActive ? "bg-green-200" : ""}`}>
+        <NavLink to={to} className={({ isActive }) => `w-full flex px-3 py-2 ${isActive ? "bg-blue-200" : ""}`}>
             {({ isActive }) => (
                 <>
-                    <div className={`flex justify-center items-center rounded-sm bg-slate-200 shadow-md h-full aspect-square mr-2 ${isActive ? "text-green-700" : ""}`}>
+                    <div className={`flex justify-center items-center rounded-sm bg-slate-200 shadow-md h-full aspect-square mr-2 ${isActive ? "text-blue-700" : ""}`}>
                         <Icon className="h-4/5" />
                     </div>
                     <span>{text}</span>

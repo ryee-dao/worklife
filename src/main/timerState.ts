@@ -2,8 +2,9 @@ import { app } from "electron";
 import path from "path";
 import fs from "fs";
 import { EventEmitter } from "events";
-import { EVENTS } from "../shared/constants";
+import { DEFAULTS, EVENTS } from "../shared/constants";
 import { appEnvironment } from "./main";
+import { getTimerSettingsData } from "./settingConfigs";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip";
@@ -30,17 +31,18 @@ let timerState: TimerState | StoredTimerState;
 let tickTimer: NodeJS.Timeout,
   emitTimer: NodeJS.Timeout,
   writeTimer: NodeJS.Timeout;
-const newTimerTimeMs = 30 * 60 * 1000;
-const breakTimeMs = 45 * 1000;
-const thresholdTimeMs = 5 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
-const newTimerData: StoredTimerState = {
-  currentCountdownMs: newTimerTimeMs,
+let newTimerTimeMs: number;
+let breakTimeMs: number;
+const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
+const defaultTimerData: StoredTimerState = {
+  currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
   status: "RUNNING",
 };
 
 export const timerEmitter = new EventEmitter();
 export const initTimer = () => {
   loadTimerStateFromFile();
+  loadTimerConfigsIntoState();
   // Fallback time delay so break time doesn't start too soon on startup
   if (timerState.currentCountdownMs <= thresholdTimeMs || timerState.status === "BREAK") {
     timerState.currentCountdownMs = thresholdTimeMs;
@@ -123,6 +125,7 @@ const transitionToNextState = () => {
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
+      loadTimerConfigsIntoState() // Update timer config changes only after break
       break;
 
     default:
@@ -166,11 +169,17 @@ const loadTimerStateFromFile = () => {
   if (!timerData.fileContent) {
     fs.writeFileSync(
       path.join(app.getPath("userData"), timerStateFileName),
-      JSON.stringify(newTimerData)
+      JSON.stringify(defaultTimerData)
     );
-    timerState = newTimerData;
+    timerState = defaultTimerData;
   } else {
     timerState = timerData.fileContent;
   }
   console.log("init timer", JSON.stringify(timerState));
 };
+
+export const loadTimerConfigsIntoState = () => {
+  const timerConfig = getTimerSettingsData();
+  newTimerTimeMs = timerConfig.timerDurationMs;
+  breakTimeMs = timerConfig.breakDurationMs;
+}

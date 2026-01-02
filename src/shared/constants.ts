@@ -11,6 +11,21 @@ export const EVENTS = {
     TIMER_UPDATE: "timer:update",
     TIMER_PAUSE: "timer:pause",
     TIMER_BEGIN: "timer:begin",
-    TIMER_SKIPBREAK: "timer:skip_break"
+    TIMER_SKIPBREAK: "timer:skip_break",
+    CONFIG: {
+      SAVE: {
+        TIMER: "config:save:timer",
+        LIMIT: "config:save:limit",
+      },
+      LOAD: {
+        TIMER: "config:load:timer",
+        LIMIT: "config:load:limit",
+      },
+    },
   },
+} as const;
+
+export const DEFAULTS = {
+  DEFAULT_TIMER_DURATION_MS: 45 * 60 * 1000, // 45 minutes,
+  DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds
 } as const;

@@ -4,7 +4,7 @@ import TopTabs from "./TopTabs";
 import Timer from "./timer/Timer";
 import Settings from "./settings/Settings";
 import { TimerState } from "../../../main/timerState";
-import TimeSettings from "./settings/TimeSettings";
+import TimeSettings from "./settings/TimerSettings";
 import LimitSettings from "./settings/LimitSettings";
 
 export default function Dashboard() {
@@ -22,8 +22,8 @@ export default function Dashboard() {
         <Routes>
           <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
           <Route path="/settings" element={<Settings />}>
-            <Route index element={<Navigate replace to="/settings/time" />} />
-            <Route path="time" element={<TimeSettings />}/>
+            <Route index element={<Navigate replace to="/settings/timer" />} />
+            <Route path="timer" element={<TimeSettings />}/>
             <Route path="limits" element={<LimitSettings />}/>
           </Route>
 
