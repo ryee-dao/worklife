@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
 import { TimerState } from "./timerState";
-import { TimerConfig } from "./settingConfigs";
+import { TimerConfig } from "./timerConfigs";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -22,12 +22,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER);
   },
   loadLimitConfig: async () => {
-    ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT);
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT);
   },
   saveTimerConfig: async (config: TimerConfig) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER, config);
   },
   saveLimitConfig: async (config: any) => {
-    ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT, config);
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT, config);
   },
 });

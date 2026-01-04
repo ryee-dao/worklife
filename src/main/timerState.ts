@@ -1,10 +1,10 @@
-import { app } from "electron";
-import path from "path";
-import fs from "fs";
 import { EventEmitter } from "events";
-import { DEFAULTS, EVENTS } from "../shared/constants";
-import { appEnvironment } from "./main";
-import { getTimerSettingsData } from "./settingConfigs";
+import { DEFAULTS, EVENTS, FILENAMES } from "../shared/constants";
+import { getTimerSettingsData } from "./timerConfigs";
+import {
+  getUserDataFromFile,
+  writeToUserDataFile,
+} from "../shared/utils/files";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip";
@@ -18,19 +18,12 @@ interface StoredTimerState {
   currentCountdownMs: number;
   status: TimerStatus;
 }
-interface TimerStateData {
-  filePath: string;
-  fileContent: StoredTimerState;
-}
 
 const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
-const timerStateFileName = "timerState.json";
 let timerState: TimerState | StoredTimerState;
-let tickTimer: NodeJS.Timeout,
-  emitTimer: NodeJS.Timeout,
-  writeTimer: NodeJS.Timeout;
+let tickTimer: NodeJS.Timeout, emitTimer: NodeJS.Timeout;
 let newTimerTimeMs: number;
 let breakTimeMs: number;
 const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
@@ -44,7 +37,10 @@ export const initTimer = () => {
   loadTimerStateFromFile();
   loadTimerConfigsIntoState();
   // Fallback time delay so break time doesn't start too soon on startup
-  if (timerState.currentCountdownMs <= thresholdTimeMs || timerState.status === "BREAK") {
+  if (
+    timerState.currentCountdownMs <= thresholdTimeMs ||
+    timerState.status === "BREAK"
+  ) {
     timerState.currentCountdownMs = thresholdTimeMs;
     timerState.status = "RUNNING";
   }
@@ -79,32 +75,25 @@ const emitTimerStatus = () => {
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
 
-const writeTimerStateToFile = () => {
-  // Write new timer state to file
-  fs.writeFileSync(
-    path.join(app.getPath("userData"), timerStateFileName),
-    JSON.stringify(timerState)
-  );
-  console.log(JSON.stringify(timerState));
-};
-
 const onTick = () => {
   tickCount++;
   checkTimer();
 
-  // If the writeIntervalMs is reached based on number of ticks (1 tick = 1000ms = 1 second)
+  // Write to file every {writeIntervalMs} seconds - based on number of ticks (1 tick = 1000ms = 1 second)
+  // Doing it this way, otherwise paused status will not trigger saves
   if (writeIntervalMs / tickCount === 1000) {
-    writeTimerStateToFile();
+    writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
     tickCount = 0;
   }
 };
 
 const checkTimer = () => {
-  // Don't tick if paused
+  // Don't count down if paused
   if (timerState.status === "PAUSED") return;
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
+  console.log(timerState);
 
   // Check for transition
   if (timerState.currentCountdownMs <= 0) {
@@ -125,7 +114,7 @@ const transitionToNextState = () => {
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
-      loadTimerConfigsIntoState() // Update timer config changes only after break
+      loadTimerConfigsIntoState(); // Update timer config changes only after break
       break;
 
     default:
@@ -137,7 +126,7 @@ export const pauseTimer = () => {
   clearInterval(tickTimer);
   timerState.status = "PAUSED";
   emitTimerStatus();
-  writeTimerStateToFile();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const startTimer = () => {
@@ -145,32 +134,21 @@ export const startTimer = () => {
   tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "RUNNING";
   emitTimerStatus();
-  writeTimerStateToFile();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const skipBreak = () => {
   timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  writeTimerStateToFile();
-};
-
-const getTimerStateData = (): TimerStateData => {
-  const filePath = path.join(app.getPath("userData"), timerStateFileName);
-  let fileContent = fs.existsSync(filePath)
-    ? JSON.parse(fs.readFileSync(filePath, "utf-8"))
-    : undefined;
-  return { filePath, fileContent };
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 const loadTimerStateFromFile = () => {
-  let timerData = getTimerStateData();
+  let timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
   // If no timer data is returned, set new state in file
   if (!timerData.fileContent) {
-    fs.writeFileSync(
-      path.join(app.getPath("userData"), timerStateFileName),
-      JSON.stringify(defaultTimerData)
-    );
+    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultTimerData);
     timerState = defaultTimerData;
   } else {
     timerState = timerData.fileContent;
@@ -182,4 +160,4 @@ export const loadTimerConfigsIntoState = () => {
   const timerConfig = getTimerSettingsData();
   newTimerTimeMs = timerConfig.timerDurationMs;
   breakTimeMs = timerConfig.breakDurationMs;
-}
+};
