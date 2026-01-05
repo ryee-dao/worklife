@@ -5,6 +5,7 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../shared/utils/files";
+import { calculateRemainingBreakSkips } from "./limitState";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip";
@@ -49,13 +50,20 @@ export const initTimer = () => {
 };
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
+  let availableActions: AvailableActions[] = [];
   switch (status) {
     case "RUNNING":
-      return ["pause"];
+      availableActions.push("pause");
+      availableActions.push("skip");
+      return availableActions;
     case "PAUSED":
-      return ["start"];
+      availableActions.push("start");
+      return availableActions;
     case "BREAK":
-      return ["skip"];
+      if (calculateRemainingBreakSkips() > 0) {
+        availableActions.push("skip");
+      }
+      return availableActions;
   }
 };
 
@@ -139,6 +147,13 @@ export const startTimer = () => {
 
 export const skipBreak = () => {
   timerState.status = "BREAK";
+  timerState.currentCountdownMs = 0;
+  emitTimerStatus();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
+export const skipTimer = () => {
+  timerState.status = "RUNNING";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);

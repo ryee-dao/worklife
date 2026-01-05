@@ -4,11 +4,11 @@ import { NavLink } from "react-router";
 interface SettingsTabProps {
     to: string;
     text: string;
-    Icon: ComponentType<{ className?: string }>
+    icon: ComponentType<{ className?: string }>
     additionalClassNames?: string;
 }
 
-export default function SettingsTab({ to, text, Icon, additionalClassNames = "" }: SettingsTabProps) {
+export default function SettingsTab({ to, text, icon: Icon, additionalClassNames = "" }: SettingsTabProps) {
     return (
         <NavLink to={to} className={({ isActive }) => `w-full flex px-3 py-2 ${isActive ? "bg-blue-200" : ""}`}>
             {({ isActive }) => (

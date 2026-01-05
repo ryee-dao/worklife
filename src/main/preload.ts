@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
-import { TimerState } from "./timerState";
+import { skipBreak, TimerState } from "./timerState";
 import { TimerConfig } from "./timerConfigs";
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -15,8 +15,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   start: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_BEGIN);
   },
-  skip: () => {
+  skipBreak: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK);
+  },
+  skipTimer: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER);
   },
   loadTimerConfig: async (): Promise<TimerConfig> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER);

@@ -13,17 +13,17 @@ export interface LimitConfig {
 }
 
 export function getLimitSettingsData(): LimitConfig {
-  let timerSettingsData = getUserDataFromFile<LimitConfig>(
+  let limitSettingsData = getUserDataFromFile<LimitConfig>(
     FILENAMES.LIMIT.SETTINGS
   );
-  let timerSettings: LimitConfig;
-  // If no timer settings data is returned, set new state in file
-  if (!timerSettingsData.fileContent) {
+  let limitSettings: LimitConfig;
+  // If no limit settings data is returned, set new state in file
+  if (!limitSettingsData.fileContent) {
     writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, defaultLimitSettings);
-    timerSettings = defaultLimitSettings;
+    limitSettings = defaultLimitSettings;
   } else {
-    timerSettings = timerSettingsData.fileContent;
+    limitSettings = limitSettingsData.fileContent;
   }
-  console.log(timerSettings);
-  return timerSettings;
+  console.log(limitSettings);
+  return limitSettings;
 }

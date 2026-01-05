@@ -16,15 +16,17 @@ import { getTimerSettingsData, TimerConfig } from "./timerConfigs";
 import { writeToUserDataFile } from "../shared/utils/files";
 import { getLimitSettingsData, LimitConfig } from "./limitConfigs";
 import { increaseSkippedBreakCount, resetDailyLimits } from "./limitState";
+import { initEventListeners } from "./events";
 
-let settingsWindow: BrowserWindow | null = null;
-let breakWindow: BrowserWindow | null = null;
+export let settingsWindow: BrowserWindow | null = null;
+export let breakWindow: BrowserWindow | null = null;
 
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const isDev = !app.isPackaged; // Returns true if packaged into an executible
 
 function initApp() {
   initTimer();
+  initEventListeners();
   resetDailyLimits();
   createSettingsWindow();
 }
@@ -51,52 +53,7 @@ if (!firstAppInstance) {
   app.whenReady().then(initApp);
 }
 
-// Sends timer state to the ipc renderer
-const broadcastTimerStateToRenderer = (timerState: TimerState) => {
-  // Send to settings window
-  if (!settingsWindow?.isDestroyed()) {
-    settingsWindow?.webContents.send(
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE,
-      timerState
-    );
-  }
-
-  if (!breakWindow?.isDestroyed()) {
-    breakWindow?.webContents.send(EVENTS.IPC_CHANNELS.TIMER_UPDATE, timerState);
-  }
-  // Send to break window
-};
-
-timerEmitter.on(EVENTS.TIMER.RUNNING, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.ON_BREAK, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.PAUSED, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
-timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
-
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, increaseSkippedBreakCount);
-
-ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER, getTimerSettingsData);
-ipcMain.handle(
-  EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER,
-  (event, config: TimerConfig) => {
-    // throw new Error("test error")
-    writeToUserDataFile(FILENAMES.TIMER.SETTINGS, config);
-  }
-);
-
-ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitSettingsData);
-ipcMain.handle(
-  EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT,
-  (event, config: LimitConfig) => {
-    // throw new Error("test error")
-    writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, config);
-  }
-);
-
-function createSettingsWindow() {
+export function createSettingsWindow() {
   settingsWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -142,7 +99,7 @@ function createSettingsWindow() {
   return settingsWindow;
 }
 
-function createBreakWindow() {
+export function createBreakWindow() {
   // breakWindow = new BrowserWindow({
   //   kiosk: true,
   //   webPreferences: {
@@ -163,7 +120,7 @@ function createBreakWindow() {
   }
 }
 
-function closeBreakWindow() {
+export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
     breakWindow.close();
   }
