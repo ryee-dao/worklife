@@ -1,28 +1,14 @@
-import { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage } from "electron";
+import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
-import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
-import {
-  initTimer,
-  loadTimerConfigsIntoState,
-  pauseTimer,
-  skipBreak,
-  startTimer,
-  timerEmitter,
-  TimerState,
-} from "./timerState";
-import { EVENTS, FILENAMES } from "../shared/constants";
-import { formatMsToMMSS } from "../shared/utils/time";
-import { getTimerSettingsData, TimerConfig } from "./timerConfigs";
-import { writeToUserDataFile } from "../shared/utils/files";
-import { getLimitSettingsData, LimitConfig } from "./limitConfigs";
-import { increaseSkippedBreakCount, resetDailyLimits } from "./limitState";
+import { initTimer } from "./timerState";
+import { resetDailyLimits } from "./limitState";
 import { initEventListeners } from "./events";
 
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
-export const isDev = !app.isPackaged; // Returns true if packaged into an executible
+export const isDev = !app.isPackaged; // Returns false if packaged into an executible
 
 function initApp() {
   initTimer();
@@ -69,16 +55,20 @@ export function createSettingsWindow() {
     settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/dashboard/`);
   }
 
+  // On close, don't actually close, just hide the app
   settingsWindow.on("close", (event) => {
     event.preventDefault();
     settingsWindow!.hide();
   });
 
+  // Set icon for app
   const trayImage = nativeImage.createFromPath(
     path.join(__dirname, "../assets/dog.png")
   );
   let tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
   tray.setToolTip("Work Life");
+
+  // Build tray menu
   const contextMenu = Menu.buildFromTemplate([
     {
       label: "Show Settings",
@@ -100,19 +90,20 @@ export function createSettingsWindow() {
 }
 
 export function createBreakWindow() {
-  // breakWindow = new BrowserWindow({
-  //   kiosk: true,
-  //   webPreferences: {
-  //     preload: PRELOAD_PATH, // Compiled preload file
-  //   },
-  // });
-  // breakWindow.setAlwaysOnTop(true, "pop-up-menu");
-
+  // Init break window
   breakWindow = new BrowserWindow({
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
+
+  // Comment this block out if you are developing and want the break window to be full screen
+  if (!isDev) {
+    breakWindow.setKiosk(true);
+    breakWindow.setAlwaysOnTop(true, "pop-up-menu");
+  }
+
+  // Render the break window html
   if (!isDev) {
     breakWindow.loadFile(path.join(__dirname, "../renderer/break/index.html"));
   } else if (isDev) {
