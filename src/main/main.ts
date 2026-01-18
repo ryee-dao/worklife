@@ -97,9 +97,11 @@ export function createBreakWindow() {
     },
   });
 
-  // Comment this block out if you are developing and want the break window to be full screen
+  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
   if (!isDev) {
-    breakWindow.setKiosk(true);
+    setTimeout(() => {
+      breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
+    }, 500);
     breakWindow.setAlwaysOnTop(true, "pop-up-menu");
   }
 

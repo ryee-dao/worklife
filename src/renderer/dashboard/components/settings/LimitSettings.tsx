@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LimitConfig } from "../../../../main/limitConfigs";
+import { isDev } from "../../../common/constants"
 
 export default function LimitSettings() {
   const [allotedBreaks, setAllotedBreaks] = useState<number>(0);
@@ -9,7 +10,9 @@ export default function LimitSettings() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle"
   );
-  const allotedBreaksValid = allotedBreaks >= 0 && allotedBreaks <= 5;
+
+  const breaksMaxLimit = isDev ? 9999999 : 5;
+  const allotedBreaksValid = allotedBreaks >= 0 && allotedBreaks <= breaksMaxLimit;
   const [saveMessage, setSaveMessage] = useState<string>("");
 
   useEffect(() => {
@@ -65,7 +68,7 @@ export default function LimitSettings() {
                   className="w-12 text-center border rounded"
                   type="number"
                   min="0"
-                  max="5"
+                  max={breaksMaxLimit}
                   value={allotedBreaks}
                   onChange={(e) => setAllotedBreaks(Number(e.target.value))}
                 />{" "}
@@ -82,19 +85,17 @@ export default function LimitSettings() {
             <button
               disabled={!isValid}
               onClick={saveChanges}
-              className={`px-3 py-0.5 border rounded bg-blue-300 w-48 ${
-                !isValid
-                  ? "cursor-not-allowed bg-slate-400"
-                  : "active:bg-blue-500"
-              }`}
+              className={`px-3 py-0.5 border rounded bg-blue-300 w-48 ${!isValid
+                ? "cursor-not-allowed bg-slate-400"
+                : "active:bg-blue-500"
+                }`}
             >
               SAVE CHANGES
             </button>
             {saveMessage && (
               <p
-                className={`text-sm ${
-                  saveStatus === "error" ? "text-red-600" : "text-green-600"
-                } mt-1`}
+                className={`text-sm ${saveStatus === "error" ? "text-red-600" : "text-green-600"
+                  } mt-1`}
               >
                 {saveMessage}
               </p>

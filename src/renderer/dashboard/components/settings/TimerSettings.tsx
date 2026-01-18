@@ -6,6 +6,7 @@ import {
   convertSecondsToMs,
 } from "../../../../shared/utils/time";
 import { TimerConfig } from "../../../../main/timerConfigs";
+import { isDev } from "../../../common/constants";
 
 export default function TimerSettings() {
   const [timerDurationInMinutes, setTimerDurationInMinutes] =
@@ -22,7 +23,7 @@ export default function TimerSettings() {
   const timerValid =
     timerDurationInMinutes >= 1 && timerDurationInMinutes <= 600;
   const breakValid =
-    breakDurationInSeconds >= 10 && breakDurationInSeconds <= 600;
+    breakDurationInSeconds >= (isDev ? 1 : 10) && breakDurationInSeconds <= 600;
 
   useEffect(() => {
     setIsValid(validateSave());
@@ -102,7 +103,7 @@ export default function TimerSettings() {
                 <input
                   className="w-12 text-center border rounded"
                   type="number"
-                  min="10"
+                  min={(isDev ? 1 : 10)}
                   max="600"
                   value={breakDurationInSeconds}
                   onChange={(e) =>
@@ -122,19 +123,17 @@ export default function TimerSettings() {
             <button
               disabled={!isValid}
               onClick={saveChanges}
-              className={`px-3 py-0.5 border rounded bg-blue-300 w-48 ${
-                !isValid
-                  ? "cursor-not-allowed bg-slate-400"
-                  : "active:bg-blue-500"
-              }`}
+              className={`px-3 py-0.5 border rounded bg-blue-300 w-48 ${!isValid
+                ? "cursor-not-allowed bg-slate-400"
+                : "active:bg-blue-500"
+                }`}
             >
               SAVE CHANGES
             </button>
             {saveMessage && (
               <p
-                className={`text-sm ${
-                  saveStatus === "error" ? "text-red-600" : "text-green-600"
-                } mt-1`}
+                className={`text-sm ${saveStatus === "error" ? "text-red-600" : "text-green-600"
+                  } mt-1`}
               >
                 {saveMessage}
               </p>
