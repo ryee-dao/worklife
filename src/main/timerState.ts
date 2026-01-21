@@ -5,7 +5,8 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../shared/utils/files";
-import { calculateRemainingBreakSkips } from "./limitState";
+import { calculateRemainingBreakSkips, getLimitState } from "./limitState";
+import { getLimitConfig } from "./limitConfigs";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip";
@@ -13,6 +14,8 @@ export interface TimerState {
   currentCountdownMs: number;
   status: TimerStatus;
   availableActions: AvailableActions[];
+  remainingSkips: number,
+  allotedBreaks: number
 }
 
 interface StoredTimerState {
@@ -79,6 +82,8 @@ const emitTimerStatus = () => {
   const stateWithActions: TimerState = {
     ...timerState,
     availableActions: getAvailableActions(timerState.status),
+    remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
+    allotedBreaks: getLimitConfig().allotedBreaks
   };
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };

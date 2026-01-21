@@ -19,7 +19,7 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
 
   return (
     <div className={`h-2/3 font-bold flex justify-center items-center ${timerColor}`}>
-      <div className="tracking-widest text-[6rem] sm:text-[9rem] md:text-[10rem] lg:text-[14rem]">
+      <div className="tracking-widest text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
         <span>{hours}</span> : <span>{minutes}</span>
       </div>
     </div>

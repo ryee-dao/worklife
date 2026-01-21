@@ -11,35 +11,66 @@ export interface LimitState {
   skippedBreakCount: number;
 }
 
+let limitState: LimitState;
+
 const limitCheckIntervalMs = 5 * 60 * 1000; // 5 mins
 setInterval(resetDailyLimits, limitCheckIntervalMs); // Check if we need to reset daily limit on a timed basis
 
-export function resetDailyLimits() {
+export const initLimits = () => {
+  loadLimitStateFromFile();
+  resetDailyLimits();
+}
+
+export function loadLimitStateFromFile() {
   let limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
-  let newLimitState: LimitState;
+  // If no timer data is returned, set new state in file
+  const defaultLimitData = {
+    lastResetDate: getTodayDateAsString(),
+    skippedBreakCount: 0,
+  }
+
+  if (!limitStateData.fileContent) {
+    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultLimitData);
+    setLimitState(defaultLimitData);
+  } else {
+    setLimitState(limitStateData.fileContent);
+  }
+}
+
+export function resetDailyLimits() {
+  let newLimitState = getLimitState();
   // If the last reset date is not today, reset it and set the last reset date to today
-  if (!(limitStateData.fileContent?.lastResetDate === getTodayDateAsString())) {
-    newLimitState = {
+  if (!(newLimitState.lastResetDate === getTodayDateAsString())) {
+    setLimitState({
       lastResetDate: getTodayDateAsString(),
       skippedBreakCount: 0,
-    };
-    writeToUserDataFile(FILENAMES.LIMIT.STATE, newLimitState);
+    });
   }
-  console.log(calculateRemainingBreakSkips())
 }
 
 export function increaseSkippedBreakCount() {
-  let limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
-  writeToUserDataFile(FILENAMES.LIMIT.STATE, {
-    ...limitStateData.fileContent!,
-    skippedBreakCount: limitStateData.fileContent!.skippedBreakCount + 1,
-  });
+  let limitStateData = getLimitState();
+  let newLimitStateData = {
+    ...limitStateData,
+    skippedBreakCount: limitStateData.skippedBreakCount + 1,
+  }
+  writeToUserDataFile(FILENAMES.LIMIT.STATE, newLimitStateData);
+  setLimitState(newLimitStateData);
 }
 
 export function calculateRemainingBreakSkips() {
-  let limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
+  let limitStateData = getLimitState();
   let limitConfigs = getLimitSettingsData();
   return (
-    limitConfigs.allotedBreaks - limitStateData.fileContent!.skippedBreakCount
+    limitConfigs.allotedBreaks - limitStateData.skippedBreakCount
   );
+}
+
+function setLimitState(newLimitState: LimitState) {
+  writeToUserDataFile(FILENAMES.LIMIT.STATE, newLimitState)
+  limitState = newLimitState;
+}
+
+export function getLimitState(): LimitState {
+  return limitState;
 }

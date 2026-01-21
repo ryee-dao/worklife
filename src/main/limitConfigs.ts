@@ -4,7 +4,7 @@ import {
   writeToUserDataFile,
 } from "../shared/utils/files";
 
-const defaultLimitSettings: LimitConfig = {
+const defaultLimitConfigs: LimitConfig = {
   allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
 };
 
@@ -12,18 +12,27 @@ export interface LimitConfig {
   allotedBreaks: number;
 }
 
+let limitConfig: LimitConfig;
+
 export function getLimitSettingsData(): LimitConfig {
   let limitSettingsData = getUserDataFromFile<LimitConfig>(
     FILENAMES.LIMIT.SETTINGS
   );
-  let limitSettings: LimitConfig;
   // If no limit settings data is returned, set new state in file
   if (!limitSettingsData.fileContent) {
-    writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, defaultLimitSettings);
-    limitSettings = defaultLimitSettings;
+    writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, defaultLimitConfigs);
+    setLimitConfigs(defaultLimitConfigs);
   } else {
-    limitSettings = limitSettingsData.fileContent;
+    setLimitConfigs(limitSettingsData.fileContent);
   }
-  console.log(limitSettings);
-  return limitSettings;
+  console.log(limitConfig);
+  return getLimitConfig();
+}
+
+function setLimitConfigs(newLimitConfig: LimitConfig) {
+  limitConfig = newLimitConfig;
+}
+
+export function getLimitConfig(): LimitConfig {
+  return limitConfig;
 }

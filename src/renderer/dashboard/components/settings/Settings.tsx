@@ -6,7 +6,6 @@ export default function Settings() {
     return (
         <div className="flex h-full">
             <SettingsSidebar />
-            {/* <NavLink to="/settings/time">hate jj</NavLink> */}
             <SettingsContent />
         </div>
     )

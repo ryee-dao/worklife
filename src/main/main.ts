@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
 import { initTimer } from "./timerState";
-import { resetDailyLimits } from "./limitState";
+import { initLimits, resetDailyLimits } from "./limitState";
 import { initEventListeners } from "./events";
 
 export let settingsWindow: BrowserWindow | null = null;
@@ -11,9 +11,9 @@ const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const isDev = !app.isPackaged; // Returns false if packaged into an executible
 
 function initApp() {
+  initLimits();
   initTimer();
   initEventListeners();
-  resetDailyLimits();
   createSettingsWindow();
 }
 

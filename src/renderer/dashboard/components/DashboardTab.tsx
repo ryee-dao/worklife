@@ -20,7 +20,7 @@ export default function DashboardTab({
         }`
       }
     >
-      <span className="text-slate-800 text-lg font-semibold tracking-widest">{text}</span>
+      <span className="text-slate-800 text-[10px] sm:text-base md:text-xl lg:text-3xl font-semibold tracking-normal sm:tracking-widest">{text}</span>
     </NavLink>
   );
 }

@@ -73,9 +73,9 @@ export default function TimerSettings() {
     <>
       {!isLoading && (
         <div className="p-3 flex flex-col h-full">
-          <h2 className="font-semibold text-2xl">Timer Settings</h2>
+          <h2 className="font-semibold text-lg md:text-2xl">Timer Settings</h2>
           <hr className="text-slate-400 my-1" />
-          <div className="grow">
+          <div className="grow text-sm md:text-lg">
             <div className="tracking-wider p-2">
               <label>
                 I want to take a break every{" "}
@@ -119,11 +119,11 @@ export default function TimerSettings() {
               )}
             </div>
           </div>
-          <div className="self-center text-slate-800 tracking-wider font-medium flex flex-col items-center">
+          <div className="w-3/4 self-center text-xs lg:text-base text-slate-800 tracking-wider font-medium flex flex-col items-center">
             <button
               disabled={!isValid}
               onClick={saveChanges}
-              className={`px-3 py-0.5 border rounded bg-blue-300 w-48 ${!isValid
+              className={`px-3 py-0.5 border rounded bg-blue-300 w-3/4 sm:w-48 ${!isValid
                 ? "cursor-not-allowed bg-slate-400"
                 : "active:bg-blue-500"
                 }`}

@@ -16,7 +16,7 @@ export default function SettingsTab({ to, text, icon: Icon, additionalClassNames
                     <div className={`flex justify-center items-center rounded-sm bg-slate-200 shadow-md h-full aspect-square mr-2 ${isActive ? "text-blue-700" : ""}`}>
                         <Icon className="h-4/5" />
                     </div>
-                    <span>{text}</span>
+                    <span className="text-xs xsm:text-base">{text}</span>
                 </>
             )}
         </NavLink>
