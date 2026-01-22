@@ -1,33 +1,19 @@
-import { app, BrowserWindow, Menu, Tray, ipcMain, nativeImage } from "electron";
+import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
-import { getHostsFileContent, setHostsFileContent } from "./hostsFile";
-import {
-  initTimer,
-  pauseTimer,
-  skipBreak,
-  startTimer,
-  timerEmitter,
-  TimerState,
-} from "./timerState";
-import { EVENTS } from "../shared/constants";
-import { formatMsToMMSS } from "../shared/utils/time";
+import { initTimer } from "./timerState";
+import { initLimits, resetDailyLimits } from "./limitState";
+import { initEventListeners } from "./events";
 
-let settingsWindow: BrowserWindow | null = null;
-let breakWindow: BrowserWindow | null = null;
+export let settingsWindow: BrowserWindow | null = null;
+export let breakWindow: BrowserWindow | null = null;
 
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
-export const appEnvironment: "PROD" | "DEV" = determineEnvironment();
-
-function determineEnvironment() {
-  if (!process.env.VITE_DEV_SERVER_URL) {
-    return "PROD";
-  } else {
-    return "DEV";
-  }
-}
+export const isDev = !app.isPackaged; // Returns false if packaged into an executible
 
 function initApp() {
+  initLimits();
   initTimer();
+  initEventListeners();
   createSettingsWindow();
 }
 
@@ -38,9 +24,9 @@ if (!firstAppInstance) {
   app.quit();
 } else {
   // This is the first instance, continue normally
-  
+
   // When a second instance is opened
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
     // Focus the existing window instead
     if (settingsWindow) {
       if (settingsWindow.isMinimized()) settingsWindow.restore();
@@ -48,38 +34,12 @@ if (!firstAppInstance) {
       settingsWindow.focus();
     }
   });
-  
+
   // Start app
   app.whenReady().then(initApp);
 }
 
-// Sends timer state to the ipc renderer
-const broadcastTimerStateToRenderer = (timerState: TimerState) => {
-  // Send to settings window
-  if (!settingsWindow?.isDestroyed()) {
-    settingsWindow?.webContents.send(
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE,
-      timerState
-    );
-  }
-
-  if (!breakWindow?.isDestroyed()) {
-    breakWindow?.webContents.send(EVENTS.IPC_CHANNELS.TIMER_UPDATE, timerState);
-  }
-  // Send to break window
-};
-timerEmitter.on(EVENTS.TIMER.RUNNING, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.ON_BREAK, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.PAUSED, broadcastTimerStateToRenderer);
-timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
-timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
-
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
-ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
-
-
-function createSettingsWindow() {
+export function createSettingsWindow() {
   settingsWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -87,22 +47,28 @@ function createSettingsWindow() {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
-  if (appEnvironment === "PROD") {
+  if (!isDev) {
     settingsWindow.loadFile(
       path.join(__dirname, "../renderer/dashboard/index.html")
     );
-  } else if (appEnvironment === "DEV") {
+  } else if (isDev) {
     settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/dashboard/`);
   }
 
+  // On close, don't actually close, just hide the app
   settingsWindow.on("close", (event) => {
     event.preventDefault();
     settingsWindow!.hide();
   });
 
-  const trayImage = nativeImage.createFromPath(path.join(__dirname, "../assets/dog.png"))
-  let tray = new Tray(trayImage.resize({width: 16, height: 16}));
+  // Set icon for app
+  const trayImage = nativeImage.createFromPath(
+    path.join(__dirname, "../assets/dog.png")
+  );
+  let tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
   tray.setToolTip("Work Life");
+
+  // Build tray menu
   const contextMenu = Menu.buildFromTemplate([
     {
       label: "Show Settings",
@@ -123,31 +89,32 @@ function createSettingsWindow() {
   return settingsWindow;
 }
 
-function createBreakWindow() {
-  // breakWindow = new BrowserWindow({
-  //   kiosk: true,
-  //   webPreferences: {
-  //     preload: PRELOAD_PATH, // Compiled preload file
-  //   },
-  // });
-  // breakWindow.setAlwaysOnTop(true, "pop-up-menu");
-
+export function createBreakWindow() {
+  // Init break window
   breakWindow = new BrowserWindow({
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
-  if (appEnvironment === "PROD") {
+
+  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+  if (!isDev) {
+    setTimeout(() => {
+      breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
+    }, 500);
+    breakWindow.setAlwaysOnTop(true, "pop-up-menu");
+  }
+
+  // Render the break window html
+  if (!isDev) {
     breakWindow.loadFile(path.join(__dirname, "../renderer/break/index.html"));
-  } else if (appEnvironment === "DEV") {
+  } else if (isDev) {
     breakWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/break/`);
   }
 }
 
-function closeBreakWindow() {
+export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
     breakWindow.close();
   }
 }
-
-
