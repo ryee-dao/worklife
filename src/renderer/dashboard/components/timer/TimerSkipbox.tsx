@@ -1,8 +1,5 @@
-import { PlayIcon, PauseIcon, ForwardIcon } from "@heroicons/react/24/outline";
 import TimerSkipboxSkipIcon from "./TimerSkipboxSkipIcon";
-import TimerSkipboxSkipCount from "./TimerSkipboxSkipCount";
 import { TimerState } from "../../../../main/timerState";
-import SlashedIcon from "../../../common/components/SlashedIcon";
 
 
 interface TimerSkipboxProps {
