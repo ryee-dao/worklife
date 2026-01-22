@@ -12,3 +12,19 @@ export function formatMsToMMSS(ms?: number): string {
     .toString()
     .padStart(2, "0")}`;
 }
+
+export function convertMsToMinutes(ms: number): number {
+  return ms / 60 / 1000;
+}
+
+export function convertSecondsToMs(seconds: number): number {
+  return seconds * 1000;
+}
+
+export function convertMsToSeconds(ms: number): number {
+  return ms / 1000;
+}
+
+export function convertMinutesToMs(minutes: number): number {
+  return minutes * 60 * 1000
+}

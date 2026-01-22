@@ -28,7 +28,18 @@
       "target": "nsis"
     },
     "files": [
-      "dist/**/*"
+      "dist/**/*",
+      "!dist/mac*",
+      "!dist/win*",
+      "!dist/linux*",
+      "!dist/*.dmg",
+      "!dist/*.zip",
+      "!dist/*.exe",
+      "!dist/*.AppImage",
+      "!dist/*.deb",
+      "!dist/*.blockmap",
+      "!dist/*.yml",
+      "!dist/*.yaml"
     ]
   },
   "repository": {
