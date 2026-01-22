@@ -1,7 +1,7 @@
 import { TimerState } from "../../../../main/timerState";
 import TimerTimeDisplay from "./TimerTimeDisplay";
 import TimerButtons from "./TimerButtons";
-import TimerSkipbox from "./TimerSkipBox";
+import TimerSkipbox from "./TimerSkipbox";
 
 interface TimerProps {
   timerState?: TimerState;
