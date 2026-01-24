@@ -54,6 +54,7 @@
   },
   "homepage": "https://github.com/RyanNDao/worklife#readme",
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
