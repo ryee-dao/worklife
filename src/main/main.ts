@@ -92,18 +92,12 @@ export function createSettingsWindow() {
 export function createBreakWindow() {
   // Init break window
   breakWindow = new BrowserWindow({
+    show: false,
+    backgroundColor: '#000000',
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
-
-  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
-  if (!isDev) {
-    setTimeout(() => {
-      breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
-    }, 500);
-    breakWindow.setAlwaysOnTop(true, "pop-up-menu");
-  }
 
   // Render the break window html
   if (!isDev) {
@@ -111,6 +105,23 @@ export function createBreakWindow() {
   } else if (isDev) {
     breakWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/break/`);
   }
+
+  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+  if (!isDev) {
+    // setTimeout(() => {
+    //   breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
+    // }, 500);
+    // breakWindow.setAlwaysOnTop(true, "pop-up-menu");
+
+    breakWindow.once('ready-to-show', () => {
+      breakWindow!.show();
+      breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
+
+      // next tick tends to work better than arbitrary 500ms
+      setTimeout(() => breakWindow!.setKiosk(true), 0);
+    });
+  }
+
 }
 
 export function closeBreakWindow() {
