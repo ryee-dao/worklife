@@ -106,7 +106,7 @@ const checkTimer = () => {
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  console.log(timerState);
+  console.log('checkTimer()', timerState);
 
   // Check for transition
   if (timerState.currentCountdownMs <= 0) {
@@ -167,12 +167,17 @@ export const skipTimer = () => {
 const loadTimerStateFromFile = () => {
   let timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
   // If no timer data is returned, set new state in file
-  if (!timerData.fileContent) {
-    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultTimerData);
-    timerState = defaultTimerData;
-  } else {
-    timerState = timerData.fileContent;
-  }
+
+  timerState = { ...defaultTimerData, ...timerData?.fileContent }
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+
+  // if (!timerData.fileContent) {
+  //   writeToUserDataFile(FILENAMES.TIMER.STATE, defaultTimerData);
+  //   timerState = defaultTimerData;
+  // } else {
+  //   timerState = timerData.fileContent;
+  // }
+
   console.log("init timer", JSON.stringify(timerState));
 };
 

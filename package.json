@@ -9,6 +9,7 @@
     "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
     "dist": "npm run build && electron-builder",
     "start": "npm run build && electron .",
+    "test:e2e": "npm run build && playwright test",
     "_dev:init": "tsc --build tsconfig.main.json && node esbuild.preload.ts",
     "_dev:vite": "vite",
     "_dev:electron:watch": "tsc --build tsconfig.main.json -w",

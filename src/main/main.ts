@@ -1,14 +1,23 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
 import { initTimer } from "./timerState";
-import { initLimits, resetDailyLimits } from "./limitState";
+import { initLimits } from "./limitState";
 import { initEventListeners } from "./events";
-
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
-export const isDev = !app.isPackaged; // Returns false if packaged into an executible
+export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Returns false if packaged into an executible
+let forceQuit = false; // Allows app.quit() to bypass tray logic
+
+process.stdout.on('error', (err) => {
+  if (err.code === 'EPIPE') return;
+  throw err;
+});
+process.stderr.on('error', (err) => {
+  if (err.code === 'EPIPE') return;
+  throw err;
+});
 
 function initApp() {
   initLimits();
@@ -17,8 +26,13 @@ function initApp() {
   createSettingsWindow();
 }
 
+app.on('before-quit', () => {
+  forceQuit = true;
+});
+
 // Check if another instance is running
 const firstAppInstance = app.requestSingleInstanceLock();
+
 if (!firstAppInstance) {
   // Another instance exists, quit this one
   app.quit();
@@ -36,7 +50,9 @@ if (!firstAppInstance) {
   });
 
   // Start app
-  app.whenReady().then(initApp);
+  app.whenReady().then(() => {
+    initApp()
+  });
 }
 
 export function createSettingsWindow() {
@@ -57,8 +73,10 @@ export function createSettingsWindow() {
 
   // On close, don't actually close, just hide the app
   settingsWindow.on("close", (event) => {
-    event.preventDefault();
-    settingsWindow!.hide();
+    if (!forceQuit) {
+      event.preventDefault();
+      settingsWindow!.hide();
+    }
   });
 
   // Set icon for app
@@ -117,7 +135,6 @@ export function createBreakWindow() {
       breakWindow!.show();
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
 
-      // next tick tends to work better than arbitrary 500ms
       setTimeout(() => breakWindow!.setKiosk(true), 0);
     });
   }
