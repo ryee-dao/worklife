@@ -9,6 +9,7 @@ export let breakWindow: BrowserWindow | null = null;
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Returns false if packaged into an executible
 let forceQuit = false; // Allows app.quit() to bypass tray logic
+const isTest = !!process.env.PLAYWRIGHT_TEST;
 
 process.stdout.on('error', (err) => {
   if (err.code === 'EPIPE') return;
@@ -124,20 +125,16 @@ export function createBreakWindow() {
     breakWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/break/`);
   }
 
-  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
-  if (!isDev) {
-    // setTimeout(() => {
-    //   breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
-    // }, 500);
-    // breakWindow.setAlwaysOnTop(true, "pop-up-menu");
-
-    breakWindow.once('ready-to-show', () => {
-      breakWindow!.show();
+  // Render the break window once it's ready
+  breakWindow.once('ready-to-show', () => {
+    breakWindow!.show();
+    // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+    if (!isDev && !isTest) {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
-
       setTimeout(() => breakWindow!.setKiosk(true), 0);
-    });
-  }
+    }
+  });
+
 
 }
 

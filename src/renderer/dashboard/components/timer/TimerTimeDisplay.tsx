@@ -18,7 +18,7 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
   const timerColor = timerColorMapper[timerState.status];
 
   return (
-    <div className={`h-2/3 font-bold flex justify-center items-center ${timerColor}`}>
+    <div data-testid="timer-time-display" className={`h-2/3 font-bold flex justify-center items-center ${timerColor}`}>
       <div className="tracking-widest text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
         <span>{hours}</span> : <span>{minutes}</span>
       </div>

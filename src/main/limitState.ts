@@ -30,7 +30,7 @@ export function loadLimitStateFromFile() {
   }
 
   if (!limitStateData.fileContent) {
-    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultLimitData);
+    // writeToUserDataFile(FILENAMES.LIMIT.STATE, defaultLimitData);
     setLimitState(defaultLimitData);
   } else {
     setLimitState(limitStateData.fileContent);

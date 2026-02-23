@@ -15,12 +15,14 @@ export interface TimerState {
   status: TimerStatus;
   availableActions: AvailableActions[];
   remainingSkips: number,
-  allotedBreaks: number
+  allotedBreaks: number,
+  _bypassThreshold?: boolean
 }
 
 interface StoredTimerState {
   currentCountdownMs: number;
   status: TimerStatus;
+  _bypassThreshold?: boolean // Only used in unit tests to bypass the {thresholdTimeMs} fallback
 }
 
 const writeIntervalMs = 30 * 1000; // 30 seconds
@@ -41,12 +43,14 @@ export const initTimer = () => {
   loadTimerStateFromFile();
   loadTimerConfigsIntoState();
   // Fallback time delay so break time doesn't start too soon on startup
-  if (
-    timerState.currentCountdownMs <= thresholdTimeMs ||
-    timerState.status === "BREAK"
-  ) {
-    timerState.currentCountdownMs = thresholdTimeMs;
-    timerState.status = "RUNNING";
+  if (!timerState._bypassThreshold) {
+    if (
+      timerState.currentCountdownMs <= thresholdTimeMs ||
+      timerState.status === "BREAK"
+    ) {
+      timerState.currentCountdownMs = thresholdTimeMs;
+      timerState.status = "RUNNING";
+    }
   }
   startTimer();
   emitTimer = setInterval(emitTimerStatus, tickIntervalMs); // Emit event every second

@@ -7,6 +7,7 @@ export function getUserDataFromFile<T>(fileName: string) {
   let fileContent: T | undefined = fs.existsSync(filePath)
     ? JSON.parse(fs.readFileSync(filePath, "utf-8"))
     : undefined;
+  console.log(`Getting user data from file : ${fileName} | file content: ${JSON.stringify(fileContent)} `);
   return { filePath, fileContent };
 }
 

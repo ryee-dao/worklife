@@ -23,10 +23,11 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
   };
 
   return (
-    <div className="grow">
+    <div data-testid="timer-buttons-container" className="grow">
       <div className="h-full flex justify-center gap-8">
         {(canPause || canStart) && (
           <button
+            data-testid="toggle-timer-button"
             onClick={changePauseState}
             className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
           >
@@ -38,6 +39,7 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
         )}
         {canSkip && (
           <button
+            data-testid="skip-button"
             onClick={skipToBreak}
             disabled={timerState.availableActions.length === 0}
             className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"

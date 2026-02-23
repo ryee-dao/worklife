@@ -6,7 +6,6 @@ import fs from 'fs'
 
 const TEST_DIR_PREFIX = "worklife-test-";
 
-const UNSAFE_CHARS = /['"]/;
 
 function ensureDirExists(p: string) {
   fs.mkdirSync(p, { recursive: true });
@@ -14,6 +13,7 @@ function ensureDirExists(p: string) {
 }
 
 function getSafeTempRoot() {
+  const UNSAFE_CHARS = /['"]/;
   const sysTmp = tmpdir();
   if (!UNSAFE_CHARS.test(sysTmp)) return sysTmp;
 
@@ -39,24 +39,23 @@ export async function launchApp(userDataDir: string) {
       path.join(__dirname, "../../dist/main/main.js"),
       `--user-data-dir=${userDataDir}`,
     ],
+    env: {
+      ...process.env,
+      PLAYWRIGHT_TEST: "1",
+    },
     cwd: path.join(__dirname, "../.."),  // project root
   });
 
   // Capture main process output
-  const process = electronApp.process();
-  process.stderr?.on("data", (data) => console.log("[STDERR]", data.toString()));
-  process.stdout?.on("data", (data) => console.log("[STDOUT]", data.toString()));
-
-  // Evaluation expression in the Electron context.
-  const appPath = await electronApp.evaluate(async ({ app }) => {
-    return app.getAppPath();
-  });
+  const electronProcess = electronApp.process();
+  electronProcess.stderr?.on("data", (data) => console.log("[STDERR]", data.toString()));
+  electronProcess.stdout?.on("data", (data) => console.log("[STDOUT]", data.toString()));
 
   // Get the first window that the app opens
-  const window = await electronApp.firstWindow();
+  const settingsWindow = await electronApp.firstWindow();
 
   // Pipe Electron console to test output for debugging
-  window.on("console", (msg) => console.log(`[Electron] ${msg.text()}`));
+  settingsWindow.on("console", (msg) => console.log(`[Electron] ${msg.text()}`));
 
-  return { electronApp, window };
+  return { electronApp, settingsWindow };
 }

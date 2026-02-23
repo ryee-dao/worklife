@@ -12,7 +12,7 @@ export default function BreakTimeDisplay({
   const hours = formattedTime.split(":")[0];
   const minutes = formattedTime.split(":")[1];
   return (
-    <div>
+    <div data-testid="break-time-display">
       <div className="h-full text-blue-800 font-bold text-9xl tracking-widest">
         <span>{hours}</span> : <span>{minutes}</span>
       </div>
