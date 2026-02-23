@@ -9,6 +9,7 @@ A timer that blocks enforces break periods. Built as a personal productivity too
 - **TypeScript** - Type safety
 - **Vite** - Fast build tooling
 - **Tailwind CSS** - Styling
+- **Playwright** - Testing
 
 ## Installation
 
@@ -43,4 +44,7 @@ npm run build
 
 # Create distributable
 npm run dist
+
+# Run Playwright tests
+npm run test
 ```
