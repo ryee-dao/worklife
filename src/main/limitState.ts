@@ -22,7 +22,7 @@ export const initLimits = () => {
 }
 
 export function loadLimitStateFromFile() {
-  let limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
+  const limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
   // If no timer data is returned, set new state in file
   const defaultLimitData = {
     lastResetDate: getTodayDateAsString(),
@@ -38,7 +38,7 @@ export function loadLimitStateFromFile() {
 }
 
 export function resetDailyLimits() {
-  let newLimitState = getLimitState();
+  const newLimitState = getLimitState();
   // If the last reset date is not today, reset it and set the last reset date to today
   if (!(newLimitState.lastResetDate === getTodayDateAsString())) {
     setLimitState({
@@ -49,8 +49,8 @@ export function resetDailyLimits() {
 }
 
 export function increaseSkippedBreakCount() {
-  let limitStateData = getLimitState();
-  let newLimitStateData = {
+  const limitStateData = getLimitState();
+  const newLimitStateData = {
     ...limitStateData,
     skippedBreakCount: limitStateData.skippedBreakCount + 1,
   }
@@ -59,8 +59,8 @@ export function increaseSkippedBreakCount() {
 }
 
 export function calculateRemainingBreakSkips() {
-  let limitStateData = getLimitState();
-  let limitConfigs = getLimitSettingsData();
+  const limitStateData = getLimitState();
+  const limitConfigs = getLimitSettingsData();
   return (
     limitConfigs.allotedBreaks - limitStateData.skippedBreakCount
   );

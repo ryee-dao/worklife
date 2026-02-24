@@ -12,7 +12,7 @@ export interface TimerConfig {
 }
 
 export function getTimerSettingsData(): TimerConfig {
-  let timerSettingsData = getUserDataFromFile<TimerConfig>(FILENAMES.TIMER.SETTINGS);
+  const timerSettingsData = getUserDataFromFile<TimerConfig>(FILENAMES.TIMER.SETTINGS);
   let timerSettings: TimerConfig;
   // If no timer settings data is returned, set new state in file
   if (!timerSettingsData.fileContent) {

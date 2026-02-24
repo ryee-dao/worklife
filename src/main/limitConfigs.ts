@@ -15,7 +15,7 @@ export interface LimitConfig {
 let limitConfig: LimitConfig;
 
 export function getLimitSettingsData(): LimitConfig {
-  let limitSettingsData = getUserDataFromFile<LimitConfig>(
+  const limitSettingsData = getUserDataFromFile<LimitConfig>(
     FILENAMES.LIMIT.SETTINGS
   );
   // If no limit settings data is returned, set new state in file

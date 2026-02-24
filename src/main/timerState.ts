@@ -5,7 +5,7 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../shared/utils/files";
-import { calculateRemainingBreakSkips, getLimitState } from "./limitState";
+import { calculateRemainingBreakSkips } from "./limitState";
 import { getLimitConfig } from "./limitConfigs";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
@@ -29,6 +29,8 @@ const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
 let timerState: TimerState | StoredTimerState;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let tickTimer: NodeJS.Timeout, emitTimer: NodeJS.Timeout;
 let newTimerTimeMs: number;
 let breakTimeMs: number;
@@ -57,7 +59,7 @@ export const initTimer = () => {
 };
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
-  let availableActions: AvailableActions[] = [];
+  const availableActions: AvailableActions[] = [];
   switch (status) {
     case "RUNNING":
       availableActions.push("pause");
@@ -169,18 +171,11 @@ export const skipTimer = () => {
 };
 
 const loadTimerStateFromFile = () => {
-  let timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
+  const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
+  
   // If no timer data is returned, set new state in file
-
   timerState = { ...defaultTimerData, ...timerData?.fileContent }
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-
-  // if (!timerData.fileContent) {
-  //   writeToUserDataFile(FILENAMES.TIMER.STATE, defaultTimerData);
-  //   timerState = defaultTimerData;
-  // } else {
-  //   timerState = timerData.fileContent;
-  // }
 
   console.log("init timer", JSON.stringify(timerState));
 };

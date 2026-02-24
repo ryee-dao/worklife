@@ -4,7 +4,7 @@ import { app } from "electron";
 
 export function getUserDataFromFile<T>(fileName: string) {
   const filePath = path.join(app.getPath("userData"), fileName);
-  let fileContent: T | undefined = fs.existsSync(filePath)
+  const fileContent: T | undefined = fs.existsSync(filePath)
     ? JSON.parse(fs.readFileSync(filePath, "utf-8"))
     : undefined;
   console.log(`Getting user data from file : ${fileName} | file content: ${JSON.stringify(fileContent)} `);

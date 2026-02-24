@@ -8,7 +8,7 @@ import TimeSettings from "./settings/TimerSettings";
 import LimitSettings from "./settings/LimitSettings";
 
 export default function Dashboard() {
-  let [timerStateObject, setTimerStateObject] = useState<TimerState>();
+  const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
     window.electronAPI.onTimerUpdate((timerState) => {
       setTimerStateObject(timerState);

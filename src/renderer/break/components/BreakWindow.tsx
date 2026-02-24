@@ -4,7 +4,7 @@ import { TimerState } from "../../../main/timerState";
 import BreakButtons from "./BreakButtons";
 
 export default function BreakWindow() {
-  let [timerStateObject, setTimerStateObject] = useState<TimerState>();
+  const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
     window.electronAPI.onTimerUpdate((timerState) => {
       setTimerStateObject(timerState);

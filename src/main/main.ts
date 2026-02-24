@@ -41,7 +41,7 @@ if (!firstAppInstance) {
   // This is the first instance, continue normally
 
   // When a second instance is opened
-  app.on("second-instance", (event, commandLine, workingDirectory) => {
+  app.on("second-instance", () => {
     // Focus the existing window instead
     if (settingsWindow) {
       if (settingsWindow.isMinimized()) settingsWindow.restore();
@@ -84,7 +84,7 @@ export function createSettingsWindow() {
   const trayImage = nativeImage.createFromPath(
     path.join(__dirname, "../assets/dog.png")
   );
-  let tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
+  const tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
   tray.setToolTip("Work Life");
 
   // Build tray menu

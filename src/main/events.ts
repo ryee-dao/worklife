@@ -24,7 +24,7 @@ export const broadcastStateToRendererWindows = (
   windows: Array<BrowserWindow | null>,
   sendEvent: string
 ) => {
-  for (let window of windows) {
+  for (const window of windows) {
     if (window && !window.isDestroyed()) {
       window.webContents.send(sendEvent, state);
     }

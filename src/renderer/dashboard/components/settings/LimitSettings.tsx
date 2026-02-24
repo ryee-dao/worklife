@@ -5,7 +5,7 @@ import { isDev } from "../../../common/constants"
 export default function LimitSettings() {
   const [allotedBreaks, setAllotedBreaks] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle"
@@ -38,7 +38,7 @@ export default function LimitSettings() {
         allotedBreaks,
       };
       try {
-        setIsSaving(true);
+        // setIsSaving(true);
         await window.electronAPI.saveLimitConfig(limitConfigs);
         setSaveStatus("success");
         setSaveMessage(
@@ -48,7 +48,7 @@ export default function LimitSettings() {
         setSaveStatus("error");
         setSaveMessage(String(err));
       } finally {
-        setIsSaving(false);
+        // setIsSaving(false);
       }
     }
   }
