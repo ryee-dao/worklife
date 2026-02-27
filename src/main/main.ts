@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
-import { initTimer } from "./timerState";
+import { destroyTimers, initTimer } from "./timerState";
 import { initLimits } from "./limitState";
 import { initEventListeners } from "./events";
 export let settingsWindow: BrowserWindow | null = null;
@@ -27,8 +27,15 @@ function initApp() {
   createSettingsWindow();
 }
 
+// When the app.close() signal is emitted, set a flag that tells the app: 
+// bypass the hide to tray logic 
 app.on('before-quit', () => {
   forceQuit = true;
+});
+
+// Right before quitting, destroy timers so that they won't persist
+app.on('will-quit', () => {
+  destroyTimers();
 });
 
 // Check if another instance is running

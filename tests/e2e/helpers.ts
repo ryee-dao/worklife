@@ -1,4 +1,4 @@
-import { _electron as electron, ElectronApplication, Page } from "playwright";
+import { _electron as electron } from "playwright";
 import { mkdtempSync, rmSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";

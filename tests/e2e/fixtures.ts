@@ -1,6 +1,7 @@
+/* eslint-disable no-empty-pattern */
 import { test as base } from "@playwright/test";
 import { ElectronApplication, Page } from "playwright";
-import { launchApp, createTestUserDataDir, cleanupTestUserDataDir } from "./helpers";
+import { launchApp, createTestUserDataDir } from "./helpers";
 import fs from "fs";
 import path from "path";
 

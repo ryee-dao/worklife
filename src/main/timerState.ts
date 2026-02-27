@@ -30,7 +30,6 @@ let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
 let timerState: TimerState | StoredTimerState;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let tickTimer: NodeJS.Timeout, emitTimer: NodeJS.Timeout;
 let newTimerTimeMs: number;
 let breakTimeMs: number;
@@ -56,6 +55,11 @@ export const initTimer = () => {
   }
   startTimer();
   emitTimer = setInterval(emitTimerStatus, tickIntervalMs); // Emit event every second
+};
+
+export const destroyTimers = () => {
+  clearInterval(tickTimer);
+  clearInterval(emitTimer);
 };
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
