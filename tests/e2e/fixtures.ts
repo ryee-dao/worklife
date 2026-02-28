@@ -1,5 +1,5 @@
 /* eslint-disable no-empty-pattern */
-import { test as base } from "@playwright/test";
+import { test as base, TestInfo } from "@playwright/test";
 import { ElectronApplication, Page } from "playwright";
 import { launchApp, createTestUserDataDir } from "./helpers";
 import fs from "fs";
@@ -27,17 +27,66 @@ const test = base.extend<{
     // cleanupTestUserDataDir(dir);
   },
 
-  launchElectron: async ({ userDataDir }, use) => {
-    let app: Awaited<ReturnType<typeof launchApp>> | null = null;
+  launchElectron: async ({ userDataDir }, use, testInfo) => {
+    const apps: ElectronApplication[] = [];
+    const tracedContexts = new Set();
 
     await use(async () => {
-      app = await launchApp(userDataDir.path);
-      return app;
+      const result = await launchApp(userDataDir.path);
+      apps.push(result.electronApp);
+      await startTracingForWindow(result.settingsWindow, tracedContexts);
+
+      result.electronApp.on('window', async (window) => {
+        await startTracingForWindow(window, tracedContexts);
+      });
+
+      return result;
     });
 
-    // Teardown
-    if (app) await (app as Awaited<ReturnType<typeof launchApp>>).electronApp.close();
+    for (const app of apps) {
+      const tracePaths = await stopAllTracing(app, tracedContexts, testInfo);
+      attachTraces(tracePaths, testInfo);
+      await app.close();
+    }
+
   },
 });
+
+// Manual tracing since it doesn't work with Electron
+async function startTracingForWindow(window: Page, tracedContexts: Set<unknown>) {
+  if (tracedContexts.has(window.context())) return;
+  tracedContexts.add(window.context());
+  await window.context().tracing.start({
+    screenshots: true,
+    snapshots: true,
+  });
+}
+
+async function stopAllTracing(
+  app: ElectronApplication,
+  tracedContexts: Set<unknown>,
+  testInfo: TestInfo
+): Promise<string[]> {
+  const tracePaths: string[] = [];
+  for (const win of app.windows()) {
+    if (tracedContexts.has(win.context())) {
+      const tracePath = testInfo.outputPath(`trace-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.zip`);
+      await win.context().tracing.stop({ path: tracePath });
+      tracePaths.push(tracePath);
+      tracedContexts.delete(win.context());
+    }
+  }
+  return tracePaths;
+}
+
+function attachTraces(tracePaths: string[], testInfo: TestInfo) {
+  for (const tracePath of tracePaths) {
+    testInfo.attachments.push({
+      name: 'trace',
+      path: tracePath,
+      contentType: 'application/zip',
+    });
+  }
+}
 
 export { test }

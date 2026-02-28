@@ -63,3 +63,79 @@ test("App launches the break window properly when the timer countdown is reached
   await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 25")).toBeVisible({ timeout: 6 * 1000 })
   await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 20")).toBeVisible({ timeout: 6 * 1000 })
 });
+
+test("App pauses properly", async ({ launchElectron }) => {
+  const { settingsWindow } = await launchElectron();
+
+  // Get the time before pause
+  const timerBeforePause = await settingsWindow.getByTestId('timer-time-display').textContent()
+
+  // Expect that the timer stops counting down after pausing 
+  await settingsWindow.getByTestId('toggle-timer-button').click();
+  await settingsWindow.waitForTimeout(3 * 1000);
+  await expect(settingsWindow.getByTestId('timer-time-display').getByText(timerBeforePause!)).toBeVisible({ timeout: 3 * 1000 })
+
+  // Expect that the timer starts to countdown after unpausing 
+  await settingsWindow.getByTestId('toggle-timer-button').click();
+  await settingsWindow.waitForTimeout(3 * 1000);
+  await expect(settingsWindow.getByTestId('timer-time-display').getByText(timerBeforePause!)).not.toBeVisible({ timeout: 3 * 1000 })
+});
+
+test("Break window is unable to skip after all skips are exhausted", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp } = await launchElectron();
+
+  // Wait for the skip container to appear
+  await settingsWindow.getByTestId("timer-skipbox").waitFor()
+
+  // Get the number of total and used skips 
+  const totalNumberOfSkips = await settingsWindow.getByTestId("timer-skip-icon").count()
+  let currentNumberOfUsedSkips = await settingsWindow.locator('.used-skip').count()
+  let expectedNumberOfSkips = 0;
+
+  // Expect that there are more than 0 skips by default and none are used
+  expect(totalNumberOfSkips).toBeGreaterThan(0);
+  expect(currentNumberOfUsedSkips).toBe(expectedNumberOfSkips);
+
+  // Loop {totalNumberOfSkips} number of times
+  for (let loopIdx = 0; loopIdx < totalNumberOfSkips; loopIdx++) {
+    // Click on the skip button and capture the break window
+    const [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window', {
+        timeout: 10 * 1000,
+      }),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+    ])
+
+    // Click on the skip break icon
+    await breakWindow.getByTestId("break-skip").click()
+    await breakWindow.waitForEvent('close');
+    await settingsWindow.getByTestId("timer-skipbox").waitFor()
+
+    // Expect the break window to be closed
+    expect(breakWindow.isClosed()).toBeTruthy();
+
+    // Expect the same number of total skips to be present
+    expect(await settingsWindow.getByTestId("timer-skip-icon").count()).toBe(totalNumberOfSkips);
+
+    // Expect the number of used skips incremented by one
+    currentNumberOfUsedSkips = await settingsWindow.locator('.used-skip').count()
+    expectedNumberOfSkips += 1;
+    expect(currentNumberOfUsedSkips).toBe(expectedNumberOfSkips);
+  }
+
+  // Skip one last time
+  const [breakWindow] = await Promise.all([
+    electronApp.waitForEvent('window', {
+      timeout: 10 * 1000,
+    }),
+    settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+  ])
+
+  // Expect the skip button is disabled
+  await expect(breakWindow.getByTestId("break-skip")).toBeDisabled();
+
+  // Expect that clicking on the skip does nothing
+  await breakWindow.getByTestId("break-skip").click({ delay: 1 * 1000, force: true })
+  await breakWindow.waitForTimeout(2 * 1000)
+  expect(breakWindow.isClosed()).toBeFalsy();
+});

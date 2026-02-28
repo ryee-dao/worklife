@@ -17,13 +17,13 @@ export default function BreakButtons({ timerState }: BreakButtonProps) {
   return (
     <div className="h-full flex justify-center">
       <button
+        data-testid="break-skip"
         onClick={changeBreakState}
         disabled={!canSkip}
-        className={`h-full aspect-square bg-green-200 rounded-full flex items-center justify-center transition-colors ${
-          canSkip
+        className={`h-full aspect-square bg-green-200 rounded-full flex items-center justify-center transition-colors ${canSkip
             ? "hover:bg-blue-300 cursor-pointer text-blue-800"
             : "cursor-not-allowed text-slate-700 hover:bg-slate-300"
-        }`}
+          }`}
       >
         {canSkip ? (
           <ForwardIcon className="h-2/3" />
