@@ -25,7 +25,7 @@ export function getLimitSettingsData(): LimitConfig {
   } else {
     setLimitConfigs(limitSettingsData.fileContent);
   }
-  console.log(limitConfig);
+  // console.log(limitConfig);
   return getLimitConfig();
 }
 

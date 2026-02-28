@@ -11,14 +11,14 @@ export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Re
 let forceQuit = false; // Allows app.quit() to bypass tray logic
 const isTest = !!process.env.PLAYWRIGHT_TEST;
 
-process.stdout.on('error', (err) => {
-  if (err.code === 'EPIPE') return;
-  throw err;
-});
-process.stderr.on('error', (err) => {
-  if (err.code === 'EPIPE') return;
-  throw err;
-});
+// process.stdout.on('error', (err) => {
+//   if (err.code === 'EPIPE') return;
+//   throw err;
+// });
+// process.stderr.on('error', (err) => {
+//   if (err.code === 'EPIPE') return;
+//   throw err;
+// });
 
 function initApp() {
   initLimits();

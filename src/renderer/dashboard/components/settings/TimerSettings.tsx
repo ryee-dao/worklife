@@ -76,7 +76,7 @@ export default function TimerSettings() {
           <h2 className="font-semibold text-lg md:text-2xl">Timer Settings</h2>
           <hr className="text-slate-400 my-1" />
           <div className="grow text-sm md:text-lg">
-            <div className="tracking-wider p-2">
+            <div data-testid="timer-duration" className="tracking-wider p-2">
               <label>
                 I want to take a break every{" "}
                 <input
@@ -97,7 +97,7 @@ export default function TimerSettings() {
                 </p>
               )}
             </div>
-            <div className="tracking-wider p-2">
+            <div data-testid="break-duration" className="tracking-wider p-2">
               <label>
                 This break will last{" "}
                 <input

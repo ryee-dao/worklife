@@ -60,7 +60,7 @@ export default function LimitSettings() {
           <h2 className="font-semibold text-lg md:text-2xl">Limit Settings</h2>
           <hr className="text-slate-400 my-1" />
           <div className="grow text-sm md:text-lg">
-            <div className="tracking-wider p-2">
+            <div data-testid="allowed-break-count" className="tracking-wider p-2">
               <label>
                 I will be able to skip{" "}
                 <input

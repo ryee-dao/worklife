@@ -137,12 +137,13 @@ const transitionToNextState = () => {
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
-      loadTimerConfigsIntoState(); // Update timer config changes only after break
+      // loadTimerConfigsIntoState(); // Update timer config changes only after break
       break;
 
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const pauseTimer = () => {
@@ -164,19 +165,19 @@ export const skipBreak = () => {
   timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+  // writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const skipTimer = () => {
   timerState.status = "RUNNING";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+  // writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 const loadTimerStateFromFile = () => {
   const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
-  
+
   // If no timer data is returned, set new state in file
   timerState = { ...defaultTimerData, ...timerData?.fileContent }
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);

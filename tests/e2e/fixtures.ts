@@ -20,11 +20,9 @@ const test = base.extend<{
     await use({
       path: dir,
       seed(filename: string, data: object) {
-        console.log(path.join(dir, filename))
         fs.writeFileSync(path.join(dir, filename), JSON.stringify(data));
       },
     });
-    // cleanupTestUserDataDir(dir);
   },
 
   launchElectron: async ({ userDataDir }, use, testInfo) => {
@@ -34,22 +32,30 @@ const test = base.extend<{
     await use(async () => {
       const result = await launchApp(userDataDir.path);
       apps.push(result.electronApp);
-      await startTracingForWindow(result.settingsWindow, tracedContexts);
 
+      await startTracingForWindow(result.settingsWindow, tracedContexts);
       result.electronApp.on('window', async (window) => {
         await startTracingForWindow(window, tracedContexts);
       });
 
+      // Wrap close to capture traces before windows are destroyed
+      const originalClose = result.electronApp.close.bind(result.electronApp);
+      result.electronApp.close = async () => {
+        const tracePaths = await stopAllTracing(result.electronApp, tracedContexts, testInfo);
+        attachTraces(tracePaths, testInfo);
+        return originalClose();
+      };
+
       return result;
     });
 
+    // Teardown: close any app that wasn't manually closed
     for (const app of apps) {
-      const tracePaths = await stopAllTracing(app, tracedContexts, testInfo);
-      attachTraces(tracePaths, testInfo);
-      await app.close();
+      // Close windows manually
+      await app.close().catch(() => null);
     }
-
   },
+
 });
 
 // Manual tracing since it doesn't work with Electron

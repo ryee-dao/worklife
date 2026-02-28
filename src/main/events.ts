@@ -11,6 +11,7 @@ import {
   skipBreak,
   TimerState,
   skipTimer,
+  loadTimerConfigsIntoState,
 } from "./timerState";
 import {
   breakWindow,
@@ -67,6 +68,8 @@ export const initEventListeners = () => {
 
   timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
+  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, loadTimerConfigsIntoState);
+
 
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
