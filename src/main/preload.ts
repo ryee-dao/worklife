@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
-import { TimerState } from "./timerState";
-import { TimerConfig } from "./timerConfigs";
-import { LimitConfig } from "./limitConfigs";
+import { TimerState } from "./timer/timerState";
+import { TimerConfig } from "./timer/timerConfigs";
+import { LimitConfig } from "./limit/limitConfigs";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {

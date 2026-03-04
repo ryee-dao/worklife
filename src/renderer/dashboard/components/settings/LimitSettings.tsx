@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LimitConfig } from "../../../../main/limitConfigs";
+import { LimitConfig } from "../../../../main/limit/limitConfigs";
 import { isDev } from "../../../common/constants"
 
 export default function LimitSettings() {

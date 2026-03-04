@@ -1,5 +1,5 @@
 import { PlayIcon, PauseIcon, ForwardIcon } from "@heroicons/react/24/outline";
-import { TimerState } from "../../../../main/timerState";
+import { TimerState } from "../../../../main/timer/timerState";
 
 interface TimerButtonProps {
   timerState: TimerState;

@@ -1,9 +1,9 @@
-import { FILENAMES } from "../shared/constants";
-import { getTodayDateAsString } from "../shared/utils/date";
+import { FILENAMES } from "../../shared/constants";
+import { getTodayDateAsString } from "../../shared/utils/date";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../shared/utils/files";
+} from "../../shared/utils/files";
 import { getLimitSettingsData } from "./limitConfigs";
 
 export interface LimitState {

@@ -1,8 +1,8 @@
-import { DEFAULTS, FILENAMES } from "../shared/constants";
+import { DEFAULTS, FILENAMES } from "../../shared/constants";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../shared/utils/files";
+} from "../../shared/utils/files";
 
 const defaultLimitConfigs: LimitConfig = {
   allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,

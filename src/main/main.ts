@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
-import { destroyTimers, initTimer } from "./timerState";
-import { initLimits } from "./limitState";
+import { destroyTimers, initTimer } from "./timer/timerState";
+import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;

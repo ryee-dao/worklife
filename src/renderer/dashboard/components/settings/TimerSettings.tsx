@@ -5,7 +5,7 @@ import {
   convertMsToSeconds,
   convertSecondsToMs,
 } from "../../../../shared/utils/time";
-import { TimerConfig } from "../../../../main/timerConfigs";
+import { TimerConfig } from "../../../../main/timer/timerConfigs";
 import { isDev } from "../../../common/constants";
 
 export default function TimerSettings() {

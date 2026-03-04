@@ -1,9 +1,9 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { EVENTS, FILENAMES } from "../shared/constants";
 import { writeToUserDataFile } from "../shared/utils/files";
-import { getLimitSettingsData, LimitConfig } from "./limitConfigs";
-import { increaseSkippedBreakCount } from "./limitState";
-import { getTimerSettingsData, TimerConfig } from "./timerConfigs";
+import { getLimitSettingsData, LimitConfig } from "./limit/limitConfigs";
+import { increaseSkippedBreakCount } from "./limit/limitState";
+import { getTimerSettingsData, TimerConfig } from "./timer/timerConfigs";
 import {
   timerEmitter,
   pauseTimer,
@@ -12,7 +12,7 @@ import {
   TimerState,
   skipTimer,
   loadTimerConfigsIntoState,
-} from "./timerState";
+} from "./timer/timerState";
 import {
   breakWindow,
   closeBreakWindow,

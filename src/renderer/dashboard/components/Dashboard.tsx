@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import TopTabs from "./TopTabs";
 import Timer from "./timer/Timer";
 import Settings from "./settings/Settings";
-import { TimerState } from "../../../main/timerState";
+import { TimerState } from "../../../main/timer/timerState";
 import TimeSettings from "./settings/TimerSettings";
 import LimitSettings from "./settings/LimitSettings";
 

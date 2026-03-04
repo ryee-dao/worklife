@@ -7,5 +7,8 @@ export default defineConfig({
         ['list'],
         ['html']
     ],
-    retries: 1
+    retries: 1,
+    use: {
+        headless: true
+    }
 });

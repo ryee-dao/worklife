@@ -1,5 +1,5 @@
-import { DEFAULTS, FILENAMES } from "../shared/constants";
-import { getUserDataFromFile, writeToUserDataFile } from "../shared/utils/files";
+import { DEFAULTS, FILENAMES } from "../../shared/constants";
+import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
 
 const defaultTimerSettings: TimerConfig = {
   timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
