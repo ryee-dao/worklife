@@ -20,7 +20,7 @@
     "_dev:preload:watch": "node esbuild.preload.ts --watch",
     "_dev:electron:start": "nodemon --watch dist/main --exec \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
     "_build:vite": "vite build",
-    "_build:electron": "tsc --build tsconfig.main.json",
+    "_build:electron": "tsc --build tsconfig.main.json --force",
     "_build:preload": "node esbuild.preload.ts"
   },
   "build": {
@@ -49,7 +49,7 @@
   },
 "simple-git-hooks": {
     "pre-commit": "npx lint-staged",
-    "pre-push": "npm run lint && npm run test:unit && npm run test:e2e"
+    "pre-push": "npm run lint && npm run _test:unit && npm run _test:e2e"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint"
