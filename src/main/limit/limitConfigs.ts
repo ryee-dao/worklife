@@ -14,13 +14,12 @@ export interface LimitConfig {
 
 let limitConfig: LimitConfig;
 
-export function getLimitSettingsData(): LimitConfig {
+export function getLimitConfigsFileData(): LimitConfig {
   const limitSettingsData = getUserDataFromFile<LimitConfig>(
     FILENAMES.LIMIT.SETTINGS
   );
   // If no limit settings data is returned, set new state in file
   if (!limitSettingsData.fileContent) {
-    writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, defaultLimitConfigs);
     setLimitConfigs(defaultLimitConfigs);
   } else {
     setLimitConfigs(limitSettingsData.fileContent);
@@ -30,6 +29,7 @@ export function getLimitSettingsData(): LimitConfig {
 }
 
 function setLimitConfigs(newLimitConfig: LimitConfig) {
+  writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, newLimitConfig);
   limitConfig = newLimitConfig;
 }
 

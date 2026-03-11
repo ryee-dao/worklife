@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { EVENTS, FILENAMES } from "../shared/constants";
 import { writeToUserDataFile } from "../shared/utils/files";
-import { getLimitSettingsData, LimitConfig } from "./limit/limitConfigs";
+import { getLimitConfigsFileData, LimitConfig } from "./limit/limitConfigs";
 import { increaseSkippedBreakCount } from "./limit/limitState";
 import { getTimerSettingsData, TimerConfig } from "./timer/timerConfigs";
 import {
@@ -86,7 +86,7 @@ export const initEventListeners = () => {
     }
   );
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitSettingsData);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitConfigsFileData);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT,
     (event, config: LimitConfig) => {

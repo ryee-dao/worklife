@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DEFAULTS, EVENTS } from '../../shared/constants';
 
-// Mock side effects only
+// Add mocks
 vi.mock('../../shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined })),
   writeToUserDataFile: vi.fn(),

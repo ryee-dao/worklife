@@ -1,7 +1,7 @@
 {
   "name": "worklife",
   "version": "1.0.0",
-  "description": "Tool to reclaim back work-life balance",
+  "description": "Tool to reclaim work-life balance",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
@@ -22,6 +22,10 @@
     "_build:vite": "vite build",
     "_build:electron": "tsc --build tsconfig.main.json --force",
     "_build:preload": "node esbuild.preload.ts"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "pre-push": "npm run lint && npm run _test:unit && npm run _test:e2e"
   },
   "build": {
     "appId": "com.worklife",
@@ -47,24 +51,20 @@
       "!dist/*.yaml"
     ]
   },
-"simple-git-hooks": {
-    "pre-commit": "npx lint-staged",
-    "pre-push": "npm run lint && npm run _test:unit && npm run _test:e2e"
-  },
   "lint-staged": {
     "*.{ts,tsx}": "eslint"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RyanNDao/worklife.git"
+    "url": "git+https://github.com/ryee-dao/worklife.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ryan D.",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/RyanNDao/worklife/issues"
+    "url": "https://github.com/ryee-dao/worklife/issues"
   },
-  "homepage": "https://github.com/RyanNDao/worklife#readme",
+  "homepage": "https://github.com/ryee-dao/worklife#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.57.0",

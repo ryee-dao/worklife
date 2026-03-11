@@ -45,6 +45,6 @@ npm run build
 # Create distributable
 npm run dist
 
-# Run Playwright tests
+# Run end-to-end + unit tests
 npm run test
 ```
