@@ -25,6 +25,8 @@ beforeEach(() => {
   vi.mocked(writeToUserDataFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
+  vi.mocked(getLimitConfigsFileData).mockReset();
+  vi.mocked(getLimitConfigsFileData).mockReturnValue({ allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
 });
 
 afterEach(() => {
@@ -100,6 +102,17 @@ describe('Limit configs effects', () => {
     expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS - 2);
   })
 
+  test('remaining skips reflects custom allotted breaks config', () => {
+    // Override the config mock for this test
+    vi.mocked(getLimitConfigsFileData).mockReturnValue({ allotedBreaks: 5 });
+
+    initLimits();
+
+    expect(calculateRemainingBreakSkips()).toBe(5);
+
+    increaseSkippedBreakCount();
+    expect(calculateRemainingBreakSkips()).toBe(4);
+  });
 })
 
 describe('Daily reset logic', () => {
@@ -180,19 +193,5 @@ describe('Skip count edge cases', () => {
     const state = getLimitState();
     expect(state.lastResetDate).toBe("2026-01-23");
     expect(state.skippedBreakCount).toBe(2);
-  });
-});
-
-describe('Limit configs', () => {
-  test('remaining skips reflects custom allotted breaks config', () => {
-    // Override the config mock for this test
-    vi.mocked(getLimitConfigsFileData).mockReturnValue({ allotedBreaks: 5 });
-
-    initLimits();
-
-    expect(calculateRemainingBreakSkips()).toBe(5);
-
-    increaseSkippedBreakCount();
-    expect(calculateRemainingBreakSkips()).toBe(4);
   });
 });

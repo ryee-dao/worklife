@@ -70,7 +70,12 @@ export function createSettingsWindow() {
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
+    show: false,
   });
+
+  // Only show window when everything is loaded
+  settingsWindow.once('ready-to-show', () => settingsWindow!.show());
+
   if (!isDev) {
     settingsWindow.loadFile(
       path.join(__dirname, "../renderer/dashboard/index.html")
