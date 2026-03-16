@@ -120,11 +120,10 @@ const checkTimer = () => {
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  console.log('checkTimer()', timerState, warningThresholdMs);
-
+  console.log('checkTimer()', timerState);
+  
   // Emit a warning if {warningThresholdMs} is reached
   if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
-    console.log('WARNING GTRIGGER')
     timerEmitter.emit(EVENTS.TIMER.WARNING);
   }
 
