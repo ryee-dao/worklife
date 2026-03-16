@@ -9,7 +9,7 @@
     "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
     "dist": "npm run build && electron-builder",
     "start": "npm run build && electron .",
-    "lint": "eslint src/ tests/",
+    "lint": "npx tsc --noEmit && eslint src/ tests/",
     "test": "npm run _test:unit && npm run _test:e2e",
     "prepare": "npx simple-git-hooks",
     "_test:unit": "vitest run",

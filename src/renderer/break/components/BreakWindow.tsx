@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import BreakTimeDisplay from "./BreakTimeDisplay";
-import { TimerState } from "../../../main/timerState";
+import { TimerState } from "../../../main/timer/timerState";
 import BreakButtons from "./BreakButtons";
 
 export default function BreakWindow() {

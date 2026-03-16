@@ -32,11 +32,11 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
               <button
                 data-testid="toggle-timer-button"
                 onClick={changePauseState}
-                className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
+                className="aspect-square h-2/3 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
               >
-                {canPause && <PauseIcon className="h-2/3 text-green-700" />}
+                {canPause && <PauseIcon className="h-2/3 text-slate-700" />}
                 {canStart && (
-                  <PlayIcon className="h-2/3 text-green-700 ml-1 lg:ml-4" />
+                  <PlayIcon className="h-2/3 text-slate-700 ml-1 lg:ml-4" />
                 )}
               </button>
             )}
@@ -45,9 +45,9 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
                 data-testid="skip-button"
                 onClick={skipToBreak}
                 disabled={timerState.availableActions.length === 0}
-                className="aspect-square h-2/3 bg-green-200 rounded-full flex items-center justify-center hover:bg-green-300 transition-colors cursor-pointer"
+                className="aspect-square h-2/3 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
               >
-                <ForwardIcon className="h-2/3 text-green-700 sm:ml-1 lg:ml-3" />
+                <ForwardIcon className="h-2/3 text-slate-700 sm:ml-1 lg:ml-3" />
               </button>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { TimerState } from "../../../../main/timerState";
+import { TimerState } from "../../../../main/timer/timerState";
 import TimerTimeDisplay from "./TimerTimeDisplay";
 import TimerButtons from "./TimerButtons";
 import TimerSkipbox from "./TimerSkipbox";

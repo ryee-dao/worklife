@@ -33,6 +33,7 @@ let timerState: TimerState | StoredTimerState;
 let tickTimer: NodeJS.Timeout
 let newTimerTimeMs: number;
 let breakTimeMs: number;
+let warningThresholdMs: number;
 const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
@@ -43,24 +44,26 @@ export const timerEmitter = new EventEmitter();
 export const initTimer = () => {
   loadTimerStateFromFile();
   loadTimerConfigsIntoState();
-  // Fallback time delay so break time doesn't start too soon on startup
   if (!timerState._bypassThreshold) {
-    if (
-      timerState.currentCountdownMs <= thresholdTimeMs ||
-      timerState.status === "BREAK"
-    ) {
-      timerState.currentCountdownMs = thresholdTimeMs;
-      timerState.status = "RUNNING";
-    }
+    fallbackTimer();
   }
   startTimer();
-  // emitTimer = setInterval(emitTimerStatus, tickIntervalMs); // Emit event every second
 };
 
 export const destroyTimers = () => {
   clearInterval(tickTimer);
-  // clearInterval(emitTimer);
 };
+
+const fallbackTimer = () => {
+  // Fallback time delay so break time doesn't start too soon on startup
+  if (
+    timerState.currentCountdownMs <= thresholdTimeMs ||
+    timerState.status === "BREAK"
+  ) {
+    timerState.currentCountdownMs = thresholdTimeMs;
+    timerState.status = "RUNNING";
+  }
+}
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   const availableActions: AvailableActions[] = [];
@@ -117,7 +120,13 @@ const checkTimer = () => {
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  console.log('checkTimer()', timerState);
+  console.log('checkTimer()', timerState, warningThresholdMs);
+
+  // Emit a warning if {warningThresholdMs} is reached
+  if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
+    console.log('WARNING GTRIGGER')
+    timerEmitter.emit(EVENTS.TIMER.WARNING);
+  }
 
   // Check for transition
   if (timerState.currentCountdownMs <= 0) {
@@ -166,14 +175,12 @@ export const skipBreak = () => {
   timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  // writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const skipTimer = () => {
   timerState.status = "RUNNING";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  // writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 const loadTimerStateFromFile = () => {
@@ -190,4 +197,5 @@ export const loadTimerConfigsIntoState = () => {
   const timerConfig = getTimerSettingsData();
   newTimerTimeMs = timerConfig.timerDurationMs;
   breakTimeMs = timerConfig.breakDurationMs;
+  warningThresholdMs = timerConfig.warningThresholdMs;
 };

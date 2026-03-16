@@ -1,4 +1,4 @@
-import { TimerState } from "../../../main/timerState";
+import { TimerState } from "../../../main/timer/timerState";
 import { formatMsToMMSS } from "../../../shared/utils/time";
 
 interface BreakTimeDisplayProps {

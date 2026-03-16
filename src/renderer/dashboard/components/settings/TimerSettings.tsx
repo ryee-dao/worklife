@@ -13,6 +13,8 @@ export default function TimerSettings() {
     useState<number>(0);
   const [breakDurationInSeconds, setBreakDurationInSeconds] =
     useState<number>(0);
+  const [warningThresholdInMinutes, setWarningThresholdInMinutes] =
+    useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   // const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(true);
@@ -38,6 +40,7 @@ export default function TimerSettings() {
       const timerConfig: TimerConfig = {
         timerDurationMs: convertMinutesToMs(timerDurationInMinutes),
         breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
+        warningThresholdMs: convertMinutesToMs(warningThresholdInMinutes),
       };
       try {
         // setIsSaving(true);
@@ -63,6 +66,9 @@ export default function TimerSettings() {
       );
       setBreakDurationInSeconds(
         convertMsToSeconds(timerConfig.breakDurationMs)
+      );
+      setWarningThresholdInMinutes(
+        convertMsToMinutes(timerConfig.warningThresholdMs)
       );
     };
     loadTimerConfig();
@@ -111,6 +117,27 @@ export default function TimerSettings() {
                   }
                 />{" "}
                 seconds
+              </label>
+              {!breakValid && (
+                <p className="text-sm text-red-600 mt-1">
+                  Must be between 10 and 600 seconds
+                </p>
+              )}
+            </div>
+            <div data-testid="warning-threshold" className="tracking-wider p-2">
+              <label>
+                I want a warning {" "}
+                <input
+                  className="w-12 text-center border rounded"
+                  type="number"
+                  min={(isDev ? 1 : 10)}
+                  max="600"
+                  value={warningThresholdInMinutes}
+                  onChange={(e) =>
+                    setWarningThresholdInMinutes(Number(e.target.value))
+                  }
+                />{" "}
+                minutes before the break starts
               </label>
               {!breakValid && (
                 <p className="text-sm text-red-600 mt-1">

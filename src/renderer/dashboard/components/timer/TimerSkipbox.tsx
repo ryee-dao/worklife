@@ -1,5 +1,5 @@
 import TimerSkipboxSkipIcon from "./TimerSkipboxSkipIcon";
-import { TimerState } from "../../../../main/timerState";
+import { TimerState } from "../../../../main/timer/timerState";
 
 
 interface TimerSkipboxProps {

@@ -28,7 +28,7 @@ function initApp() {
 }
 
 // When the app.close() signal is emitted, set a flag that tells the app: 
-// bypass the hide to tray logic 
+// bypass the hide-to-tray logic 
 app.on('before-quit', () => {
   forceQuit = true;
 });
@@ -118,6 +118,13 @@ export function createSettingsWindow() {
 
   tray.setContextMenu(contextMenu);
   return settingsWindow;
+}
+
+export function showTimer() {
+  settingsWindow!.setAlwaysOnTop(true);
+  settingsWindow!.show();
+  settingsWindow!.focus();
+  settingsWindow!.setAlwaysOnTop(false);
 }
 
 export function createBreakWindow() {
