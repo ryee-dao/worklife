@@ -1,6 +1,6 @@
 # WorkLife
 
-A timer that blocks enforces break periods. Built as a personal productivity tool.
+A personal Pomodoro-style desktop app that enforces work boundaries through mandatory but configurable breaks. Built with Electron.
 
 ## Tech Stack
 
@@ -9,7 +9,8 @@ A timer that blocks enforces break periods. Built as a personal productivity too
 - **TypeScript** - Type safety
 - **Vite** - Fast build tooling
 - **Tailwind CSS** - Styling
-- **Playwright** - Testing
+- **Playwright** - E2E testing
+- **Vitest** - Unit testing
 
 ## Installation
 
@@ -35,16 +36,25 @@ Download the latest installer for your platform:
 ```bash
 # Install dependencies
 npm install
-
+ 
 # Run in development mode
 npm run dev
-
+ 
 # Build for production
 npm run build
-
+ 
 # Create distributable
 npm run dist
-
-# Run end-to-end + unit tests
+```
+ 
+### Testing
+```bash
+# Unit tests
+npm run test:unit
+ 
+# End to end tests
+npm run test:e2e
+ 
+# All tests
 npm run test
 ```

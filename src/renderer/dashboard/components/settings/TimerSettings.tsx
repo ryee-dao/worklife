@@ -88,7 +88,7 @@ export default function TimerSettings() {
                 <input
                   className="w-12 text-center border rounded"
                   type="number"
-                  min="1"
+                  min="5"
                   max="600"
                   value={timerDurationInMinutes}
                   onChange={(e) =>
@@ -130,8 +130,8 @@ export default function TimerSettings() {
                 <input
                   className="w-12 text-center border rounded"
                   type="number"
-                  min={(isDev ? 1 : 10)}
-                  max="600"
+                  min="1"
+                  max={Math.max(1, timerDurationInMinutes - 1)}
                   value={warningThresholdInMinutes}
                   onChange={(e) =>
                     setWarningThresholdInMinutes(Number(e.target.value))
@@ -141,7 +141,7 @@ export default function TimerSettings() {
               </label>
               {!breakValid && (
                 <p className="text-sm text-red-600 mt-1">
-                  Must be between 10 and 600 seconds
+                  Must be between 1 and {Math.max(1, timerDurationInMinutes - 1)} minutes
                 </p>
               )}
             </div>

@@ -120,11 +120,14 @@ export function createSettingsWindow() {
   return settingsWindow;
 }
 
-export function showTimer() {
+export function showTimerOnTop() {
   settingsWindow!.setAlwaysOnTop(true);
   settingsWindow!.show();
   settingsWindow!.focus();
-  settingsWindow!.setAlwaysOnTop(false);
+  setInterval(() => {
+    // Add a delay of a second before allowing window to close 
+    settingsWindow!.setAlwaysOnTop(false);
+  }, 1 * 1000)
 }
 
 export function createBreakWindow() {

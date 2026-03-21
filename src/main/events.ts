@@ -18,7 +18,7 @@ import {
   closeBreakWindow,
   createBreakWindow,
   settingsWindow,
-  showTimer,
+  showTimerOnTop,
 } from "./main";
 
 export const broadcastStateToRendererWindows = (
@@ -66,7 +66,7 @@ export const initEventListeners = () => {
     );
   });
 
-  timerEmitter.on(EVENTS.TIMER.WARNING, showTimer);
+  timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, loadTimerConfigsIntoState);
