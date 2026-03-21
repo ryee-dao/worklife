@@ -3,7 +3,8 @@
 A personal Pomodoro-style desktop app that enforces work boundaries through mandatory but configurable breaks. Built with Electron.
 
 <p align="left">
- <img src="https://github.com/user-attachments/assets/2129853d-b255-461b-a174-bd24d09bf399" alt="WorkLife Preview" width="500" />
+ <video src="https://github.com/user-attachments/assets/dac98d7a-f3e1-4984-ab8f-4fc2cd326b83" width="500" controls>
+ </video>
 </p>
 
 ## Tech Stack
