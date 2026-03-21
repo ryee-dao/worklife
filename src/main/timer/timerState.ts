@@ -1,12 +1,12 @@
 import { EventEmitter } from "events";
-import { DEFAULTS, EVENTS, FILENAMES } from "../shared/constants";
-import { getTimerSettingsData } from "./timerConfigs";
+import { DEFAULTS, EVENTS, FILENAMES } from "../../shared/constants";
+import { getTimerSettingsData } from "../timer/timerConfigs";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../shared/utils/files";
-import { calculateRemainingBreakSkips, getLimitState } from "./limitState";
-import { getLimitConfig } from "./limitConfigs";
+} from "../../shared/utils/files";
+import { calculateRemainingBreakSkips } from "../limit/limitState";
+import { getLimitConfig } from "../limit/limitConfigs";
 
 export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip";
@@ -15,21 +15,25 @@ export interface TimerState {
   status: TimerStatus;
   availableActions: AvailableActions[];
   remainingSkips: number,
-  allotedBreaks: number
+  allotedBreaks: number,
+  _bypassThreshold?: boolean
 }
 
-interface StoredTimerState {
+export interface StoredTimerState {
   currentCountdownMs: number;
   status: TimerStatus;
+  _bypassThreshold?: boolean // Only used in unit tests to bypass the {thresholdTimeMs} fallback
 }
 
 const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
 let timerState: TimerState | StoredTimerState;
-let tickTimer: NodeJS.Timeout, emitTimer: NodeJS.Timeout;
+
+let tickTimer: NodeJS.Timeout
 let newTimerTimeMs: number;
 let breakTimeMs: number;
+let warningThresholdMs: number;
 const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
@@ -40,6 +44,17 @@ export const timerEmitter = new EventEmitter();
 export const initTimer = () => {
   loadTimerStateFromFile();
   loadTimerConfigsIntoState();
+  if (!timerState._bypassThreshold) {
+    fallbackTimer();
+  }
+  startTimer();
+};
+
+export const destroyTimers = () => {
+  clearInterval(tickTimer);
+};
+
+const fallbackTimer = () => {
   // Fallback time delay so break time doesn't start too soon on startup
   if (
     timerState.currentCountdownMs <= thresholdTimeMs ||
@@ -48,12 +63,10 @@ export const initTimer = () => {
     timerState.currentCountdownMs = thresholdTimeMs;
     timerState.status = "RUNNING";
   }
-  startTimer();
-  emitTimer = setInterval(emitTimerStatus, tickIntervalMs); // Emit event every second
-};
+}
 
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
-  let availableActions: AvailableActions[] = [];
+  const availableActions: AvailableActions[] = [];
   switch (status) {
     case "RUNNING":
       availableActions.push("pause");
@@ -89,12 +102,13 @@ const emitTimerStatus = () => {
 };
 
 const onTick = () => {
+  // Using ticks to count down, otherwise paused status will also count down timer
   tickCount++;
   checkTimer();
+  emitTimerStatus();
 
   // Write to file every {writeIntervalMs} seconds - based on number of ticks (1 tick = 1000ms = 1 second)
-  // Doing it this way, otherwise paused status will not trigger saves
-  if (writeIntervalMs / tickCount === 1000) {
+  if (writeIntervalMs / 1000 === tickCount) {
     writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
     tickCount = 0;
   }
@@ -106,7 +120,12 @@ const checkTimer = () => {
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  console.log(timerState);
+  console.log('checkTimer()', timerState);
+  
+  // Emit a warning if {warningThresholdMs} is reached
+  if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
+    timerEmitter.emit(EVENTS.TIMER.WARNING);
+  }
 
   // Check for transition
   if (timerState.currentCountdownMs <= 0) {
@@ -127,16 +146,17 @@ const transitionToNextState = () => {
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
-      loadTimerConfigsIntoState(); // Update timer config changes only after break
+      // loadTimerConfigsIntoState(); // Update timer config changes only after break
       break;
 
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const pauseTimer = () => {
-  clearInterval(tickTimer);
+  // clearInterval(tickTimer);
   timerState.status = "PAUSED";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
@@ -154,25 +174,21 @@ export const skipBreak = () => {
   timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const skipTimer = () => {
   timerState.status = "RUNNING";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 const loadTimerStateFromFile = () => {
-  let timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
+  const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
+
   // If no timer data is returned, set new state in file
-  if (!timerData.fileContent) {
-    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultTimerData);
-    timerState = defaultTimerData;
-  } else {
-    timerState = timerData.fileContent;
-  }
+  timerState = { ...defaultTimerData, ...timerData?.fileContent }
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+
   console.log("init timer", JSON.stringify(timerState));
 };
 
@@ -180,4 +196,5 @@ export const loadTimerConfigsIntoState = () => {
   const timerConfig = getTimerSettingsData();
   newTimerTimeMs = timerConfig.timerDurationMs;
   breakTimeMs = timerConfig.breakDurationMs;
+  warningThresholdMs = timerConfig.warningThresholdMs;
 };

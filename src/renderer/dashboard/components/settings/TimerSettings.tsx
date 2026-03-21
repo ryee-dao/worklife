@@ -5,7 +5,7 @@ import {
   convertMsToSeconds,
   convertSecondsToMs,
 } from "../../../../shared/utils/time";
-import { TimerConfig } from "../../../../main/timerConfigs";
+import { TimerConfig } from "../../../../main/timer/timerConfigs";
 import { isDev } from "../../../common/constants";
 
 export default function TimerSettings() {
@@ -13,8 +13,10 @@ export default function TimerSettings() {
     useState<number>(0);
   const [breakDurationInSeconds, setBreakDurationInSeconds] =
     useState<number>(0);
+  const [warningThresholdInMinutes, setWarningThresholdInMinutes] =
+    useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle"
@@ -38,9 +40,10 @@ export default function TimerSettings() {
       const timerConfig: TimerConfig = {
         timerDurationMs: convertMinutesToMs(timerDurationInMinutes),
         breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
+        warningThresholdMs: convertMinutesToMs(warningThresholdInMinutes),
       };
       try {
-        setIsSaving(true);
+        // setIsSaving(true);
         await window.electronAPI.saveTimerConfig(timerConfig);
         setSaveStatus("success");
         setSaveMessage(
@@ -50,7 +53,7 @@ export default function TimerSettings() {
         setSaveStatus("error");
         setSaveMessage(String(err));
       } finally {
-        setIsSaving(false);
+        // setIsSaving(false);
       }
     }
   }
@@ -64,6 +67,9 @@ export default function TimerSettings() {
       setBreakDurationInSeconds(
         convertMsToSeconds(timerConfig.breakDurationMs)
       );
+      setWarningThresholdInMinutes(
+        convertMsToMinutes(timerConfig.warningThresholdMs)
+      );
     };
     loadTimerConfig();
     setIsLoading(false);
@@ -76,13 +82,13 @@ export default function TimerSettings() {
           <h2 className="font-semibold text-lg md:text-2xl">Timer Settings</h2>
           <hr className="text-slate-400 my-1" />
           <div className="grow text-sm md:text-lg">
-            <div className="tracking-wider p-2">
+            <div data-testid="timer-duration" className="tracking-wider p-2">
               <label>
                 I want to take a break every{" "}
                 <input
                   className="w-12 text-center border rounded"
                   type="number"
-                  min="1"
+                  min="5"
                   max="600"
                   value={timerDurationInMinutes}
                   onChange={(e) =>
@@ -97,7 +103,7 @@ export default function TimerSettings() {
                 </p>
               )}
             </div>
-            <div className="tracking-wider p-2">
+            <div data-testid="break-duration" className="tracking-wider p-2">
               <label>
                 This break will last{" "}
                 <input
@@ -115,6 +121,27 @@ export default function TimerSettings() {
               {!breakValid && (
                 <p className="text-sm text-red-600 mt-1">
                   Must be between 10 and 600 seconds
+                </p>
+              )}
+            </div>
+            <div data-testid="warning-threshold" className="tracking-wider p-2">
+              <label>
+                I want a warning {" "}
+                <input
+                  className="w-12 text-center border rounded"
+                  type="number"
+                  min="1"
+                  max={Math.max(1, timerDurationInMinutes - 1)}
+                  value={warningThresholdInMinutes}
+                  onChange={(e) =>
+                    setWarningThresholdInMinutes(Number(e.target.value))
+                  }
+                />{" "}
+                minutes before the break starts
+              </label>
+              {!breakValid && (
+                <p className="text-sm text-red-600 mt-1">
+                  Must be between 1 and {Math.max(1, timerDurationInMinutes - 1)} minutes
                 </p>
               )}
             </div>

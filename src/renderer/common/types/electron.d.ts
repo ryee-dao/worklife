@@ -1,6 +1,6 @@
 import { TimerState } from "../../../main/timerState";
-import { TimerConfig } from "../../../main/timerConfigs"
-import { LimitConfig } from "../../../main/limitConfigs";
+import { TimerConfig } from "../../../main/timer/timerConfigs"
+import { LimitConfig } from "../../../main/limit/limitConfigs";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => void;

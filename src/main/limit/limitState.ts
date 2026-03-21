@@ -1,10 +1,10 @@
-import { FILENAMES } from "../shared/constants";
-import { getTodayDateAsString } from "../shared/utils/date";
+import { FILENAMES } from "../../shared/constants";
+import { getTodayDateAsString } from "../../shared/utils/date";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../shared/utils/files";
-import { getLimitSettingsData } from "./limitConfigs";
+} from "../../shared/utils/files";
+import { getLimitConfigsFileData } from "./limitConfigs";
 
 export interface LimitState {
   lastResetDate: string;
@@ -14,7 +14,7 @@ export interface LimitState {
 let limitState: LimitState;
 
 const limitCheckIntervalMs = 5 * 60 * 1000; // 5 mins
-setInterval(resetDailyLimits, limitCheckIntervalMs); // Check if we need to reset daily limit on a timed basis
+setInterval(resetDailyLimits, limitCheckIntervalMs); // A check to see if daily limit needs to be reset
 
 export const initLimits = () => {
   loadLimitStateFromFile();
@@ -22,7 +22,7 @@ export const initLimits = () => {
 }
 
 export function loadLimitStateFromFile() {
-  let limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
+  const limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
   // If no timer data is returned, set new state in file
   const defaultLimitData = {
     lastResetDate: getTodayDateAsString(),
@@ -30,7 +30,7 @@ export function loadLimitStateFromFile() {
   }
 
   if (!limitStateData.fileContent) {
-    writeToUserDataFile(FILENAMES.TIMER.STATE, defaultLimitData);
+    // writeToUserDataFile(FILENAMES.LIMIT.STATE, defaultLimitData);
     setLimitState(defaultLimitData);
   } else {
     setLimitState(limitStateData.fileContent);
@@ -38,7 +38,7 @@ export function loadLimitStateFromFile() {
 }
 
 export function resetDailyLimits() {
-  let newLimitState = getLimitState();
+  const newLimitState = getLimitState();
   // If the last reset date is not today, reset it and set the last reset date to today
   if (!(newLimitState.lastResetDate === getTodayDateAsString())) {
     setLimitState({
@@ -49,8 +49,8 @@ export function resetDailyLimits() {
 }
 
 export function increaseSkippedBreakCount() {
-  let limitStateData = getLimitState();
-  let newLimitStateData = {
+  const limitStateData = getLimitState();
+  const newLimitStateData = {
     ...limitStateData,
     skippedBreakCount: limitStateData.skippedBreakCount + 1,
   }
@@ -59,8 +59,8 @@ export function increaseSkippedBreakCount() {
 }
 
 export function calculateRemainingBreakSkips() {
-  let limitStateData = getLimitState();
-  let limitConfigs = getLimitSettingsData();
+  const limitStateData = getLimitState();
+  const limitConfigs = getLimitConfigsFileData();
   return (
     limitConfigs.allotedBreaks - limitStateData.skippedBreakCount
   );

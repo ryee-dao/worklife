@@ -1,5 +1,5 @@
 import TimerSkipboxSkipIcon from "./TimerSkipboxSkipIcon";
-import { TimerState } from "../../../../main/timerState";
+import { TimerState } from "../../../../main/timer/timerState";
 
 
 interface TimerSkipboxProps {
@@ -12,7 +12,7 @@ export default function TimerSkipbox({ timerState }: TimerSkipboxProps) {
   const showSkipIcons = allotedBreaks <= 5 && allotedBreaks !== 0;
 
   return (
-    <div className="
+    <div data-testid="timer-skipbox" className="
       absolute top-0 left-1/2 -translate-x-1/2 border-b-4 border-x-4 border-slate-600 justify-center hidden h-5 w-30 xsm:flex xsm:h-10 xsm:w-40 sm:h-12 sm:w-50 md:h-14 md:w-60 lg:w-80
     ">
       <div className="grow flex p-0.5 gap-0.5 md:gap-2 justify-center">

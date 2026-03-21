@@ -6,6 +6,7 @@ export const EVENTS = {
     START_BREAK: "timer_start_break",
     ON_BREAK: "timer_on_break",
     STOP_BREAK: "timer_stop_break",
+    WARNING: "timer_warning",
   },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
@@ -27,8 +28,9 @@ export const EVENTS = {
 } as const;
 
 export const DEFAULTS = {
-  DEFAULT_TIMER_DURATION_MS: 45 * 60 * 1000, // 45 minutes,
+  DEFAULT_TIMER_DURATION_MS: 45 * 60 * 1000, // 45 minutes
   DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds
+  DEFAULT_WARNING_THRESHOLD_MS: 2 * 60 * 1000, // 2 minutes
   DEFAULT_ALLOTTED_BREAKS: 3,
 } as const;
 

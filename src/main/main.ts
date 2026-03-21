@@ -1,14 +1,24 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
 import path from "path";
-import { initTimer } from "./timerState";
-import { initLimits, resetDailyLimits } from "./limitState";
+import { destroyTimers, initTimer } from "./timer/timerState";
+import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
-
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
 const PRELOAD_PATH = path.join(__dirname, "../preload.js");
-export const isDev = !app.isPackaged; // Returns false if packaged into an executible
+export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Returns false if packaged into an executible
+let forceQuit = false; // Allows app.quit() to bypass tray logic
+const isTest = !!process.env.PLAYWRIGHT_TEST;
+
+// process.stdout.on('error', (err) => {
+//   if (err.code === 'EPIPE') return;
+//   throw err;
+// });
+// process.stderr.on('error', (err) => {
+//   if (err.code === 'EPIPE') return;
+//   throw err;
+// });
 
 function initApp() {
   initLimits();
@@ -17,8 +27,20 @@ function initApp() {
   createSettingsWindow();
 }
 
+// When the app.close() signal is emitted, set a flag that tells the app: 
+// bypass the hide-to-tray logic 
+app.on('before-quit', () => {
+  forceQuit = true;
+});
+
+// Right before quitting, destroy timers so that they won't persist
+app.on('will-quit', () => {
+  destroyTimers();
+});
+
 // Check if another instance is running
 const firstAppInstance = app.requestSingleInstanceLock();
+
 if (!firstAppInstance) {
   // Another instance exists, quit this one
   app.quit();
@@ -26,7 +48,7 @@ if (!firstAppInstance) {
   // This is the first instance, continue normally
 
   // When a second instance is opened
-  app.on("second-instance", (event, commandLine, workingDirectory) => {
+  app.on("second-instance", () => {
     // Focus the existing window instead
     if (settingsWindow) {
       if (settingsWindow.isMinimized()) settingsWindow.restore();
@@ -36,7 +58,9 @@ if (!firstAppInstance) {
   });
 
   // Start app
-  app.whenReady().then(initApp);
+  app.whenReady().then(() => {
+    initApp()
+  });
 }
 
 export function createSettingsWindow() {
@@ -46,7 +70,12 @@ export function createSettingsWindow() {
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
+    show: false,
   });
+
+  // Only show window when everything is loaded
+  settingsWindow.once('ready-to-show', () => settingsWindow!.show());
+
   if (!isDev) {
     settingsWindow.loadFile(
       path.join(__dirname, "../renderer/dashboard/index.html")
@@ -57,15 +86,17 @@ export function createSettingsWindow() {
 
   // On close, don't actually close, just hide the app
   settingsWindow.on("close", (event) => {
-    event.preventDefault();
-    settingsWindow!.hide();
+    if (!forceQuit) {
+      event.preventDefault();
+      settingsWindow!.hide();
+    }
   });
 
   // Set icon for app
   const trayImage = nativeImage.createFromPath(
     path.join(__dirname, "../assets/dog.png")
   );
-  let tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
+  const tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
   tray.setToolTip("Work Life");
 
   // Build tray menu
@@ -89,21 +120,25 @@ export function createSettingsWindow() {
   return settingsWindow;
 }
 
+export function showTimerOnTop() {
+  settingsWindow!.setAlwaysOnTop(true);
+  settingsWindow!.show();
+  settingsWindow!.focus();
+  setInterval(() => {
+    // Add a delay of a second before allowing window to close 
+    settingsWindow!.setAlwaysOnTop(false);
+  }, 1 * 1000)
+}
+
 export function createBreakWindow() {
   // Init break window
   breakWindow = new BrowserWindow({
+    show: false,
+    backgroundColor: '#000000',
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
-
-  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
-  if (!isDev) {
-    setTimeout(() => {
-      breakWindow!.setKiosk(true); // Add a delay as it sometimes shows blank screen with Mac if not
-    }, 500);
-    breakWindow.setAlwaysOnTop(true, "pop-up-menu");
-  }
 
   // Render the break window html
   if (!isDev) {
@@ -111,6 +146,18 @@ export function createBreakWindow() {
   } else if (isDev) {
     breakWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/break/`);
   }
+
+  // Render the break window once it's ready
+  breakWindow.once('ready-to-show', () => {
+    breakWindow!.show();
+    // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+    if (!isDev && !isTest) {
+      breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
+      setTimeout(() => breakWindow!.setKiosk(true), 0);
+    }
+  });
+
+
 }
 
 export function closeBreakWindow() {

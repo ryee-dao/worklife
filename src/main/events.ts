@@ -1,9 +1,9 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { EVENTS, FILENAMES } from "../shared/constants";
 import { writeToUserDataFile } from "../shared/utils/files";
-import { getLimitSettingsData, LimitConfig } from "./limitConfigs";
-import { increaseSkippedBreakCount } from "./limitState";
-import { getTimerSettingsData, TimerConfig } from "./timerConfigs";
+import { getLimitConfigsFileData, LimitConfig } from "./limit/limitConfigs";
+import { increaseSkippedBreakCount } from "./limit/limitState";
+import { getTimerSettingsData, TimerConfig } from "./timer/timerConfigs";
 import {
   timerEmitter,
   pauseTimer,
@@ -11,12 +11,14 @@ import {
   skipBreak,
   TimerState,
   skipTimer,
-} from "./timerState";
+  loadTimerConfigsIntoState,
+} from "./timer/timerState";
 import {
   breakWindow,
   closeBreakWindow,
   createBreakWindow,
   settingsWindow,
+  showTimerOnTop,
 } from "./main";
 
 export const broadcastStateToRendererWindows = (
@@ -24,7 +26,7 @@ export const broadcastStateToRendererWindows = (
   windows: Array<BrowserWindow | null>,
   sendEvent: string
 ) => {
-  for (let window of windows) {
+  for (const window of windows) {
     if (window && !window.isDestroyed()) {
       window.webContents.send(sendEvent, state);
     }
@@ -64,9 +66,11 @@ export const initEventListeners = () => {
     );
   });
 
-
+  timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_BREAK, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
+  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, loadTimerConfigsIntoState);
+
 
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
@@ -83,7 +87,7 @@ export const initEventListeners = () => {
     }
   );
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitSettingsData);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitConfigsFileData);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT,
     (event, config: LimitConfig) => {

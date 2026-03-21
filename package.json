@@ -1,7 +1,7 @@
 {
   "name": "worklife",
   "version": "1.0.0",
-  "description": "Tool to reclaim back work-life balance",
+  "description": "Tool to reclaim work-life balance",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
@@ -9,14 +9,23 @@
     "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
     "dist": "npm run build && electron-builder",
     "start": "npm run build && electron .",
+    "lint": "npx tsc --noEmit && eslint src/ tests/",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "npm run build && playwright test",
     "_dev:init": "tsc --build tsconfig.main.json && node esbuild.preload.ts",
     "_dev:vite": "vite",
     "_dev:electron:watch": "tsc --build tsconfig.main.json -w",
     "_dev:preload:watch": "node esbuild.preload.ts --watch",
     "_dev:electron:start": "nodemon --watch dist/main --exec \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
     "_build:vite": "vite build",
-    "_build:electron": "tsc --build tsconfig.main.json",
-    "_build:preload": "node esbuild.preload.ts"
+    "_build:electron": "tsc --build tsconfig.main.json --force",
+    "_build:preload": "node esbuild.preload.ts",
+    "prepare": "npx simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "pre-push": "npm run lint && npm run test:unit && npm run test:e2e"
   },
   "build": {
     "appId": "com.worklife",
@@ -42,18 +51,23 @@
       "!dist/*.yaml"
     ]
   },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RyanNDao/worklife.git"
+    "url": "git+https://github.com/ryee-dao/worklife.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ryan D.",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/RyanNDao/worklife/issues"
+    "url": "https://github.com/ryee-dao/worklife/issues"
   },
-  "homepage": "https://github.com/RyanNDao/worklife#readme",
+  "homepage": "https://github.com/ryee-dao/worklife#readme",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.57.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -62,9 +76,14 @@
     "electron": "^39.2.0",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.27.1",
+    "eslint": "^10.0.1",
+    "lint-staged": "^16.2.7",
     "nodemon": "^3.1.11",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^5.9.3",
-    "vite": "^7.2.2"
+    "typescript-eslint": "^8.56.0",
+    "vite": "^7.2.2",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

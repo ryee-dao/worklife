@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { LimitConfig } from "../../../../main/limitConfigs";
+import { LimitConfig } from "../../../../main/limit/limitConfigs";
 import { isDev } from "../../../common/constants"
 
 export default function LimitSettings() {
   const [allotedBreaks, setAllotedBreaks] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
     "idle"
@@ -38,7 +38,7 @@ export default function LimitSettings() {
         allotedBreaks,
       };
       try {
-        setIsSaving(true);
+        // setIsSaving(true);
         await window.electronAPI.saveLimitConfig(limitConfigs);
         setSaveStatus("success");
         setSaveMessage(
@@ -48,7 +48,7 @@ export default function LimitSettings() {
         setSaveStatus("error");
         setSaveMessage(String(err));
       } finally {
-        setIsSaving(false);
+        // setIsSaving(false);
       }
     }
   }
@@ -60,7 +60,7 @@ export default function LimitSettings() {
           <h2 className="font-semibold text-lg md:text-2xl">Limit Settings</h2>
           <hr className="text-slate-400 my-1" />
           <div className="grow text-sm md:text-lg">
-            <div className="tracking-wider p-2">
+            <div data-testid="allowed-break-count" className="tracking-wider p-2">
               <label>
                 I will be able to skip{" "}
                 <input
