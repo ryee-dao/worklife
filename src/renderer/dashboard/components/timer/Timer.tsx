@@ -1,4 +1,4 @@
-import { TimerState } from "../../../../main/timerState";
+import { TimerState } from "../../../../main/timer/timerState";
 import TimerTimeDisplay from "./TimerTimeDisplay";
 import TimerButtons from "./TimerButtons";
 import TimerSkipbox from "./TimerSkipbox";
@@ -11,7 +11,7 @@ export default function Timer({ timerState }: TimerProps) {
   return (
     <>
       {timerState && (
-        <div className="flex flex-col grow relative">
+        <div data-testid="timer-container" className="flex flex-col grow relative">
           <TimerTimeDisplay timerState={timerState} />
           <TimerButtons timerState={timerState}/>
           <TimerSkipbox timerState={timerState} />

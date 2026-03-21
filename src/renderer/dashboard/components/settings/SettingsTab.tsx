@@ -1,4 +1,4 @@
-import { ComponentType, ReactElement } from "react";
+import { ComponentType } from "react";
 import { NavLink } from "react-router";
 
 interface SettingsTabProps {
@@ -8,7 +8,7 @@ interface SettingsTabProps {
     additionalClassNames?: string;
 }
 
-export default function SettingsTab({ to, text, icon: Icon, additionalClassNames = "" }: SettingsTabProps) {
+export default function SettingsTab({ to, text, icon: Icon }: SettingsTabProps) {
     return (
         <NavLink to={to} className={({ isActive }) => `w-full flex px-3 py-2 ${isActive ? "bg-blue-200" : ""}`}>
             {({ isActive }) => (

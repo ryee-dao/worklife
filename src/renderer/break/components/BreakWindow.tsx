@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import BreakTimeDisplay from "./BreakTimeDisplay";
-import { TimerState } from "../../../main/timerState";
+import { TimerState } from "../../../main/timer/timerState";
 import BreakButtons from "./BreakButtons";
 
 export default function BreakWindow() {
-  let [timerStateObject, setTimerStateObject] = useState<TimerState>();
+  const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
     window.electronAPI.onTimerUpdate((timerState) => {
       setTimerStateObject(timerState);
