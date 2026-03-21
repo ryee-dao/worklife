@@ -2,6 +2,10 @@
 
 A personal Pomodoro-style desktop app that enforces work boundaries through mandatory but configurable breaks. Built with Electron.
 
+<p align="left">
+ <img src="https://github.com/user-attachments/assets/f5958702-7b3b-4a6c-8258-23e133733efc" alt="WorkLife Preview" width="500" />
+</p>
+
 ## Tech Stack
 
 - **Electron** - Desktop app framework
