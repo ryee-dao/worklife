@@ -31,7 +31,13 @@
     "appId": "com.worklife",
     "productName": "WorkLife",
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ]
     },
     "win": {
       "target": "nsis"
