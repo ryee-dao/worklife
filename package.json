@@ -32,10 +32,11 @@
     "productName": "WorkLife",
     "mac": {
       "category": "public.app-category.productivity",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal"]
+          "arch": ["x64", "arm64"]
         }
       ]
     },
