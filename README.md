@@ -22,12 +22,12 @@ A personal Pomodoro-style desktop app that enforces work boundaries through mand
 Download the latest installer for your platform:
 
 **Windows:**
-1. Download `WorkLife Setup.exe` from releases
+1. Download `WorkLife Setup.exe` from [releases](https://github.com/ryee-dao/worklife/releases)
 2. Run the installer
 3. Launch WorkLife from Start Menu
 
 **macOS:**
-1. Download `WorkLife.dmg` from releases
+1. Download `WorkLife.dmg` from [releases](https://github.com/ryee-dao/worklife/releases)
 2. Open the DMG and drag WorkLife to Applications
 3. Launch from Applications folder
 
