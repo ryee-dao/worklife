@@ -8,8 +8,8 @@ import {
 import { calculateRemainingBreakSkips } from "../limit/limitState";
 import { getLimitConfig } from "../limit/limitConfigs";
 
-export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
-export type AvailableActions = "start" | "pause" | "skip";
+export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
+export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
 export interface TimerState {
   currentCountdownMs: number;
   status: TimerStatus;
@@ -80,6 +80,9 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
         availableActions.push("skip");
       }
       return availableActions;
+    case "OVERDUE":
+      availableActions.push("breaktime");
+      return availableActions;
   }
 };
 
@@ -89,9 +92,10 @@ const emitTimerStatus = () => {
     RUNNING: EVENTS.TIMER.RUNNING,
     BREAK: EVENTS.TIMER.ON_BREAK,
     PAUSED: EVENTS.TIMER.PAUSED,
+    OVERDUE: EVENTS.TIMER.ON_OVERDUE,
   };
 
-  // Emit along with the state, the available actions
+  // Emit along additional data along with the timer state
   const stateWithActions: TimerState = {
     ...timerState,
     availableActions: getAvailableActions(timerState.status),
@@ -115,14 +119,30 @@ const onTick = () => {
 };
 
 const checkTimer = () => {
+  console.log('checkTimer()', timerState);
+
+  // switch (timerState.status) {
+  //   case "PAUSED":
+  //     break;
+  //   case "RUNNING":
+  //     timerState.currentCountdownMs -= tickIntervalMs;
+  //     break;
+  //   case "BREAK":
+  //     timerState.currentCountdownMs -= tickIntervalMs;
+  //     break;
+  //   case "OVERDUE":
+
+  // }
+
+
   // Don't count down if paused
   if (timerState.status === "PAUSED") return;
 
   // Countdown
   timerState.currentCountdownMs -= tickIntervalMs;
-  console.log('checkTimer()', timerState);
-  
-  // Emit a warning if {warningThresholdMs} is reached
+
+
+  // Emit a warning event if {warningThresholdMs} is reached
   if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
     timerEmitter.emit(EVENTS.TIMER.WARNING);
   }

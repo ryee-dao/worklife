@@ -1,10 +1,10 @@
 export const EVENTS = {
   TIMER: {
-    BEGIN: "timer_begin",
     RUNNING: "timer_running",
     PAUSED: "timer_paused",
     START_BREAK: "timer_start_break",
     ON_BREAK: "timer_on_break",
+    ON_OVERDUE: "timer_on_overdue",
     STOP_BREAK: "timer_stop_break",
     WARNING: "timer_warning",
   },

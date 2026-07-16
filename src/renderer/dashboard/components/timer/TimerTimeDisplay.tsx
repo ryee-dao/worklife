@@ -17,7 +17,8 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
     RUNNING: "text-green-600",
     BREAK: "text-blue-600",
     PAUSED: "text-slate-600",
-    WARNING: "text-yellow-600"
+    WARNING: "text-yellow-600",
+    OVERDUE: "text-red-600",
   };
   const timerColor = timerColorMapper[timerState.status];
 
