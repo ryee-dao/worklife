@@ -4,6 +4,7 @@ export const EVENTS = {
     PAUSED: "timer_paused",
     START_BREAK: "timer_start_break",
     ON_BREAK: "timer_on_break",
+    START_OVERDUE: "timer_start_overdue",
     ON_OVERDUE: "timer_on_overdue",
     STOP_BREAK: "timer_stop_break",
     WARNING: "timer_warning",
@@ -12,6 +13,7 @@ export const EVENTS = {
     TIMER_UPDATE: "timer:update",
     TIMER_PAUSE: "timer:pause",
     TIMER_BEGIN: "timer:begin",
+    TIMER_STARTBREAK: "timer:start_break",
     TIMER_SKIPBREAK: "timer:skip_break",
     TIMER_SKIPTIMER: "timer:skip_timer",
     CONFIG: {

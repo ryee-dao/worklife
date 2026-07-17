@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   start: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_BEGIN);
   },
+  startBreak: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK);
+  },
   skipBreak: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK);
   },

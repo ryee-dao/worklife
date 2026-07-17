@@ -6,6 +6,7 @@ export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => void;
   pause: () => void;
   start: () => void;
+  startBreak: () => void;
   skipBreak: () => void;
   skipTimer: () => void;
   saveTimerConfig: (arg0: TimerConfig) => Promise<void>;

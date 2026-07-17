@@ -1,6 +1,6 @@
 import { ForwardIcon } from "@heroicons/react/24/outline";
-import { TimerState } from "../../../main/timer/timerState";
-import SlashedIcon from "../../common/components/SlashedIcon";
+import { TimerState } from "../../../../main/timer/timerState";
+import SlashedIcon from "../../../common/components/SlashedIcon";
 
 interface BreakButtonProps {
   timerState: TimerState;

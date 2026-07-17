@@ -11,6 +11,7 @@ import { getLimitConfig } from "../limit/limitConfigs";
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
 export interface TimerState {
+  overdueTimeMs: number;
   currentCountdownMs: number;
   status: TimerStatus;
   availableActions: AvailableActions[];
@@ -20,6 +21,7 @@ export interface TimerState {
 }
 
 export interface StoredTimerState {
+  overdueTimeMs: number;
   currentCountdownMs: number;
   status: TimerStatus;
   _bypassThreshold?: boolean // Only used in unit tests to bypass the {thresholdTimeMs} fallback
@@ -38,6 +40,7 @@ const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBre
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
   status: "RUNNING",
+  overdueTimeMs: 0,
 };
 
 export const timerEmitter = new EventEmitter();
@@ -121,54 +124,54 @@ const onTick = () => {
 const checkTimer = () => {
   console.log('checkTimer()', timerState);
 
-  // switch (timerState.status) {
-  //   case "PAUSED":
-  //     break;
-  //   case "RUNNING":
-  //     timerState.currentCountdownMs -= tickIntervalMs;
-  //     break;
-  //   case "BREAK":
-  //     timerState.currentCountdownMs -= tickIntervalMs;
-  //     break;
-  //   case "OVERDUE":
-
-  // }
-
-
-  // Don't count down if paused
-  if (timerState.status === "PAUSED") return;
-
-  // Countdown
-  timerState.currentCountdownMs -= tickIntervalMs;
-
-
-  // Emit a warning event if {warningThresholdMs} is reached
-  if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
-    timerEmitter.emit(EVENTS.TIMER.WARNING);
-  }
-
-  // Check for transition
-  if (timerState.currentCountdownMs <= 0) {
-    transitionToNextState();
+  // Perform logic on timerState based on status
+  switch (timerState.status) {
+    case "PAUSED":
+      break;
+    case "RUNNING":
+      timerState.currentCountdownMs -= tickIntervalMs;
+      if (timerState.currentCountdownMs === warningThresholdMs) {
+        timerEmitter.emit(EVENTS.TIMER.WARNING);
+      }
+      if (timerState.currentCountdownMs <= 0) {
+        transitionToNextState();
+      }
+      break;
+    case "BREAK":
+      timerState.currentCountdownMs -= tickIntervalMs;
+      if (timerState.currentCountdownMs <= 0) {
+        transitionToNextState();
+      }
+      break;
+    case "OVERDUE":
+      timerState.overdueTimeMs += tickIntervalMs;
+      break;
   }
 };
 
 const transitionToNextState = () => {
   switch (timerState.status) {
     case "RUNNING":
+      timerState.status = "OVERDUE";
+      timerState.currentCountdownMs = 0;
+      timerState.overdueTimeMs = 0;
+      timerEmitter.emit(EVENTS.TIMER.START_OVERDUE);
+      // timerState.currentCountdownMs = breakTimeMs;
+      // timerEmitter.emit(EVENTS.TIMER.START_BREAK);
+      break;
+    case "OVERDUE":
       timerState.status = "BREAK";
       timerState.currentCountdownMs = breakTimeMs;
+      timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
-
     case "BREAK":
       timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
+      timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
-      // loadTimerConfigsIntoState(); // Update timer config changes only after break
       break;
-
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
@@ -186,6 +189,15 @@ export const startTimer = () => {
   clearInterval(tickTimer); // Clear any existing tick intervals
   tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "RUNNING";
+  emitTimerStatus();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
+export const startBreak = () => {
+  clearInterval(tickTimer); // Clear any existing tick intervals
+  tickTimer = setInterval(onTick, tickIntervalMs);
+  timerState.status = "BREAK";
+  timerState.currentCountdownMs = breakTimeMs;
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
