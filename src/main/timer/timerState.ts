@@ -50,6 +50,8 @@ export const initTimer = () => {
   if (!timerState._bypassThreshold) {
     fallbackTimer();
   }
+  timerState.overdueTimeMs = 0;
+  tickCount = 0;
   startTimer();
 };
 
