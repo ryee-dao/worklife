@@ -12,7 +12,7 @@ export default function OverdueTimeDisplay({
   const hours = formattedTime.split(":")[0];
   const minutes = formattedTime.split(":")[1];
   return (
-    <div data-testid="break-time-display">
+    <div data-testid="overdue-time-display">
       <div className="h-full text-red-700 font-bold text-9xl tracking-widest">
         <span>{hours}</span> : <span>{minutes}</span>
       </div>
