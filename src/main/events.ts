@@ -68,14 +68,6 @@ export const initEventListeners = () => {
     );
   });
 
-  timerEmitter.on(EVENTS.TIMER.ON_BREAK, (state: TimerState) => {
-    broadcastStateToRendererWindows(
-      state,
-      [breakWindow],
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE
-    );
-  });
-
   timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);

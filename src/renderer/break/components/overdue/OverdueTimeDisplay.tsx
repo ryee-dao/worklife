@@ -1,13 +1,11 @@
 import { TimerState } from "../../../../main/timer/timerState";
 import { formatMsToMMSS } from "../../../../shared/utils/time";
 
-interface OverdueTimeDisplay {
+interface OverdueTimeDisplayProps {
   timerState: TimerState;
 }
 
-export default function OverdueTimeDisplay({
-  timerState,
-}: OverdueTimeDisplay) {
+export default function OverdueTimeDisplay({ timerState }: OverdueTimeDisplayProps) {
   const formattedTime = formatMsToMMSS(timerState.overdueTimeMs);
   const hours = formattedTime.split(":")[0];
   const minutes = formattedTime.split(":")[1];

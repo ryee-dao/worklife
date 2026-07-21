@@ -158,8 +158,6 @@ const transitionToNextState = () => {
       timerState.currentCountdownMs = 0;
       timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.START_OVERDUE);
-      // timerState.currentCountdownMs = breakTimeMs;
-      // timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
     case "OVERDUE":
       timerState.status = "BREAK";
@@ -196,6 +194,9 @@ export const startTimer = () => {
 };
 
 export const startBreak = () => {
+  if (timerState.status !== "OVERDUE") {
+    return;
+  }
   clearInterval(tickTimer); // Clear any existing tick intervals
   tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "BREAK";
