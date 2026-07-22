@@ -8,7 +8,7 @@ interface TimerTimeDisplayProps {
 
 export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) {
   const [warningThresholdMs, setWarningThresholdMs] = useState<number | null>(null);
-  const formattedTime = formatMsToMMSS(timerState.currentCountdownMs);
+  const formattedTime = formatMsToMMSS(timerState.currentCountdownMs || timerState.overdueTimeMs);
   const hours = formattedTime.split(":")[0];
   const minutes = formattedTime.split(":")[1];
   const warningThresholdMet = warningThresholdMs && timerState.currentCountdownMs <= warningThresholdMs
@@ -17,11 +17,15 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
     RUNNING: "text-green-600",
     BREAK: "text-blue-600",
     PAUSED: "text-slate-600",
-    WARNING: "text-yellow-600"
+    WARNING: "text-yellow-600",
+    OVERDUE: "text-red-700",
   };
   const timerColor = timerColorMapper[timerState.status];
 
   function determineTimerColor() {
+    if (timerState.status === "OVERDUE") {
+      return timerColorMapper['OVERDUE'];
+    }
     if (warningThresholdMet && timerState.status !== "PAUSED") {
       return timerColorMapper["WARNING"]
     }

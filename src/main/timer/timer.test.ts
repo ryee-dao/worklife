@@ -22,14 +22,16 @@ vi.mock('./timerConfigs', () => ({
   })),
 }));
 
-import { initTimer, destroyTimers, pauseTimer, startTimer, skipTimer, skipBreak, timerEmitter, TimerState, StoredTimerState } from './timerState';
+import { initTimer, destroyTimers, pauseTimer, startTimer, skipTimer, skipBreak, timerEmitter, TimerState, StoredTimerState, startBreak } from './timerState';
 import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
 import { calculateRemainingBreakSkips } from '../limit/limitState';
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.mocked(writeToUserDataFile).mockClear();
-  vi.mocked(getUserDataFromFile).mockClear();
+  vi.mocked(getUserDataFromFile).mockReset();
+  vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
+  vi.mocked(calculateRemainingBreakSkips).mockReset();
+  vi.mocked(calculateRemainingBreakSkips).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
 });
 
 afterEach(() => {
@@ -39,7 +41,7 @@ afterEach(() => {
 });
 
 // Helper: seed timer state before initTimer
-const seedTimerState = (state: StoredTimerState) => {
+const seedTimerState = (state: Partial<StoredTimerState>) => {
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: state, filePath: '' });
 };
 
@@ -72,6 +74,53 @@ describe('Timer initialization and teardown', () => {
     expect(runningHandler).toHaveBeenCalled();
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
     expect(emittedState.currentCountdownMs).toBeLessThan(500000);
+  });
+
+  test('relaunching during OVERDUE resets to RUNNING', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+    initTimer();
+
+    // Make the state naturally change to OVERDUE
+    vi.advanceTimersByTime(3000);
+
+    // Capture what the app actually persisted, then "close"
+    const captured = vi.mocked(writeToUserDataFile).mock.lastCall![1] as StoredTimerState;
+
+    // Ensure that it is actually OVERDUE
+    expect(captured.status).toBe('OVERDUE');
+
+    // Destroy the timer and "close the app"  
+    destroyTimers();
+
+    // "Reopen" against the app's own file contents
+    // but remove the _bypassThreshold flag to trigger the reset logic
+    seedTimerState({ ...captured, _bypassThreshold: false });
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    // Assert the state was correctly reset
+    const state = runningHandler.mock.lastCall![0];
+    expect(state.status).toBe('RUNNING');
+    expect(state.overdueTimeMs).toBe(0);
+    expect(state.currentCountdownMs).toBeGreaterThan(0);
+  });
+
+  test('defaults overdueTimeMs to 0 when missing from stored state', () => {
+    seedTimerState({ currentCountdownMs: 500000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    // Assert that {overdueTimeMs} defaults to 0 if not in file/seeded in
+    const state = runningHandler.mock.lastCall![0];
+    expect(typeof (state.overdueTimeMs)).toBe("number");
+    expect(state.overdueTimeMs).toBe(0);
+    expect(Number.isNaN(state.overdueTimeMs)).toBe(false);
   });
 
   test('applies threshold fallback when countdown is too low on startup', () => {
@@ -144,17 +193,40 @@ describe('Timer countdown and transitions', () => {
     expect(emittedState.currentCountdownMs).toBe(2000);
   });
 
-  test('transitions to BREAK when countdown reaches 0', () => {
+  test('transitions to OVERDUE when countdown reaches 0', () => {
     seedTimerState({ currentCountdownMs: 2000, status: 'RUNNING', _bypassThreshold: true });
 
     const breakHandler = vi.fn();
-    timerEmitter.on(EVENTS.TIMER.START_BREAK, breakHandler);
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
+    timerEmitter.on(EVENTS.TIMER.START_OVERDUE, overdueHandler);
 
     initTimer();
     vi.advanceTimersByTime(2000);
 
-    expect(breakHandler).toHaveBeenCalled();
+    expect(breakHandler).not.toHaveBeenCalled();
+    expect(overdueHandler).toHaveBeenCalled();
   });
+
+  test('OVERDUE never transitions automatically', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const breakHandler = vi.fn();
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE state
+
+    // Advance the timer by a long amount
+    vi.advanceTimersByTime(4 * 60 * 60 * 1000);
+
+    expect(breakHandler).not.toHaveBeenCalled();
+    expect(overdueHandler).toHaveBeenCalled();
+    expect(overdueHandler.mock.lastCall![0].status).toBe('OVERDUE');
+  });
+
 
   test('transitions back to RUNNING after break ends', () => {
     seedTimerState({ currentCountdownMs: 2000, status: 'RUNNING', _bypassThreshold: true });
@@ -168,9 +240,46 @@ describe('Timer countdown and transitions', () => {
     vi.advanceTimersByTime(2000);
 
     // Run through break countdown
+    startBreak();
     vi.advanceTimersByTime(DEFAULTS.DEFAULT_BREAK_DURATION_MS);
 
     expect(stopBreakHandler).toHaveBeenCalled();
+  });
+
+  test('OVERDUE counts up while countdown stays frozen at 0', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    // Change the state to OVERDUE
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    // Have it 5 seconds OVERDUE
+    vi.advanceTimersByTime(5000);
+
+    const state = overdueHandler.mock.lastCall![0];
+    expect(state.overdueTimeMs).toBe(5000);
+    expect(state.currentCountdownMs).toBe(0);
+  });
+
+  test('overdueTimeMs resets after break', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000);  // → OVERDUE
+    vi.advanceTimersByTime(30000); // accrue 30s
+    startBreak();                  // → BREAK
+    skipBreak();                   // → RUNNING
+    vi.advanceTimersByTime(1000);  // emit RUNNING state
+
+    const state = runningHandler.mock.lastCall![0];
+    expect(state.status).toBe('RUNNING');
+    expect(state.overdueTimeMs).toBe(0); // stale-counter tripwire
   });
 
   test('writes state to file on transition', () => {
@@ -238,15 +347,15 @@ describe('Pause and resume', () => {
 
     // Init the timer and let it run down
     initTimer();
-    vi.advanceTimersByTime(2000); // 8000 remaining
+    vi.advanceTimersByTime(2000); // 8000 (8 seconds) remaining
     let emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
     expect(emittedState.currentCountdownMs).toBe(8000);
 
     // Pause the timer and make sure the value did not decrement
     pauseTimer();
     vi.advanceTimersByTime(5000); // Time passes, no countdown
-    expect(emittedState.currentCountdownMs).toBe(8000);
 
+    // Resume timer
     startTimer();
     vi.advanceTimersByTime(1000); // Should tick from 8000 to 7000
 
@@ -270,11 +379,13 @@ describe('Pause and resume', () => {
 });
 
 describe('Skip functionality', () => {
-  test('skipTimer forces immediate transition to break', () => {
+  test('skipTimer forces immediate transition to overdue', () => {
     seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
 
+    const overdueHandler = vi.fn();
     const breakHandler = vi.fn();
-    timerEmitter.on(EVENTS.TIMER.START_BREAK, breakHandler);
+    timerEmitter.on(EVENTS.TIMER.START_OVERDUE, overdueHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
 
     initTimer();
     skipTimer();
@@ -282,22 +393,34 @@ describe('Skip functionality', () => {
     // Next tick should trigger transition since countdown was set to 0
     vi.advanceTimersByTime(1000);
 
-    expect(breakHandler).toHaveBeenCalled();
+    expect(breakHandler).not.toHaveBeenCalled();
+    expect(overdueHandler).toHaveBeenCalledOnce();
   });
 
   test('skipBreak forces immediate transition back to running', () => {
     seedTimerState({ currentCountdownMs: 2000, status: 'RUNNING', _bypassThreshold: true });
 
     const stopBreakHandler = vi.fn();
+    const runningHandler = vi.fn();
     timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
 
+    // Transition to break
     initTimer();
-    vi.advanceTimersByTime(2000); // Transition to break
+    vi.advanceTimersByTime(2000);
+    startBreak();
 
+    // Skip the break
+    runningHandler.mockClear(); // Ignore RUNNING emissions from before the break
     skipBreak();
     vi.advanceTimersByTime(1000); // Next tick processes the skip
 
     expect(stopBreakHandler).toHaveBeenCalled();
+    expect(runningHandler).toHaveBeenCalled();
+
+    const emittedState = runningHandler.mock.lastCall![0];
+    expect(emittedState.status).toBe('RUNNING');
+    expect(emittedState.currentCountdownMs).toBeGreaterThan(0);
   });
 });
 
@@ -341,7 +464,8 @@ describe('Available actions', () => {
     timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
 
     initTimer();
-    vi.advanceTimersByTime(1000); // Transition to break
+    vi.advanceTimersByTime(1000); // Transition to overdue
+    startBreak()
     vi.advanceTimersByTime(1000); // Emit break state
 
     const emittedState = breakHandler.mock.calls[breakHandler.mock.calls.length - 1][0];
@@ -357,10 +481,25 @@ describe('Available actions', () => {
 
     initTimer();
     vi.advanceTimersByTime(1000);
-    vi.advanceTimersByTime(1000);
+    startBreak();
 
     const emittedState = breakHandler.mock.calls[breakHandler.mock.calls.length - 1][0];
     expect(emittedState.availableActions).not.toContain('skip');
+  });
+
+  test('OVERDUE state has correct avilable actions', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(2000);
+
+    const state = overdueHandler.mock.lastCall![0];
+    expect(state.availableActions).toContain('breaktime');
+    expect(state.availableActions).not.toContain('pause');
+    expect(state.availableActions).not.toContain('skip');
   });
 });
 
@@ -392,5 +531,72 @@ describe('State emission', () => {
 
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
     expect(emittedState.remainingSkips).toBe(0);
+  });
+});
+
+describe('Action enforcement', () => {
+  test('startBreak is a no-op during RUNNING', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const breakHandler = vi.fn();
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.START_BREAK, breakHandler);
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000);
+    runningHandler.mockClear(); // Clear existing runningHandler so it doesn't contain stale calls
+    startBreak(); // late/hostile IPC message: state doesn't permit this
+    vi.advanceTimersByTime(1000);
+
+
+    expect(breakHandler).not.toHaveBeenCalled();
+    expect(runningHandler).toHaveBeenCalled();              // still emitting AFTER the action
+    expect(runningHandler.mock.lastCall![0].status).toBe('RUNNING');
+  });
+
+  test('startBreak is a no-op during PAUSED', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const breakHandler = vi.fn();
+    const pausedHandler = vi.fn();
+
+    timerEmitter.on(EVENTS.TIMER.PAUSED, pausedHandler);
+    timerEmitter.on(EVENTS.TIMER.START_BREAK, breakHandler);
+
+    initTimer();
+    pauseTimer();
+    pausedHandler.mockClear(); // Clear existing pausedHandler so it doesn't contain stale calls
+    startBreak();
+    vi.advanceTimersByTime(1000);
+
+    expect(breakHandler).not.toHaveBeenCalled();
+    expect(pausedHandler).toHaveBeenCalled();
+    expect(pausedHandler.mock.lastCall![0].status).toBe('PAUSED');
+  });
+
+  test('skipBreak is a no-op during OVERDUE', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const stopBreakHandler = vi.fn();
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+
+    // Attempt to skip the break from OVERDUE — not permitted
+    overdueHandler.mockClear(); // Ignore emissions from before the call
+    skipBreak();
+    vi.advanceTimersByTime(2000);
+
+    // Assert the timer never collapsed back to RUNNING
+    expect(stopBreakHandler).not.toHaveBeenCalled();
+
+    // Assert OVERDUE is still emitting after the call
+    expect(overdueHandler).toHaveBeenCalled();
+    const emittedState = overdueHandler.mock.lastCall![0];
+    expect(emittedState.status).toBe('OVERDUE');
   });
 });

@@ -150,14 +150,18 @@ export function createBreakWindow() {
   // Render the break window once it's ready
   breakWindow.once('ready-to-show', () => {
     breakWindow!.show();
-    // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+    // Make this into "if !!isDev" if you are developing and want the overdue window to always be on top
     if (!isDev && !isTest) {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
-      setTimeout(() => breakWindow!.setKiosk(true), 0);
     }
   });
+}
 
-
+export function activateKioskModeForBreakWindow() {
+  // Make this into "if !!isDev" if you are developing and want the break window to be full screen
+  if (!isDev && !isTest) {
+    setTimeout(() => breakWindow!.setKiosk(true), 0);
+  }
 }
 
 export function closeBreakWindow() {

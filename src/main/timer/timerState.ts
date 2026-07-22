@@ -8,9 +8,10 @@ import {
 import { calculateRemainingBreakSkips } from "../limit/limitState";
 import { getLimitConfig } from "../limit/limitConfigs";
 
-export type TimerStatus = "RUNNING" | "PAUSED" | "BREAK";
-export type AvailableActions = "start" | "pause" | "skip";
+export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
+export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
 export interface TimerState {
+  overdueTimeMs: number;
   currentCountdownMs: number;
   status: TimerStatus;
   availableActions: AvailableActions[];
@@ -20,6 +21,7 @@ export interface TimerState {
 }
 
 export interface StoredTimerState {
+  overdueTimeMs: number;
   currentCountdownMs: number;
   status: TimerStatus;
   _bypassThreshold?: boolean // Only used in unit tests to bypass the {thresholdTimeMs} fallback
@@ -38,6 +40,7 @@ const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBre
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
   status: "RUNNING",
+  overdueTimeMs: 0,
 };
 
 export const timerEmitter = new EventEmitter();
@@ -47,6 +50,8 @@ export const initTimer = () => {
   if (!timerState._bypassThreshold) {
     fallbackTimer();
   }
+  timerState.overdueTimeMs = 0;
+  tickCount = 0;
   startTimer();
 };
 
@@ -80,6 +85,9 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
         availableActions.push("skip");
       }
       return availableActions;
+    case "OVERDUE":
+      availableActions.push("breaktime");
+      return availableActions;
   }
 };
 
@@ -89,9 +97,10 @@ const emitTimerStatus = () => {
     RUNNING: EVENTS.TIMER.RUNNING,
     BREAK: EVENTS.TIMER.ON_BREAK,
     PAUSED: EVENTS.TIMER.PAUSED,
+    OVERDUE: EVENTS.TIMER.ON_OVERDUE,
   };
 
-  // Emit along with the state, the available actions
+  // Emit along additional data along with the timer state
   const stateWithActions: TimerState = {
     ...timerState,
     availableActions: getAvailableActions(timerState.status),
@@ -115,40 +124,54 @@ const onTick = () => {
 };
 
 const checkTimer = () => {
-  // Don't count down if paused
-  if (timerState.status === "PAUSED") return;
-
-  // Countdown
-  timerState.currentCountdownMs -= tickIntervalMs;
   console.log('checkTimer()', timerState);
-  
-  // Emit a warning if {warningThresholdMs} is reached
-  if (timerState.status === "RUNNING" && timerState.currentCountdownMs === warningThresholdMs) {
-    timerEmitter.emit(EVENTS.TIMER.WARNING);
-  }
 
-  // Check for transition
-  if (timerState.currentCountdownMs <= 0) {
-    transitionToNextState();
+  // Perform logic on timerState based on status
+  switch (timerState.status) {
+    case "PAUSED":
+      break;
+    case "RUNNING":
+      timerState.currentCountdownMs -= tickIntervalMs;
+      if (timerState.currentCountdownMs === warningThresholdMs) {
+        timerEmitter.emit(EVENTS.TIMER.WARNING);
+      }
+      if (timerState.currentCountdownMs <= 0) {
+        transitionToNextState();
+      }
+      break;
+    case "BREAK":
+      timerState.currentCountdownMs -= tickIntervalMs;
+      if (timerState.currentCountdownMs <= 0) {
+        transitionToNextState();
+      }
+      break;
+    case "OVERDUE":
+      timerState.overdueTimeMs += tickIntervalMs;
+      break;
   }
 };
 
 const transitionToNextState = () => {
   switch (timerState.status) {
     case "RUNNING":
+      timerState.status = "OVERDUE";
+      timerState.currentCountdownMs = 0;
+      timerState.overdueTimeMs = 0;
+      timerEmitter.emit(EVENTS.TIMER.START_OVERDUE);
+      break;
+    case "OVERDUE":
       timerState.status = "BREAK";
       timerState.currentCountdownMs = breakTimeMs;
+      timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
-
     case "BREAK":
       timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
+      timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.RUNNING);
-      // loadTimerConfigsIntoState(); // Update timer config changes only after break
       break;
-
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
@@ -170,10 +193,21 @@ export const startTimer = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const skipBreak = () => {
+export const startBreak = () => {
+  if (timerState.status !== "OVERDUE") {
+    return;
+  }
+  clearInterval(tickTimer); // Clear any existing tick intervals
+  tickTimer = setInterval(onTick, tickIntervalMs);
   timerState.status = "BREAK";
-  timerState.currentCountdownMs = 0;
+  timerState.currentCountdownMs = breakTimeMs;
   emitTimerStatus();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
+export const skipBreak = () => {
+  if (timerState.status !== "BREAK") return;
+  timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
 };
 
 export const skipTimer = () => {

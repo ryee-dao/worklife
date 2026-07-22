@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.main.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false
+  },
+  "include": ["src/main/**/*", "src/shared/**/*"],
+  "exclude": []
+}
