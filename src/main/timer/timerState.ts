@@ -206,9 +206,8 @@ export const startBreak = () => {
 };
 
 export const skipBreak = () => {
-  timerState.status = "BREAK";
-  timerState.currentCountdownMs = 0;
-  emitTimerStatus();
+  if (timerState.status !== "BREAK") return;
+  timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
 };
 
 export const skipTimer = () => {

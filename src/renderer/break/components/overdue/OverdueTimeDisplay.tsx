@@ -6,13 +6,12 @@ interface OverdueTimeDisplayProps {
 }
 
 export default function OverdueTimeDisplay({ timerState }: OverdueTimeDisplayProps) {
-  const formattedTime = formatMsToMMSS(timerState.overdueTimeMs);
-  const hours = formattedTime.split(":")[0];
-  const minutes = formattedTime.split(":")[1];
+  const [minutes, seconds] = formatMsToMMSS(timerState.overdueTimeMs).split(':');
+
   return (
     <div data-testid="overdue-time-display">
       <div className="h-full text-red-700 font-bold text-9xl tracking-widest">
-        <span>{hours}</span> : <span>{minutes}</span>
+        <span>{minutes}</span> : <span>{seconds}</span>
       </div>
       <div></div>
     </div>

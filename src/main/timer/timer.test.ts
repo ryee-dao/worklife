@@ -401,15 +401,26 @@ describe('Skip functionality', () => {
     seedTimerState({ currentCountdownMs: 2000, status: 'RUNNING', _bypassThreshold: true });
 
     const stopBreakHandler = vi.fn();
+    const runningHandler = vi.fn();
     timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
 
+    // Transition to break
     initTimer();
-    vi.advanceTimersByTime(2000); // Transition to break
+    vi.advanceTimersByTime(2000);
+    startBreak();
 
+    // Skip the break
+    runningHandler.mockClear(); // Ignore RUNNING emissions from before the break
     skipBreak();
     vi.advanceTimersByTime(1000); // Next tick processes the skip
 
     expect(stopBreakHandler).toHaveBeenCalled();
+    expect(runningHandler).toHaveBeenCalled();
+
+    const emittedState = runningHandler.mock.lastCall![0];
+    expect(emittedState.status).toBe('RUNNING');
+    expect(emittedState.currentCountdownMs).toBeGreaterThan(0);
   });
 });
 
@@ -562,5 +573,30 @@ describe('Action enforcement', () => {
     expect(breakHandler).not.toHaveBeenCalled();
     expect(pausedHandler).toHaveBeenCalled();
     expect(pausedHandler.mock.lastCall![0].status).toBe('PAUSED');
+  });
+
+  test('skipBreak is a no-op during OVERDUE', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const stopBreakHandler = vi.fn();
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+
+    // Attempt to skip the break from OVERDUE — not permitted
+    overdueHandler.mockClear(); // Ignore emissions from before the call
+    skipBreak();
+    vi.advanceTimersByTime(2000);
+
+    // Assert the timer never collapsed back to RUNNING
+    expect(stopBreakHandler).not.toHaveBeenCalled();
+
+    // Assert OVERDUE is still emitting after the call
+    expect(overdueHandler).toHaveBeenCalled();
+    const emittedState = overdueHandler.mock.lastCall![0];
+    expect(emittedState.status).toBe('OVERDUE');
   });
 });
