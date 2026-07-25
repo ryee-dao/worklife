@@ -1,4 +1,4 @@
-import { TimerState } from "../../../main/timerState";
+import { TimerState } from "../../../main/timer/timerState";
 import { TimerConfig } from "../../../main/timer/timerConfigs"
 import { LimitConfig } from "../../../main/limit/limitConfigs";
 

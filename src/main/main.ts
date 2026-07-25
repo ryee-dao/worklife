@@ -11,15 +11,6 @@ export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Re
 let forceQuit = false; // Allows app.quit() to bypass tray logic
 const isTest = !!process.env.PLAYWRIGHT_TEST;
 
-// process.stdout.on('error', (err) => {
-//   if (err.code === 'EPIPE') return;
-//   throw err;
-// });
-// process.stderr.on('error', (err) => {
-//   if (err.code === 'EPIPE') return;
-//   throw err;
-// });
-
 function initApp() {
   initLimits();
   initTimer();
@@ -131,14 +122,20 @@ export function showTimerOnTop() {
 }
 
 export function createBreakWindow() {
-  // Init break window
+  // Init break/overdue window
   breakWindow = new BrowserWindow({
     show: false,
     backgroundColor: '#000000',
+    minimizable: false,
+    resizable: false,
+    closable: false,
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
+
+  // breakWindow.setBounds({ x: 440, y: 225, width: 20, height: 600 })
+
 
   // Render the break window html
   if (!isDev) {
@@ -155,6 +152,16 @@ export function createBreakWindow() {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
     }
   });
+
+  // If minimized, bring it back to screen
+  breakWindow.on('minimize', () => {
+    setTimeout(() => {
+      if (breakWindow && !breakWindow.isDestroyed()) {
+        breakWindow.restore();
+        breakWindow.focus();
+      }
+    }, 250);
+  });
 }
 
 export function activateKioskModeForBreakWindow() {
@@ -166,6 +173,7 @@ export function activateKioskModeForBreakWindow() {
 
 export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
-    breakWindow.close();
+    breakWindow.destroy();
+    breakWindow = null;
   }
 }
