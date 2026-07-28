@@ -15,18 +15,9 @@ export interface TimerConfig {
 
 export function getTimerSettingsData(): TimerConfig {
   const timerSettingsData = getUserDataFromFile<TimerConfig>(FILENAMES.TIMER.SETTINGS);
-  // let timerSettings: TimerConfig;
   // If no timer settings data is returned, set new state in file
-  // If no timer data is returned, set new state in file
   const timerSettings = { ...defaultTimerSettings, ...timerSettingsData?.fileContent }
   writeToUserDataFile(FILENAMES.TIMER.SETTINGS, timerSettings);
-
-  // if (!timerSettingsData.fileContent) {
-  //   writeToUserDataFile(FILENAMES.TIMER.SETTINGS, defaultTimerSettings)
-  //   timerSettings = defaultTimerSettings;
-  // } else {
-  //   timerSettings = timerSettingsData.fileContent;
-  // }
   console.log('timersettings', timerSettings)
   return timerSettings;
 }

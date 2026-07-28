@@ -34,9 +34,15 @@ export const DEFAULTS = {
   DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds
   DEFAULT_WARNING_THRESHOLD_MS: 2 * 60 * 1000, // 2 minutes
   DEFAULT_ALLOTTED_BREAKS: 3,
+  DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
 } as const;
 
 export const FILENAMES = {
   TIMER: { SETTINGS: "timerSettings.json", STATE: "timerState.json" },
   LIMIT: { SETTINGS: "limitSettings.json", STATE: "limitState.json" },
-};
+  OVERDUE: { CONFIGS: "overdueConfigs.json" },
+} as const;
+
+export const CONSTRAINTS = {
+  OVERDUE: { MAXIMUM_WINDOW_LEVEL: 5, MAXIMUM_WINDOW_RATIO: .9 },
+}

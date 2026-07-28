@@ -19,6 +19,8 @@ import {
   breakWindow,
   closeBreakWindow,
   createBreakWindow,
+  resizeBreakWindow,
+  setOverdueLevelsArray,
   settingsWindow,
   showTimerOnTop,
 } from "./main";
@@ -68,11 +70,16 @@ export const initEventListeners = () => {
     );
   });
 
+  timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, (timerState: TimerState) => {
+    resizeBreakWindow(timerState);
+  });
   timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
-  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, loadTimerConfigsIntoState);
-
+  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // This ensures configs are loaded only after break
+    setOverdueLevelsArray();
+    loadTimerConfigsIntoState();
+  });
 
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);

@@ -1,8 +1,10 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
+import { app, BrowserWindow, Menu, Tray, nativeImage, screen, Size } from "electron";
 import path from "path";
-import { destroyTimers, initTimer } from "./timer/timerState";
+import { destroyTimers, initTimer, TimerState } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
+import { convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "./overdue/overdueGeometry";
+import { getOverdueConfigs, loadOverdueConfigsData } from "./overdue/overdueConfigs";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
@@ -10,12 +12,34 @@ const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Returns false if packaged into an executible
 let forceQuit = false; // Allows app.quit() to bypass tray logic
 const isTest = !!process.env.PLAYWRIGHT_TEST;
+let lastAppliedOverdueLevelIdx: number = -1;
+
 
 function initApp() {
+  setScreenSize();
   initLimits();
   initTimer();
   initEventListeners();
   createSettingsWindow();
+  loadOverdueConfigsData(); // see if this has to be here or can be somewhere else
+  setOverdueLevelsArray();
+}
+
+// Set the user's screen size
+const getScreenSize = () => {
+  const primaryDisplay = screen.getPrimaryDisplay()
+  return primaryDisplay.workAreaSize;
+}
+const setScreenSize = () => {
+  screenSize = getScreenSize();
+}
+let screenSize: Size | undefined = undefined;
+
+let overdueLevelsArray: OverdueLevelObject[];
+
+export const setOverdueLevelsArray = () => {
+  const overdueConfigs = getOverdueConfigs()
+  overdueLevelsArray = createOverdueLevelsArray(overdueConfigs);
 }
 
 // When the app.close() signal is emitted, set a flag that tells the app: 
@@ -134,9 +158,6 @@ export function createBreakWindow() {
     },
   });
 
-  // breakWindow.setBounds({ x: 440, y: 225, width: 20, height: 600 })
-
-
   // Render the break window html
   if (!isDev) {
     breakWindow.loadFile(path.join(__dirname, "../renderer/break/index.html"));
@@ -175,5 +196,21 @@ export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
     breakWindow.destroy();
     breakWindow = null;
+    lastAppliedOverdueLevelIdx = -1
   }
+}
+
+export const resizeBreakWindow = (timerState: TimerState) => {
+  const overdueLevelObject = convertOverdueTimeToOverdueLevelObject(
+    timerState.overdueTimeMs,
+    overdueLevelsArray
+  )
+
+  if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {
+    const resizedScreenSize = convertOverdueLevelObjectToScreenSize(screenSize!, overdueLevelObject)
+    breakWindow!.setBounds(resizedScreenSize);
+    lastAppliedOverdueLevelIdx = overdueLevelObject.levelIdx;
+  }
+
+  console.log('resizeBreakWindow()', JSON.stringify(overdueLevelObject), JSON.stringify(screenSize), JSON.stringify(overdueLevelsArray))
 }
