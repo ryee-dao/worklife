@@ -7,24 +7,15 @@ interface OverdueViewProps {
 }
 
 export default function OverdueView({ timerState }: OverdueViewProps) {
+  if (!timerState) return null;
 
   return (
-    <div className="flex flex-col items-center h-screen bg-yellow-200">
-      <div className="h-1/3 text-red-700 font-bold flex items-end text-9xl lg:text-[12rem] tracking-widest">
-        <span>OVERDUE</span>
-      </div>
-      <div className="h-2/3 flex-col">
-        {timerState && (
-          <>
-            <div className="h-1/2 pt-4">
-              <OverdueButtons timerState={timerState} />
-            </div>
-            <div className="h-1/2 flex">
-              <OverdueTimeDisplay timerState={timerState} />
-            </div>
-          </>
-        )}
-      </div>
+    <div className="flex flex-col items-center justify-between py-[8vh] h-screen bg-yellow-200">
+      <span className="text-red-700 font-bold text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-[.5rem] md:tracking-[2rem]">
+        OVERDUE
+      </span>
+      <OverdueButtons timerState={timerState} />
+      <OverdueTimeDisplay timerState={timerState} />
     </div>
   );
 }

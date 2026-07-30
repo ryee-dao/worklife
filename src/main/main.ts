@@ -151,7 +151,7 @@ export function createBreakWindow() {
     show: false,
     backgroundColor: '#000000',
     minimizable: false,
-    resizable: false,
+    // resizable: false,
     closable: false,
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
