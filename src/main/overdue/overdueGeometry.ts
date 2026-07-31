@@ -1,4 +1,4 @@
-import { Size } from "electron";
+import { Size, Rectangle } from "electron";
 import { OverdueConfigs } from "./overdueConfigs";
 
 export interface OverdueLevelObject {
@@ -50,4 +50,17 @@ export const createOverdueLevelsArray = (overdueConfigs: OverdueConfigs) => {
   }
 
   return overdueLevelsArray;
+};
+
+export const clampRectToWorkArea = (rect: Rectangle, workArea: Rectangle): Rectangle => {
+  // Largest x/y that still keeps the window fully inside (right/bottom edge on the boundary)
+  const maxX = workArea.x + workArea.width - rect.width;
+  const maxY = workArea.y + workArea.height - rect.height;
+
+  // Clamp position between the top-left corner and those maxes.
+  // If the window is bigger than the work area, maxX < workArea.x, and this pins to top-left.
+  const x = Math.max(workArea.x, Math.min(rect.x, maxX));
+  const y = Math.max(workArea.y, Math.min(rect.y, maxY));
+
+  return { x, y, width: rect.width, height: rect.height };
 };

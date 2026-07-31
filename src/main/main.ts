@@ -3,7 +3,7 @@ import path from "path";
 import { destroyTimers, initTimer, TimerState } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
-import { convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "./overdue/overdueGeometry";
+import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "./overdue/overdueGeometry";
 import { getOverdueConfigs, loadOverdueConfigsData } from "./overdue/overdueConfigs";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
@@ -12,11 +12,14 @@ const PRELOAD_PATH = path.join(__dirname, "../preload.js");
 export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Returns false if packaged into an executible
 let forceQuit = false; // Allows app.quit() to bypass tray logic
 const isTest = !!process.env.PLAYWRIGHT_TEST;
+
+// Constants related to overdue resizing logic
 let lastAppliedOverdueLevelIdx: number = -1;
+let currentOverdueSize: Size | undefined;
 
 
 function initApp() {
-  setScreenSize();
+  setWorkArea();
   initLimits();
   initTimer();
   initEventListeners();
@@ -25,18 +28,14 @@ function initApp() {
   setOverdueLevelsArray();
 }
 
-// Set the user's screen size
-const getScreenSize = () => {
-  const primaryDisplay = screen.getPrimaryDisplay()
-  return primaryDisplay.workAreaSize;
-}
-const setScreenSize = () => {
-  screenSize = getScreenSize();
-}
-let screenSize: Size | undefined = undefined;
+// Set the user's work area size
+let workArea: Electron.Rectangle | undefined = undefined;
+const setWorkArea = () => {
+  workArea = screen.getPrimaryDisplay().workArea; // { x, y, width, height }
+};
+
 
 let overdueLevelsArray: OverdueLevelObject[];
-
 export const setOverdueLevelsArray = () => {
   const overdueConfigs = getOverdueConfigs()
   overdueLevelsArray = createOverdueLevelsArray(overdueConfigs);
@@ -151,6 +150,7 @@ export function createBreakWindow() {
     show: false,
     backgroundColor: '#000000',
     minimizable: false,
+    maximizable: false,
     // resizable: false,
     closable: false,
     webPreferences: {
@@ -171,6 +171,29 @@ export function createBreakWindow() {
     // Make this into "if !!isDev" if you are developing and want the overdue window to always be on top
     if (!isDev && !isTest) {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
+    }
+  });
+
+  // Keep the overdue window inside the screen when dragged toward an edge (a "wall")
+  breakWindow.on("will-move", (event, newBounds) => {
+    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
+
+    // Clamp using our stored TRUE size, not newBounds' size. On Windows/DPI scaling,
+    // setBounds rounds sub-pixel sizes, and reading that back each move would let the
+    // window grow a pixel at a time. Using the authoritative size breaks that feedback loop.
+    const trueBounds = {
+      x: newBounds.x,
+      y: newBounds.y,
+      width: currentOverdueSize.width,
+      height: currentOverdueSize.height,
+    };
+    const clamped = clampRectToWorkArea(trueBounds, workArea);
+
+    // Only intervene if the move actually went out of bounds — otherwise let the
+    // native drag proceed so it feels smooth
+    if (clamped.x !== newBounds.x || clamped.y !== newBounds.y) {
+      event.preventDefault();          // cancel the OS's out-of-bounds move
+      breakWindow.setBounds(clamped);  // re-assert position AND known-good size
     }
   });
 
@@ -196,7 +219,10 @@ export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
     breakWindow.destroy();
     breakWindow = null;
-    lastAppliedOverdueLevelIdx = -1
+    // Reset overdue-session state so the next overdue period starts clean
+    // (and the will-move handler no-ops until the first level applies)
+    currentOverdueSize = undefined;
+    lastAppliedOverdueLevelIdx = -1;
   }
 }
 
@@ -206,11 +232,19 @@ export const resizeBreakWindow = (timerState: TimerState) => {
     overdueLevelsArray
   )
 
+  // Only resize when crossing into a new level — not every tick
   if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {
-    const resizedScreenSize = convertOverdueLevelObjectToScreenSize(screenSize!, overdueLevelObject)
-    breakWindow!.setBounds(resizedScreenSize);
+    const resizedScreenSize = convertOverdueLevelObjectToScreenSize(
+      { height: workArea!.height, width: workArea!.width },
+      overdueLevelObject
+    )
+    const windowCoords = breakWindow!.getBounds()
+    const desiredBounds = { x: windowCoords.x, y: windowCoords.y, ...resizedScreenSize };
+    const clampedBounds = clampRectToWorkArea(desiredBounds, workArea!);
+    breakWindow!.setBounds(clampedBounds);
+    // Store the size we intended, so the clamp handler can re-assert it instead of
+    // reading back the window's (DPI-rounding-drifted) size — prevents growth on repeated moves
+    currentOverdueSize = { width: resizedScreenSize.width, height: resizedScreenSize.height };
     lastAppliedOverdueLevelIdx = overdueLevelObject.levelIdx;
   }
-
-  console.log('resizeBreakWindow()', JSON.stringify(overdueLevelObject), JSON.stringify(screenSize), JSON.stringify(overdueLevelsArray))
 }
