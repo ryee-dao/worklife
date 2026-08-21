@@ -2,11 +2,11 @@ import { ReactNode, useEffect, useState } from "react";
 
 interface SettingsPanelProps<T> {
   title: string;
+  isValid: boolean;
+  successMessage: string;
   load: () => Promise<T>;
   save: (value: T) => Promise<void>;
   buildConfig: () => T;        // caller assembles the config from its own state
-  isValid: boolean;
-  successMessage: string;
   onLoaded: (value: T) => void; // caller pushes loaded values into its own state
   children: ReactNode;          // the bespoke fields
 }
@@ -20,6 +20,7 @@ export default function SettingsPanel<T>({
 
   useEffect(() => {
     load().then((value) => {
+      console.log('Loading values for settingPanel:', value)
       onLoaded(value);
       setIsLoading(false);
     });

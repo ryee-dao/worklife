@@ -20,10 +20,12 @@ export const EVENTS = {
       SAVE: {
         TIMER: "config:save:timer",
         LIMIT: "config:save:limit",
+        OVERDUE: "config:save:overdue",
       },
       LOAD: {
         TIMER: "config:load:timer",
         LIMIT: "config:load:limit",
+        OVERDUE: "config:load:overdue",
       },
     },
   },

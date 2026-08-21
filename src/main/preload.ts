@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
 import { TimerState } from "./timer/timerState";
 import { TimerConfig } from "./timer/timerConfigs";
-import { LimitConfig } from "./limit/limitConfigs";
+import { LimitConfigs } from "./limit/limitConfigs";
+import { OverdueConfigs } from "./overdue/overdueConfigs";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -31,10 +32,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loadLimitConfig: async () => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT);
   },
+  loadOverdueConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.OVERDUE);
+  },
   saveTimerConfig: async (config: TimerConfig) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER, config);
   },
-  saveLimitConfig: async (config: LimitConfig) => {
+  saveLimitConfig: async (config: LimitConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT, config);
+  },
+  saveOverdueConfigs: async (config: OverdueConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.OVERDUE, config);
   },
 });

@@ -41,10 +41,12 @@ export const setOverdueLevelsArray = () => {
   overdueLevelsArray = createOverdueLevelsArray(overdueConfigs);
 }
 
-// When the app.close() signal is emitted, set a flag that tells the app: 
+// When the app.close() signal is emitted, set a flag {forceQuit}, that tells the app: 
 // bypass the hide-to-tray logic 
 app.on('before-quit', () => {
   forceQuit = true;
+  // Close all windows manually before close in case any can't be closed (ex: closable = false)
+  BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 
 // Right before quitting, destroy timers so that they won't persist
@@ -231,6 +233,7 @@ export const resizeBreakWindow = (timerState: TimerState) => {
     timerState.overdueTimeMs,
     overdueLevelsArray
   )
+  console.log(overdueLevelObject)
 
   // Only resize when crossing into a new level — not every tick
   if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {

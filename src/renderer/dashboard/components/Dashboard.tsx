@@ -6,6 +6,7 @@ import Settings from "./settings/Settings";
 import { TimerState } from "../../../main/timer/timerState";
 import TimeSettings from "./settings/TimerSettings";
 import LimitSettings from "./settings/LimitSettings";
+import OverdueConfigsForm from "./settings/OverdueConfigsForm";
 
 export default function Dashboard() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
@@ -25,6 +26,7 @@ export default function Dashboard() {
             <Route index element={<Navigate replace to="/settings/timer" />} />
             <Route path="timer" element={<TimeSettings />}/>
             <Route path="limits" element={<LimitSettings />}/>
+            <Route path="overdue" element={<OverdueConfigsForm />}/>
           </Route>
 
           {/* Default route */}

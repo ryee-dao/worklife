@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LimitConfig } from "../../../../main/limit/limitConfigs";
+import { LimitConfigs } from "../../../../main/limit/limitConfigs";
 import { isDev } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
@@ -11,7 +11,7 @@ export default function LimitSettings() {
   const allotedBreaksValid = allotedBreaks >= 0 && allotedBreaks <= breaksMaxLimit;
 
   return (
-    <SettingsPanel<LimitConfig>
+    <SettingsPanel<LimitConfigs>
       title="Limit Settings"
       isValid={allotedBreaksValid}
       successMessage="Settings saved successfully. Limits will reset after midnight"
