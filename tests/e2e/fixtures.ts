@@ -1,7 +1,7 @@
 /* eslint-disable no-empty-pattern */
-import { test as base, TestInfo } from "@playwright/test";
+import { test as base, BrowserContext, TestInfo } from "@playwright/test";
 import { ElectronApplication, Page } from "playwright";
-import { launchApp, createTestUserDataDir } from "./helpers";
+import { launchApp, createTestUserDataDir, TestClock } from "./helpers";
 import fs from "fs";
 import path from "path";
 
@@ -9,7 +9,12 @@ type UserDataDir = {
   path: string;
   seed: (filename: string, data: object) => void;
 };
-type LaunchElectron = () => Promise<{ electronApp: ElectronApplication; settingsWindow: Page }>;
+type LaunchElectron = () => Promise<{
+  electronApp: ElectronApplication;
+  settingsWindow: Page,
+  context: BrowserContext,
+  testClock: TestClock,
+}>;
 
 const test = base.extend<{
   userDataDir: UserDataDir;

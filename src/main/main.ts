@@ -1,9 +1,15 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, screen, Size } from "electron";
 import path from "path";
-import { destroyTimers, initTimer, TimerState } from "./timer/timerState";
+import { destroyTimers, emitTimerStatus, initTimer, TimerState } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
-import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "./overdue/overdueGeometry";
+import {
+  clampRectToWorkArea,
+  convertOverdueLevelObjectToScreenSize,
+  convertOverdueTimeToOverdueLevelObject,
+  createOverdueLevelsArray,
+  OverdueLevelObject
+} from "./overdue/overdueGeometry";
 import { getOverdueConfigs, loadOverdueConfigsData } from "./overdue/overdueConfigs";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
@@ -54,7 +60,13 @@ app.on('will-quit', () => {
   destroyTimers();
 });
 
-// Check if another instance is running
+// If in dev, set a different app name so if there's a prod version running, it doesn't clash
+if (isDev) {
+  app.setName('WorkLife-Dev');
+  app.setPath('userData', app.getPath('userData').replace('WorkLife', 'WorkLife-Dev'));
+}
+
+// Only allow one instance of the app in the same environment at the same time
 const firstAppInstance = app.requestSingleInstanceLock();
 
 if (!firstAppInstance) {
@@ -91,6 +103,12 @@ export function createSettingsWindow() {
 
   // Only show window when everything is loaded
   settingsWindow.once('ready-to-show', () => settingsWindow!.show());
+
+  // Emit the timer status initially when the setting window first loads 
+  // so it doesn't have to wait for first interval
+  settingsWindow.webContents.once('did-finish-load', () => {
+    emitTimerStatus();
+  });
 
   if (!isDev) {
     settingsWindow.loadFile(
@@ -132,6 +150,7 @@ export function createSettingsWindow() {
     },
   ]);
 
+
   tray.setContextMenu(contextMenu);
   return settingsWindow;
 }
@@ -153,7 +172,7 @@ export function createBreakWindow() {
     backgroundColor: '#000000',
     minimizable: false,
     maximizable: false,
-    // resizable: false,
+    resizable: false, // Comment this back out if window ever needs to be resizable again
     closable: false,
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
@@ -176,6 +195,11 @@ export function createBreakWindow() {
     }
   });
 
+  // Emit the timer status when the break window loads
+  breakWindow.webContents.once('did-finish-load', () => {
+    emitTimerStatus();
+  });
+
   // Keep the overdue window inside the screen when dragged toward an edge (a "wall")
   breakWindow.on("will-move", (event, newBounds) => {
     if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
@@ -196,6 +220,24 @@ export function createBreakWindow() {
     if (clamped.x !== newBounds.x || clamped.y !== newBounds.y) {
       event.preventDefault();          // cancel the OS's out-of-bounds move
       breakWindow.setBounds(clamped);  // re-assert position AND known-good size
+    }
+  });
+
+  // For Mac
+  breakWindow.on("move", () => {
+    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
+
+    const bounds = breakWindow.getBounds();
+    const trueBounds = {
+      x: bounds.x,
+      y: bounds.y,
+      width: currentOverdueSize.width,
+      height: currentOverdueSize.height,
+    };
+    const clamped = clampRectToWorkArea(trueBounds, workArea);
+
+    if (clamped.x !== bounds.x || clamped.y !== bounds.y) {
+      breakWindow.setBounds(clamped);
     }
   });
 

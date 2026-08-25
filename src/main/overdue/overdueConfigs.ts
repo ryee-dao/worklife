@@ -33,3 +33,7 @@ export const loadOverdueConfigsData = () => {
 export const getOverdueConfigs = () => {
   return overdueConfigs;
 }
+
+export const setOverdueConfigs = (newOverdueConfigs: OverdueConfigs) => {
+  overdueConfigs = newOverdueConfigs;
+}

@@ -14,7 +14,7 @@ export default function OverdueConfigsForm() {
 
   const levelThresholdInSecondsValid = levelThresholdInSeconds >= 5 && levelThresholdInSeconds <= 3600
   const windowLevelCapValid = windowLevelCap >= 1 && windowLevelCap <= CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_LEVEL
-  const windowPercentageValid = windowPercentageCap >= 20 && windowPercentageCap <= CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO * 100
+  const windowPercentageValid = windowPercentageCap >= 10 && windowPercentageCap <= CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO * 100
   const isValid = levelThresholdInSecondsValid && windowLevelCapValid && windowPercentageValid
 
   return (
@@ -30,7 +30,6 @@ export default function OverdueConfigsForm() {
         windowRatioCap: windowPercentageCap / 100
       })}
       onLoaded={(config) => {
-        console.log(config, 'ss')
         setLevelThresholdInSeconds(convertMsToSeconds(config.levelThresholdMs));
         setWindowLevelCap(config.windowLevelCap);
         setWindowPercentageCap(config.windowRatioCap * 100);
@@ -40,7 +39,7 @@ export default function OverdueConfigsForm() {
         <label>
           I want the overdue window to take up maximum{" "}
           <NumberInput
-            min={20}
+            min={10}
             max={CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO * 100}
             value={windowPercentageCap}
             onChange={(e) => setWindowPercentageCap(Number(e.target.value))}
@@ -49,7 +48,7 @@ export default function OverdueConfigsForm() {
         </label>
         {!windowPercentageValid && (
           <p className="text-sm text-red-600 mt-1">
-            Must be between 20% and {CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO * 100}%
+            Must be between 10% and {CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO * 100}%
           </p>
         )}
       </div>
@@ -81,7 +80,7 @@ export default function OverdueConfigsForm() {
 
       <div data-testid="maximum-window-levels" className="tracking-wider p-2">
         <label>
-          I want the overdue window increase in size every{" "}
+          I want the overdue window to increase in size every{" "}
           <NumberInput
             min={5}
             max={3600}

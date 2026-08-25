@@ -24,7 +24,7 @@ import {
   settingsWindow,
   showTimerOnTop,
 } from "./main";
-import { getOverdueConfigs, loadOverdueConfigsData, OverdueConfigs } from "./overdue/overdueConfigs";
+import { getOverdueConfigs, loadOverdueConfigsData, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -115,6 +115,7 @@ export const initEventListeners = () => {
     (event, config: OverdueConfigs) => {
       // throw new Error("test error")
       writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, config);
+      setOverdueConfigs(config);
     }
   );
 };

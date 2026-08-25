@@ -91,7 +91,7 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   }
 };
 
-const emitTimerStatus = () => {
+export const emitTimerStatus = () => {
   // Given the status, emit the event and the state itself
   const statusMapper: Record<TimerStatus, string> = {
     RUNNING: EVENTS.TIMER.RUNNING,
@@ -107,6 +107,7 @@ const emitTimerStatus = () => {
     remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
     allotedBreaks: getLimitConfig().allotedBreaks
   };
+  console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
 
@@ -186,8 +187,12 @@ export const pauseTimer = () => {
 };
 
 export const startTimer = () => {
-  clearInterval(tickTimer); // Clear any existing tick intervals
-  tickTimer = setInterval(onTick, tickIntervalMs);
+  clearInterval(tickTimer);
+  // When running e2e tests, we don't set an interval to control the timing
+  // This is to prevent flakiness in tests
+  if (!process.env.PLAYWRIGHT_TEST) {
+    tickTimer = setInterval(onTick, tickIntervalMs);
+  }
   timerState.status = "RUNNING";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
@@ -198,7 +203,12 @@ export const startBreak = () => {
     return;
   }
   clearInterval(tickTimer); // Clear any existing tick intervals
-  tickTimer = setInterval(onTick, tickIntervalMs);
+
+  // When running e2e tests, we don't set an interval to control the timing
+  // This is to prevent flakiness in tests
+  if (!process.env.PLAYWRIGHT_TEST) {
+    tickTimer = setInterval(onTick, tickIntervalMs);
+  }
   timerState.status = "BREAK";
   timerState.currentCountdownMs = breakTimeMs;
   emitTimerStatus();
@@ -206,14 +216,14 @@ export const startBreak = () => {
 };
 
 export const skipBreak = () => {
-  if (timerState.status !== "BREAK") return;
+  if (timerState.status !== "BREAK") return; // Guard against wrong state
   timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
 };
 
 export const skipTimer = () => {
-  timerState.status = "RUNNING";
   timerState.currentCountdownMs = 0;
   emitTimerStatus();
+  transitionToNextState()
 };
 
 const loadTimerStateFromFile = () => {
@@ -232,3 +242,16 @@ export const loadTimerConfigsIntoState = () => {
   breakTimeMs = timerConfig.breakDurationMs;
   warningThresholdMs = timerConfig.warningThresholdMs;
 };
+
+export const getTimerState = () => {
+  return timerState
+};
+
+// Expose a function that allows end to end tests to manually speed up timers 
+if (process.env.PLAYWRIGHT_TEST) {
+  global.__test_fastForwardTimerOneSecond = () => {
+    // Can only fast forward one second/tick at a time 
+    // because for some reason, the event loop doesn't allow batches (not sure why)
+    onTick();
+  };
+}

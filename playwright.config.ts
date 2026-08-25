@@ -8,9 +8,6 @@ export default defineConfig({
     ['list'],
     ['html']
   ],
-  timeout: 1.5 * 60 * 1000,
+  timeout: 1 * 60 * 1000,
   retries: 1,
-  use: {
-    headless: true
-  }
 });
