@@ -498,8 +498,8 @@ describe('Available actions', () => {
 
     const state = overdueHandler.mock.lastCall![0];
     expect(state.availableActions).toContain('breaktime');
+    expect(state.availableActions).toContain('skip');
     expect(state.availableActions).not.toContain('pause');
-    expect(state.availableActions).not.toContain('skip');
   });
 });
 
@@ -575,28 +575,29 @@ describe('Action enforcement', () => {
     expect(pausedHandler.mock.lastCall![0].status).toBe('PAUSED');
   });
 
-  test('skipBreak is a no-op during OVERDUE', () => {
+  test('skipBreak during OVERDUE transitions to RUNNING', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
     const stopBreakHandler = vi.fn();
-    const overdueHandler = vi.fn();
+    const runningHandler = vi.fn();
     timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
-    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
 
     initTimer();
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
 
-    // Attempt to skip the break from OVERDUE — not permitted
-    overdueHandler.mockClear(); // Ignore emissions from before the call
+    // Skip the break directly from OVERDUE
+    runningHandler.mockClear();
     skipBreak();
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(1000); // Tick to process BREAK → RUNNING
 
-    // Assert the timer never collapsed back to RUNNING
-    expect(stopBreakHandler).not.toHaveBeenCalled();
+    // Assert the transition completed
+    expect(stopBreakHandler).toHaveBeenCalled();
+    expect(runningHandler).toHaveBeenCalled();
 
-    // Assert OVERDUE is still emitting after the call
-    expect(overdueHandler).toHaveBeenCalled();
-    const emittedState = overdueHandler.mock.lastCall![0];
-    expect(emittedState.status).toBe('OVERDUE');
+    const state = runningHandler.mock.lastCall![0];
+    expect(state.status).toBe('RUNNING');
+    expect(state.overdueTimeMs).toBe(0);
+    expect(state.currentCountdownMs).toBeGreaterThan(0);
   });
 });

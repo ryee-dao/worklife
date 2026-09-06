@@ -80,13 +80,16 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
     case "PAUSED":
       availableActions.push("start");
       return availableActions;
-    case "BREAK":
+    case "OVERDUE":
+      availableActions.push("breaktime");
       if (calculateRemainingBreakSkips() > 0) {
         availableActions.push("skip");
       }
       return availableActions;
-    case "OVERDUE":
-      availableActions.push("breaktime");
+    case "BREAK":
+      if (calculateRemainingBreakSkips() > 0) {
+        availableActions.push("skip");
+      }
       return availableActions;
   }
 };
@@ -216,7 +219,8 @@ export const startBreak = () => {
 };
 
 export const skipBreak = () => {
-  if (timerState.status !== "BREAK") return; // Guard against wrong state
+  if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
+  timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
 };
 

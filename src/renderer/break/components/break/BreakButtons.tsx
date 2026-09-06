@@ -8,22 +8,21 @@ interface BreakButtonProps {
 }
 
 export default function BreakButtons({ timerState }: BreakButtonProps) {
-  const isSkipping = timerState.currentCountdownMs <= 0;
-  const canSkip = timerState.availableActions.includes("skip") && !isSkipping;
+  const canSkip = timerState.availableActions.includes("skip");
 
   return (
     <CircularButton
-      testId="break-skip"
+      testId="break-window-skip-break-button"
       onClick={() => canSkip && window.electronAPI.skipBreak()}
       disabled={!canSkip}
       className={`h-full ${canSkip
-        ? "bg-blue-300 text-blue-800 hover:bg-blue-300"
+        ? "bg-blue-200 text-slate-600 hover:bg-slate-300"
         : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
     >
       {canSkip ? (
         <ForwardIcon className="h-2/3" />
       ) : (
-        <SlashedIcon icon={ForwardIcon} className="h-2/3" />
+        <SlashedIcon icon={ForwardIcon} slashSize={4} className="h-2/3" />
       )}
     </CircularButton>
   );

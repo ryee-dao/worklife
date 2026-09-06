@@ -11,7 +11,7 @@ export default function OverdueView({ timerState }: OverdueViewProps) {
 
   return (
     <div className="flex flex-col items-center justify-between py-[8vh] h-screen bg-yellow-200">
-      <span className="text-red-700 font-bold text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-[.5rem] md:tracking-[2rem]">
+      <span className="text-red-700 font-bold text-xl xsm:text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-normal xsm:tracking-[.5rem] md:tracking-[2rem]">
         OVERDUE
       </span>
       <OverdueButtons timerState={timerState} />
