@@ -45,7 +45,12 @@ function initApp() {
 // Handle whenever the screen size changes like for external monitors
 function listenForDisplayChanges() {
   const handleDisplayChange = () => {
-    setWorkArea();
+    if (breakWindow && !breakWindow.isDestroyed() && currentOverdueSize) {
+      workArea = screen.getDisplayMatching(breakWindow.getBounds()).workArea;
+    } else {
+      workArea = screen.getPrimaryDisplay().workArea;
+    }
+
     if (breakWindow && !breakWindow.isDestroyed() && currentOverdueSize && workArea) {
       const bounds = breakWindow.getBounds();
       const clamped = clampRectToWorkArea({ ...bounds, ...currentOverdueSize }, workArea);
