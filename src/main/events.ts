@@ -1,9 +1,9 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { EVENTS, FILENAMES } from "../shared/constants";
 import { writeToUserDataFile } from "../shared/utils/files";
-import { getLimitConfigsFileData, LimitConfigs } from "./limit/limitConfigs";
+import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
 import { increaseSkippedBreakCount } from "./limit/limitState";
-import { getTimerSettingsData, TimerConfig } from "./timer/timerConfigs";
+import { getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
   pauseTimer,
@@ -24,7 +24,7 @@ import {
   settingsWindow,
   showTimerOnTop,
 } from "./main";
-import { getOverdueConfigs, loadOverdueConfigsData, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
+import { getOverdueConfigs, loadOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -78,7 +78,7 @@ export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // This ensures configs are loaded only after break
-    loadOverdueConfigsData();
+    loadOverdueConfigs();
     setOverdueLevelsArray();
     loadTimerConfigsIntoState();
   });
@@ -91,31 +91,33 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, increaseSkippedBreakCount);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, skipTimer);
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER, getTimerSettingsData);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER,
-    (event, config: TimerConfig) => {
+    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,
+    (event, configs: TimerConfigs) => {
       // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.TIMER.SETTINGS, config);
+      writeToUserDataFile(FILENAMES.TIMER.CONFIGS, configs);
+      setTimerConfigs(configs)
     }
   );
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT, getLimitConfigsFileData);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.LIMIT, getLimitConfigs);
   ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT,
-    (event, config: LimitConfigs) => {
+    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT,
+    (event, configs: LimitConfigs) => {
       // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, config);
+      writeToUserDataFile(FILENAMES.LIMIT.CONFIGS, configs);
+      setLimitConfigs(configs);
     }
   );
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIG.LOAD.OVERDUE, getOverdueConfigs);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE, getOverdueConfigs);
   ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIG.SAVE.OVERDUE,
-    (event, config: OverdueConfigs) => {
+    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE,
+    (event, configs: OverdueConfigs) => {
       // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, config);
-      setOverdueConfigs(config);
+      writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, configs);
+      setOverdueConfigs(configs);
     }
   );
 };

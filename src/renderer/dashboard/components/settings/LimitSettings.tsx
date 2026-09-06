@@ -15,10 +15,10 @@ export default function LimitSettings() {
       title="Limit Settings"
       isValid={allotedBreaksValid}
       successMessage="Settings saved successfully. Limits will reset after midnight"
-      load={() => window.electronAPI.loadLimitConfig()}
-      save={(config) => window.electronAPI.saveLimitConfig(config)}
+      load={() => window.electronAPI.loadLimitConfigs()}
+      save={(configs) => window.electronAPI.saveLimitConfigs(configs)}
       buildConfig={() => ({ allotedBreaks })}
-      onLoaded={(config) => setAllotedBreaks(config.allotedBreaks)}
+      onLoaded={(configs) => setAllotedBreaks(configs.allotedBreaks)}
     >
       <div data-testid="allowed-break-count" className="tracking-wider p-2">
         <label>

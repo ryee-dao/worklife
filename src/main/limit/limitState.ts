@@ -4,7 +4,7 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { getLimitConfigsFileData } from "./limitConfigs";
+import { getLimitConfigs } from "./limitConfigs";
 
 export interface LimitState {
   lastResetDate: string;
@@ -60,7 +60,7 @@ export function increaseSkippedBreakCount() {
 
 export function calculateRemainingBreakSkips() {
   const limitStateData = getLimitState();
-  const limitConfigs = getLimitConfigsFileData();
+  const limitConfigs = getLimitConfigs();
   return (
     limitConfigs.allotedBreaks - limitStateData.skippedBreakCount
   );

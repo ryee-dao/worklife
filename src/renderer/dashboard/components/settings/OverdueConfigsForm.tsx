@@ -23,16 +23,16 @@ export default function OverdueConfigsForm() {
       isValid={isValid}
       successMessage="Overdue configs saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadOverdueConfigs()}
-      save={(config) => window.electronAPI.saveOverdueConfigs(config)}
+      save={(configs) => window.electronAPI.saveOverdueConfigs(configs)}
       buildConfig={() => ({
         levelThresholdMs: convertSecondsToMs(levelThresholdInSeconds),
         windowLevelCap: windowLevelCap,
         windowRatioCap: windowPercentageCap / 100
       })}
-      onLoaded={(config) => {
-        setLevelThresholdInSeconds(convertMsToSeconds(config.levelThresholdMs));
-        setWindowLevelCap(config.windowLevelCap);
-        setWindowPercentageCap(config.windowRatioCap * 100);
+      onLoaded={(configs) => {
+        setLevelThresholdInSeconds(convertMsToSeconds(configs.levelThresholdMs));
+        setWindowLevelCap(configs.windowLevelCap);
+        setWindowPercentageCap(configs.windowRatioCap * 100);
       }}
     >
       <div data-testid="maximum-window-percentage" className="tracking-wider p-2">

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
 import { TimerState } from "./timer/timerState";
-import { TimerConfig } from "./timer/timerConfigs";
+import { TimerConfigs } from "./timer/timerConfigs";
 import { LimitConfigs } from "./limit/limitConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 
@@ -26,22 +26,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   skipTimer: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER);
   },
-  loadTimerConfig: async (): Promise<TimerConfig> => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER);
+  loadTimerConfigs: async (): Promise<TimerConfigs> => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER);
   },
-  loadLimitConfig: async () => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT);
+  loadLimitConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.LIMIT);
   },
   loadOverdueConfigs: async () => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.OVERDUE);
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE);
   },
-  saveTimerConfig: async (config: TimerConfig) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER, config);
+  saveTimerConfigs: async (configs: TimerConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, configs);
   },
-  saveLimitConfig: async (config: LimitConfigs) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT, config);
+  saveLimitConfigs: async (configs: LimitConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT, configs);
   },
-  saveOverdueConfigs: async (config: OverdueConfigs) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.OVERDUE, config);
+  saveOverdueConfigs: async (configs: OverdueConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, configs);
   },
 });

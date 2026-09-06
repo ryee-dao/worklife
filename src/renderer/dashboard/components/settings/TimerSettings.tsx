@@ -5,7 +5,7 @@ import {
   convertMsToSeconds,
   convertSecondsToMs,
 } from "../../../../shared/utils/time";
-import { TimerConfig } from "../../../../main/timer/timerConfigs";
+import { TimerConfigs } from "../../../../main/timer/timerConfigs";
 import { isDev } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
@@ -21,21 +21,21 @@ export default function TimerSettings() {
   const warningValid = warningThresholdInMinutes >= 1 && warningThresholdInMinutes <= warningMax;
 
   return (
-    <SettingsPanel<TimerConfig>
+    <SettingsPanel<TimerConfigs>
       title="Timer Settings"
       isValid={timerValid && breakValid && warningValid}
       successMessage="Settings saved successfully. Changes will reflect after next break"
-      load={() => window.electronAPI.loadTimerConfig()}
-      save={(config) => window.electronAPI.saveTimerConfig(config)}
+      load={() => window.electronAPI.loadTimerConfigs()}
+      save={(configs) => window.electronAPI.saveTimerConfigs(configs)}
       buildConfig={() => ({
         timerDurationMs: convertMinutesToMs(timerDurationInMinutes),
         breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
         warningThresholdMs: convertMinutesToMs(warningThresholdInMinutes),
       })}
-      onLoaded={(config) => {
-        setTimerDurationInMinutes(convertMsToMinutes(config.timerDurationMs));
-        setBreakDurationInSeconds(convertMsToSeconds(config.breakDurationMs));
-        setWarningThresholdInMinutes(convertMsToMinutes(config.warningThresholdMs));
+      onLoaded={(configs) => {
+        setTimerDurationInMinutes(convertMsToMinutes(configs.timerDurationMs));
+        setBreakDurationInSeconds(convertMsToSeconds(configs.breakDurationMs));
+        setWarningThresholdInMinutes(convertMsToMinutes(configs.warningThresholdMs));
       }}
     >
       <div data-testid="timer-duration" className="tracking-wider p-2">

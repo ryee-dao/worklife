@@ -10,7 +10,9 @@ import {
   createOverdueLevelsArray,
   OverdueLevelObject
 } from "./overdue/overdueGeometry";
-import { getOverdueConfigs, loadOverdueConfigsData } from "./overdue/overdueConfigs";
+import { getOverdueConfigs, loadOverdueConfigs } from "./overdue/overdueConfigs";
+import { loadLimitConfigs } from "./limit/limitConfigs";
+import { loadTimerConfigs } from "./timer/timerConfigs";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
@@ -23,14 +25,19 @@ const isTest = !!process.env.PLAYWRIGHT_TEST;
 let lastAppliedOverdueLevelIdx: number = -1;
 let currentOverdueSize: Size | undefined;
 
+function initConfigs() {
+  loadTimerConfigs();
+  loadLimitConfigs();
+  loadOverdueConfigs();
+}
 
 function initApp() {
   setWorkArea();
+  initConfigs();
   initLimits();
   initTimer();
   initEventListeners();
   createSettingsWindow();
-  loadOverdueConfigsData(); // see if this has to be here or can be somewhere else
   setOverdueLevelsArray();
 }
 

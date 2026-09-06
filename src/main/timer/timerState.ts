@@ -1,12 +1,12 @@
 import { EventEmitter } from "events";
 import { DEFAULTS, EVENTS, FILENAMES } from "../../shared/constants";
-import { getTimerSettingsData } from "../timer/timerConfigs";
+import { getTimerConfigs } from "../timer/timerConfigs";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
 import { calculateRemainingBreakSkips } from "../limit/limitState";
-import { getLimitConfig } from "../limit/limitConfigs";
+import { getLimitConfigs } from "../limit/limitConfigs";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
 export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
@@ -105,7 +105,7 @@ export const emitTimerStatus = () => {
     ...timerState,
     availableActions: getAvailableActions(timerState.status),
     remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-    allotedBreaks: getLimitConfig().allotedBreaks
+    allotedBreaks: getLimitConfigs().allotedBreaks
   };
   console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
@@ -237,10 +237,10 @@ const loadTimerStateFromFile = () => {
 };
 
 export const loadTimerConfigsIntoState = () => {
-  const timerConfig = getTimerSettingsData();
-  newTimerTimeMs = timerConfig.timerDurationMs;
-  breakTimeMs = timerConfig.breakDurationMs;
-  warningThresholdMs = timerConfig.warningThresholdMs;
+  const timerConfigs = getTimerConfigs();
+  newTimerTimeMs = timerConfigs.timerDurationMs;
+  breakTimeMs = timerConfigs.breakDurationMs;
+  warningThresholdMs = timerConfigs.warningThresholdMs;
 };
 
 export const getTimerState = () => {

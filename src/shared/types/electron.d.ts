@@ -10,11 +10,11 @@ export interface ElectronAPI {
   startBreak: () => void;
   skipBreak: () => void;
   skipTimer: () => void;
-  saveTimerConfig: (arg0: TimerConfig) => Promise<void>;
-  saveLimitConfig: (arg0: LimitConfig) => Promise<void>;
+  saveTimerConfigs: (arg0: TimerConfig) => Promise<void>;
+  saveLimitConfigs: (arg0: LimitConfig) => Promise<void>;
   saveOverdueConfigs: (arg0: OverdueConfigs) => Promise<void>;
-  loadTimerConfig: () => Promise<TimerConfig>;
-  loadLimitConfig: () => Promise<LimitConfig>
+  loadTimerConfigs: () => Promise<TimerConfig>;
+  loadLimitConfigs: () => Promise<LimitConfig>
   loadOverdueConfigs: () => Promise<OverdueConfigs>
 }
 

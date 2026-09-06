@@ -16,16 +16,16 @@ export const EVENTS = {
     TIMER_STARTBREAK: "timer:start_break",
     TIMER_SKIPBREAK: "timer:skip_break",
     TIMER_SKIPTIMER: "timer:skip_timer",
-    CONFIG: {
+    CONFIGS: {
       SAVE: {
-        TIMER: "config:save:timer",
-        LIMIT: "config:save:limit",
-        OVERDUE: "config:save:overdue",
+        TIMER: "configs:save:timer",
+        LIMIT: "configs:save:limit",
+        OVERDUE: "configs:save:overdue",
       },
       LOAD: {
-        TIMER: "config:load:timer",
-        LIMIT: "config:load:limit",
-        OVERDUE: "config:load:overdue",
+        TIMER: "configs:load:timer",
+        LIMIT: "configs:load:limit",
+        OVERDUE: "configs:load:overdue",
       },
     },
   },
@@ -40,8 +40,8 @@ export const DEFAULTS = {
 } as const;
 
 export const FILENAMES = {
-  TIMER: { SETTINGS: "timerSettings.json", STATE: "timerState.json" },
-  LIMIT: { SETTINGS: "limitSettings.json", STATE: "limitState.json" },
+  TIMER: { CONFIGS: "timerConfigs.json", STATE: "timerState.json" },
+  LIMIT: { CONFIGS: "limitConfigs.json", STATE: "limitState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
 } as const;
 
