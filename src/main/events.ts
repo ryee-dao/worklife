@@ -1,6 +1,5 @@
 import { BrowserWindow, ipcMain } from "electron";
-import { EVENTS, FILENAMES } from "../shared/constants";
-import { writeToUserDataFile } from "../shared/utils/files";
+import { EVENTS } from "../shared/constants";
 import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
 import { increaseSkippedBreakCount } from "./limit/limitState";
 import { getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
@@ -96,7 +95,6 @@ export const initEventListeners = () => {
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,
     (event, configs: TimerConfigs) => {
       // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.TIMER.CONFIGS, configs);
       setTimerConfigs(configs)
     }
   );
@@ -106,7 +104,6 @@ export const initEventListeners = () => {
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT,
     (event, configs: LimitConfigs) => {
       // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.LIMIT.CONFIGS, configs);
       setLimitConfigs(configs);
     }
   );
@@ -115,8 +112,6 @@ export const initEventListeners = () => {
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE,
     (event, configs: OverdueConfigs) => {
-      // throw new Error("test error")
-      writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, configs);
       setOverdueConfigs(configs);
     }
   );

@@ -33,12 +33,29 @@ function initConfigs() {
 
 function initApp() {
   setWorkArea();
+  listenForDisplayChanges();
   initConfigs();
   initLimits();
   initTimer();
   initEventListeners();
   createSettingsWindow();
   setOverdueLevelsArray();
+}
+
+// Handle whenever the screen size changes like for external monitors
+function listenForDisplayChanges() {
+  const handleDisplayChange = () => {
+    setWorkArea();
+    if (breakWindow && !breakWindow.isDestroyed() && currentOverdueSize && workArea) {
+      const bounds = breakWindow.getBounds();
+      const clamped = clampRectToWorkArea({ ...bounds, ...currentOverdueSize }, workArea);
+      breakWindow.setBounds(clamped);
+    }
+  };
+
+  screen.on('display-metrics-changed', handleDisplayChange);
+  screen.on('display-added', handleDisplayChange);
+  screen.on('display-removed', handleDisplayChange);
 }
 
 // Set the user's work area size
