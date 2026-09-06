@@ -15,7 +15,7 @@ export default function SlashedIcon({
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           className={`w-3/4 h-${slashSize} bg-current rotate-135`}
-          style={{ height: `${slashSize * 0.25}rem` }}
+          style={{ height: `${slashSize * 0.15}rem` }}
         >
         </div>
       </div>

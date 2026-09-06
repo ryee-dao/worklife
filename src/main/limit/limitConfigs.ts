@@ -1,38 +1,27 @@
 import { DEFAULTS, FILENAMES } from "../../shared/constants";
-import {
-  getUserDataFromFile,
-  writeToUserDataFile,
-} from "../../shared/utils/files";
+import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
 
-const defaultLimitConfigs: LimitConfig = {
+const defaultLimitConfigs: LimitConfigs = {
   allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
 };
 
-export interface LimitConfig {
+export interface LimitConfigs {
   allotedBreaks: number;
 }
 
-let limitConfig: LimitConfig;
+let limitConfigs: LimitConfigs;
 
-export function getLimitConfigsFileData(): LimitConfig {
-  const limitSettingsData = getUserDataFromFile<LimitConfig>(
-    FILENAMES.LIMIT.SETTINGS
-  );
-  // If no limit settings data is returned, set new state in file
-  if (!limitSettingsData.fileContent) {
-    setLimitConfigs(defaultLimitConfigs);
-  } else {
-    setLimitConfigs(limitSettingsData.fileContent);
-  }
-  // console.log(limitConfig);
-  return getLimitConfig();
+export const loadLimitConfigs = () => {
+  const limitConfigsData = getUserDataFromFile<LimitConfigs>(FILENAMES.LIMIT.CONFIGS);
+  limitConfigs = { ...defaultLimitConfigs, ...limitConfigsData?.fileContent };
+  writeToUserDataFile(FILENAMES.LIMIT.CONFIGS, limitConfigs);
 }
 
-function setLimitConfigs(newLimitConfig: LimitConfig) {
-  writeToUserDataFile(FILENAMES.LIMIT.SETTINGS, newLimitConfig);
-  limitConfig = newLimitConfig;
+export const getLimitConfigs = () => {
+  return limitConfigs;
 }
 
-export function getLimitConfig(): LimitConfig {
-  return limitConfig;
+export const setLimitConfigs = (newLimitConfigs: LimitConfigs) => {
+  limitConfigs = newLimitConfigs;
+  writeToUserDataFile(FILENAMES.LIMIT.CONFIGS, limitConfigs);
 }

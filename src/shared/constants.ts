@@ -16,14 +16,16 @@ export const EVENTS = {
     TIMER_STARTBREAK: "timer:start_break",
     TIMER_SKIPBREAK: "timer:skip_break",
     TIMER_SKIPTIMER: "timer:skip_timer",
-    CONFIG: {
+    CONFIGS: {
       SAVE: {
-        TIMER: "config:save:timer",
-        LIMIT: "config:save:limit",
+        TIMER: "configs:save:timer",
+        LIMIT: "configs:save:limit",
+        OVERDUE: "configs:save:overdue",
       },
       LOAD: {
-        TIMER: "config:load:timer",
-        LIMIT: "config:load:limit",
+        TIMER: "configs:load:timer",
+        LIMIT: "configs:load:limit",
+        OVERDUE: "configs:load:overdue",
       },
     },
   },
@@ -34,9 +36,15 @@ export const DEFAULTS = {
   DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds
   DEFAULT_WARNING_THRESHOLD_MS: 2 * 60 * 1000, // 2 minutes
   DEFAULT_ALLOTTED_BREAKS: 3,
+  DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
 } as const;
 
 export const FILENAMES = {
-  TIMER: { SETTINGS: "timerSettings.json", STATE: "timerState.json" },
-  LIMIT: { SETTINGS: "limitSettings.json", STATE: "limitState.json" },
-};
+  TIMER: { CONFIGS: "timerConfigs.json", STATE: "timerState.json" },
+  LIMIT: { CONFIGS: "limitConfigs.json", STATE: "limitState.json" },
+  OVERDUE: { CONFIGS: "overdueConfigs.json" },
+} as const;
+
+export const CONSTRAINTS = {
+  OVERDUE: { MAXIMUM_WINDOW_LEVEL: 5, MAXIMUM_WINDOW_RATIO: .9 },
+}

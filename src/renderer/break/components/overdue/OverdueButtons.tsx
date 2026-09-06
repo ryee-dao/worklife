@@ -1,32 +1,23 @@
-// import { ForwardIcon } from "@heroicons/react/24/outline";
 import { TimerState } from "../../../../main/timer/timerState";
-// import SlashedIcon from "../../../common/components/SlashedIcon";
 import { TreePalm } from 'lucide-react';
+import CircularButton from "../../../common/components/CircularButton";
 
 interface OverdueButtonsProps {
   timerState: TimerState;
 }
 
 export default function OverdueButtons({ timerState }: OverdueButtonsProps) {
-  const canStartBreak = timerState.availableActions.includes("breaktime"); // This is a little redundant but can stay to keep {timerState}
-  const startBreak = () => {
-    if (canStartBreak) window.electronAPI.startBreak();
-  };
-
+  const canStartBreak = timerState.availableActions.includes("breaktime");
 
   return (
-    <div className="h-full flex justify-center">
-      <button
-        data-testid="start-break"
-        onClick={startBreak}
-        disabled={!canStartBreak} // Ideally should never be disabled
-        className={`h-full aspect-square bg-yellow-200 rounded-full flex items-center 
-          justify-center transition-colors hover:bg-blue-300 
-          cursor-pointer text-green-800`
-        }
-      >
-        <TreePalm className="size-24"/>
-      </button>
-    </div>
+    <CircularButton
+      testId="start-break"
+      onClick={() => canStartBreak && window.electronAPI.startBreak()}
+      disabled={!canStartBreak}
+      className="h-[30vh] bg-blue-200 border-blue-500 text-green-800
+        hover:bg-blue-300"
+    >
+      <TreePalm className="size-12 sm:size-18 md:size-24 lg:size-32" />
+    </CircularButton>
   );
 }

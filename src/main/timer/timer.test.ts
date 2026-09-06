@@ -12,11 +12,11 @@ vi.mock('../limit/limitState', () => ({
 }));
 
 vi.mock('../limit/limitConfigs', () => ({
-  getLimitConfig: vi.fn(() => ({ allotedBreaks: 3 })),
+  getLimitConfigs: vi.fn(() => ({ allotedBreaks: 3 })),
 }));
 
 vi.mock('./timerConfigs', () => ({
-  getTimerSettingsData: vi.fn(() => ({
+  getTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
   })),

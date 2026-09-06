@@ -1,8 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
 import { TimerState } from "./timer/timerState";
-import { TimerConfig } from "./timer/timerConfigs";
-import { LimitConfig } from "./limit/limitConfigs";
+import { TimerConfigs } from "./timer/timerConfigs";
+import { LimitConfigs } from "./limit/limitConfigs";
+import { OverdueConfigs } from "./overdue/overdueConfigs";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -25,16 +26,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   skipTimer: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER);
   },
-  loadTimerConfig: async (): Promise<TimerConfig> => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.TIMER);
+  loadTimerConfigs: async (): Promise<TimerConfigs> => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER);
   },
-  loadLimitConfig: async () => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.LOAD.LIMIT);
+  loadLimitConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.LIMIT);
   },
-  saveTimerConfig: async (config: TimerConfig) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.TIMER, config);
+  loadOverdueConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE);
   },
-  saveLimitConfig: async (config: LimitConfig) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIG.SAVE.LIMIT, config);
+  saveTimerConfigs: async (configs: TimerConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, configs);
+  },
+  saveLimitConfigs: async (configs: LimitConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT, configs);
+  },
+  saveOverdueConfigs: async (configs: OverdueConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, configs);
   },
 });

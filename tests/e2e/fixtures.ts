@@ -1,7 +1,7 @@
 /* eslint-disable no-empty-pattern */
-import { test as base, TestInfo } from "@playwright/test";
+import { test as base, BrowserContext, TestInfo } from "@playwright/test";
 import { ElectronApplication, Page } from "playwright";
-import { launchApp, createTestUserDataDir } from "./helpers";
+import { launchApp, createTestUserDataDir, TestClock } from "./helpers";
 import fs from "fs";
 import path from "path";
 
@@ -9,7 +9,12 @@ type UserDataDir = {
   path: string;
   seed: (filename: string, data: object) => void;
 };
-type LaunchElectron = () => Promise<{ electronApp: ElectronApplication; settingsWindow: Page }>;
+type LaunchElectron = () => Promise<{
+  electronApp: ElectronApplication;
+  settingsWindow: Page,
+  context: BrowserContext,
+  testClock: TestClock,
+}>;
 
 const test = base.extend<{
   userDataDir: UserDataDir;
@@ -41,18 +46,38 @@ const test = base.extend<{
       // Wrap close to capture traces before windows are destroyed
       const originalClose = result.electronApp.close.bind(result.electronApp);
       result.electronApp.close = async () => {
-        const tracePaths = await stopAllTracing(result.electronApp, tracedContexts, testInfo);
-        attachTraces(tracePaths, testInfo);
+        try {
+          const tracePaths = await Promise.race([
+            stopAllTracing(result.electronApp, tracedContexts, testInfo),
+            new Promise<string[]>((_, reject) =>
+              // Force timeout if it doesn't resolve in time
+              setTimeout(() => reject(new Error('Tracing timed out')), 5 * 1000)
+            ),
+          ]);
+          attachTraces(tracePaths, testInfo);
+        } catch (e) {
+          console.warn('Trace capture failed:', e);
+        }
         return originalClose();
       };
+
 
       return result;
     });
 
     // Teardown: close any app that wasn't manually closed
     for (const app of apps) {
-      // Close windows manually
-      await app.close().catch(() => null);
+      try {
+        await Promise.race([
+          app.close(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Close timed out')), 10 * 1000)
+          ),
+        ]);
+      } catch {
+        // If close hangs (window tracing stuck, process unresponsive), force kill it
+        app.process().kill()
+      }
     }
   },
 

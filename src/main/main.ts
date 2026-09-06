@@ -1,8 +1,18 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage } from "electron";
+import { app, BrowserWindow, Menu, Tray, nativeImage, screen, Size } from "electron";
 import path from "path";
-import { destroyTimers, initTimer } from "./timer/timerState";
+import { destroyTimers, emitTimerStatus, initTimer, TimerState } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
+import {
+  clampRectToWorkArea,
+  convertOverdueLevelObjectToScreenSize,
+  convertOverdueTimeToOverdueLevelObject,
+  createOverdueLevelsArray,
+  OverdueLevelObject
+} from "./overdue/overdueGeometry";
+import { getOverdueConfigs, loadOverdueConfigs } from "./overdue/overdueConfigs";
+import { loadLimitConfigs } from "./limit/limitConfigs";
+import { loadTimerConfigs } from "./timer/timerConfigs";
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
@@ -11,26 +21,67 @@ export const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL; // Re
 let forceQuit = false; // Allows app.quit() to bypass tray logic
 const isTest = !!process.env.PLAYWRIGHT_TEST;
 
-// process.stdout.on('error', (err) => {
-//   if (err.code === 'EPIPE') return;
-//   throw err;
-// });
-// process.stderr.on('error', (err) => {
-//   if (err.code === 'EPIPE') return;
-//   throw err;
-// });
+// Constants related to overdue resizing logic
+let lastAppliedOverdueLevelIdx: number = -1;
+let currentOverdueSize: Size | undefined;
+
+function initConfigs() {
+  loadTimerConfigs();
+  loadLimitConfigs();
+  loadOverdueConfigs();
+}
 
 function initApp() {
+  setWorkArea();
+  listenForDisplayChanges();
+  initConfigs();
   initLimits();
   initTimer();
   initEventListeners();
   createSettingsWindow();
+  setOverdueLevelsArray();
 }
 
-// When the app.close() signal is emitted, set a flag that tells the app: 
+// Handle whenever the screen size changes like for external monitors
+function listenForDisplayChanges() {
+  const handleDisplayChange = () => {
+    if (breakWindow && !breakWindow.isDestroyed() && currentOverdueSize) {
+      workArea = screen.getDisplayMatching(breakWindow.getBounds()).workArea;
+    } else {
+      workArea = screen.getPrimaryDisplay().workArea;
+    }
+
+    if (breakWindow && !breakWindow.isDestroyed() && currentOverdueSize && workArea) {
+      const bounds = breakWindow.getBounds();
+      const clamped = clampRectToWorkArea({ ...bounds, ...currentOverdueSize }, workArea);
+      breakWindow.setBounds(clamped);
+    }
+  };
+
+  screen.on('display-metrics-changed', handleDisplayChange);
+  screen.on('display-added', handleDisplayChange);
+  screen.on('display-removed', handleDisplayChange);
+}
+
+// Set the user's work area size
+let workArea: Electron.Rectangle | undefined = undefined;
+const setWorkArea = () => {
+  workArea = screen.getPrimaryDisplay().workArea; // { x, y, width, height }
+};
+
+
+let overdueLevelsArray: OverdueLevelObject[];
+export const setOverdueLevelsArray = () => {
+  const overdueConfigs = getOverdueConfigs()
+  overdueLevelsArray = createOverdueLevelsArray(overdueConfigs);
+}
+
+// When the app.close() signal is emitted, set a flag {forceQuit}, that tells the app: 
 // bypass the hide-to-tray logic 
 app.on('before-quit', () => {
   forceQuit = true;
+  // Close all windows manually before close in case any can't be closed (ex: closable = false)
+  BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 
 // Right before quitting, destroy timers so that they won't persist
@@ -38,7 +89,13 @@ app.on('will-quit', () => {
   destroyTimers();
 });
 
-// Check if another instance is running
+// If in dev, set a different app name so if there's a prod version running, it doesn't clash
+if (isDev) {
+  app.setName('WorkLife-Dev');
+  app.setPath('userData', app.getPath('userData').replace('WorkLife', 'WorkLife-Dev'));
+}
+
+// Only allow one instance of the app in the same environment at the same time
 const firstAppInstance = app.requestSingleInstanceLock();
 
 if (!firstAppInstance) {
@@ -75,6 +132,12 @@ export function createSettingsWindow() {
 
   // Only show window when everything is loaded
   settingsWindow.once('ready-to-show', () => settingsWindow!.show());
+
+  // Emit the timer status initially when the setting window first loads 
+  // so it doesn't have to wait for first interval
+  settingsWindow.webContents.once('did-finish-load', () => {
+    emitTimerStatus();
+  });
 
   if (!isDev) {
     settingsWindow.loadFile(
@@ -116,6 +179,7 @@ export function createSettingsWindow() {
     },
   ]);
 
+
   tray.setContextMenu(contextMenu);
   return settingsWindow;
 }
@@ -131,10 +195,14 @@ export function showTimerOnTop() {
 }
 
 export function createBreakWindow() {
-  // Init break window
+  // Init break/overdue window
   breakWindow = new BrowserWindow({
     show: false,
     backgroundColor: '#000000',
+    minimizable: false,
+    maximizable: false,
+    resizable: false, // Comment this back out if window ever needs to be resizable again
+    closable: false,
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
@@ -155,6 +223,62 @@ export function createBreakWindow() {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
     }
   });
+
+  // Emit the timer status when the break window loads
+  breakWindow.webContents.once('did-finish-load', () => {
+    emitTimerStatus();
+  });
+
+  // Keep the overdue window inside the screen when dragged toward an edge (a "wall")
+  breakWindow.on("will-move", (event, newBounds) => {
+    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
+
+    // Clamp using our stored TRUE size, not newBounds' size. On Windows/DPI scaling,
+    // setBounds rounds sub-pixel sizes, and reading that back each move would let the
+    // window grow a pixel at a time. Using the authoritative size breaks that feedback loop.
+    const trueBounds = {
+      x: newBounds.x,
+      y: newBounds.y,
+      width: currentOverdueSize.width,
+      height: currentOverdueSize.height,
+    };
+    const clamped = clampRectToWorkArea(trueBounds, workArea);
+
+    // Only intervene if the move actually went out of bounds — otherwise let the
+    // native drag proceed so it feels smooth
+    if (clamped.x !== newBounds.x || clamped.y !== newBounds.y) {
+      event.preventDefault();          // cancel the OS's out-of-bounds move
+      breakWindow.setBounds(clamped);  // re-assert position AND known-good size
+    }
+  });
+
+  // For Mac
+  breakWindow.on("move", () => {
+    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
+
+    const bounds = breakWindow.getBounds();
+    const trueBounds = {
+      x: bounds.x,
+      y: bounds.y,
+      width: currentOverdueSize.width,
+      height: currentOverdueSize.height,
+    };
+    const clamped = clampRectToWorkArea(trueBounds, workArea);
+
+    if (clamped.x !== bounds.x || clamped.y !== bounds.y) {
+      breakWindow.setBounds(clamped);
+    }
+  });
+
+  // If minimized, bring it back to screen
+  breakWindow.on('minimize', () => {
+    setTimeout(() => {
+      if (breakWindow && !breakWindow.isDestroyed()) {
+        breakWindow.restore();
+        breakWindow.focus();
+      }
+    }, 250);
+  });
 }
 
 export function activateKioskModeForBreakWindow() {
@@ -166,6 +290,35 @@ export function activateKioskModeForBreakWindow() {
 
 export function closeBreakWindow() {
   if (breakWindow && !breakWindow.isDestroyed()) {
-    breakWindow.close();
+    breakWindow.destroy();
+    breakWindow = null;
+    // Reset overdue-session state so the next overdue period starts clean
+    // (and the will-move handler no-ops until the first level applies)
+    currentOverdueSize = undefined;
+    lastAppliedOverdueLevelIdx = -1;
+  }
+}
+
+export const resizeBreakWindow = (timerState: TimerState) => {
+  const overdueLevelObject = convertOverdueTimeToOverdueLevelObject(
+    timerState.overdueTimeMs,
+    overdueLevelsArray
+  )
+  console.log(overdueLevelObject)
+
+  // Only resize when crossing into a new level — not every tick
+  if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {
+    const resizedScreenSize = convertOverdueLevelObjectToScreenSize(
+      { height: workArea!.height, width: workArea!.width },
+      overdueLevelObject
+    )
+    const windowCoords = breakWindow!.getBounds()
+    const desiredBounds = { x: windowCoords.x, y: windowCoords.y, ...resizedScreenSize };
+    const clampedBounds = clampRectToWorkArea(desiredBounds, workArea!);
+    breakWindow!.setBounds(clampedBounds);
+    // Store the size we intended, so the clamp handler can re-assert it instead of
+    // reading back the window's (DPI-rounding-drifted) size — prevents growth on repeated moves
+    currentOverdueSize = { width: resizedScreenSize.width, height: resizedScreenSize.height };
+    lastAppliedOverdueLevelIdx = overdueLevelObject.levelIdx;
   }
 }

@@ -33,8 +33,8 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
   }
 
   useEffect(() => {
-    window.electronAPI.loadTimerConfig().then(config => {
-      setWarningThresholdMs(config.warningThresholdMs);
+    window.electronAPI.loadTimerConfigs().then(configs => {
+      setWarningThresholdMs(configs.warningThresholdMs);
     });
   }, []);
 

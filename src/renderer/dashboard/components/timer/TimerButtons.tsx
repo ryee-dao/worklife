@@ -1,5 +1,6 @@
 import { PlayIcon, PauseIcon, ForwardIcon } from "@heroicons/react/24/outline";
 import { TimerState } from "../../../../main/timer/timerState";
+import CircularButton from "../../../common/components/CircularButton";
 
 interface TimerButtonProps {
   timerState: TimerState;
@@ -12,48 +13,38 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
   const canSkip = timerState.availableActions.includes("skip");
 
   const changePauseState = () => {
-    if (canPause && canStart) {
-      throw new Error("Invalid state");
-    }
+    if (canPause && canStart) throw new Error("Invalid state");
     if (canPause) window.electronAPI.pause();
     if (canStart) window.electronAPI.start();
   };
 
-  const skipToBreak = () => {
-    if (canSkip) window.electronAPI.skipTimer();
-  };
-
   return (
     <>
-      {timerStatus !== "BREAK" &&
+      {timerStatus !== "BREAK" && (
         <div data-testid="timer-buttons-container" className="grow">
           <div className="h-full flex justify-center gap-8">
             {(canPause || canStart) && (
-              <button
-                data-testid="toggle-timer-button"
+              <CircularButton
+                testId="toggle-timer-button"
                 onClick={changePauseState}
-                className="aspect-square h-2/3 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
+                className="h-2/3 bg-slate-200 hover:bg-slate-300"
               >
                 {canPause && <PauseIcon className="h-2/3 text-slate-700" />}
-                {canStart && (
-                  <PlayIcon className="h-2/3 text-slate-700 ml-1 lg:ml-4" />
-                )}
-              </button>
+                {canStart && <PlayIcon className="h-2/3 text-slate-700 ml-1 lg:ml-4" />}
+              </CircularButton>
             )}
             {canSkip && (
-              <button
-                data-testid="skip-button"
-                onClick={skipToBreak}
-                disabled={timerState.availableActions.length === 0}
-                className="aspect-square h-2/3 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
+              <CircularButton
+                testId="skip-button"
+                onClick={() => window.electronAPI.skipTimer()}
+                className="h-2/3 bg-slate-200 hover:bg-slate-300"
               >
                 <ForwardIcon className="h-2/3 text-slate-700 sm:ml-1 lg:ml-3" />
-              </button>
+              </CircularButton>
             )}
           </div>
         </div>
-      }
+      )}
     </>
-
   );
 }

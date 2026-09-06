@@ -1,4 +1,4 @@
-import { _electron as electron } from "playwright";
+import { _electron as electron, ElectronApplication, Page } from "playwright";
 import { mkdtempSync, rmSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -57,5 +57,36 @@ export async function launchApp(userDataDir: string) {
   // Pipe Electron console to test output for debugging
   settingsWindow.on("console", (msg) => console.log(`[Electron] ${msg.text()}`));
 
-  return { electronApp, settingsWindow };
+  return {
+    electronApp,
+    settingsWindow,
+    context: settingsWindow.context(),
+    testClock: createTestClock(electronApp)
+  };
+}
+
+// Create an internal test clock so events are triggered deterministically
+export type TestClock = ReturnType<typeof createTestClock>;
+export function createTestClock(electronApp: ElectronApplication) {
+  return {
+    async fastForward(seconds: number, delayMs = 500) {
+      for (let i = 0; i < seconds; i++) {
+        await electronApp.evaluate(() => {
+          global.__test_fastForwardTimerOneSecond!();
+        });
+      }
+      // Add an optional delay after the fast forward so the tests aren't too fast to follow 
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    },
+  };
+}
+
+export async function getWindowBounds(electronApp: ElectronApplication, page: Page) {
+  const url = page.url();
+  return electronApp.evaluate(({ BrowserWindow }, targetUrl) => {
+    const win = BrowserWindow.getAllWindows().find(w =>
+      !w.isDestroyed() && w.webContents.getURL() === targetUrl
+    );
+    return win?.getBounds() ?? null;
+  }, url);
 }

@@ -5,11 +5,12 @@ import fs from "fs";
 import path from "path";
 import { TimerState } from "../../src/main/timer/timerState"
 import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds } from "../../src/shared/utils/time"
+import { getWindowBounds } from "./helpers";
 
 test.describe.configure({ mode: 'parallel' });
 
 test("App launches with a visible window and starts up with valid components & states", async ({ userDataDir, launchElectron }) => {
-  const { settingsWindow, electronApp } = await launchElectron();
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
   let breakWindow: Page;
 
   await test.step("Verify defaults written to file", async () => {
@@ -24,8 +25,10 @@ test("App launches with a visible window and starts up with valid components & s
 
   await test.step("Verify timer counts down", async () => {
     // Assert the display ticks down through consecutive values
-    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible({ timeout: 6 * 1000 })
-    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 50")).toBeVisible({ timeout: 6 * 1000 })
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible()
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 50")).toBeVisible()
   });
 
   await test.step("Verify default UI state", async () => {
@@ -40,22 +43,27 @@ test("App launches with a visible window and starts up with valid components & s
     // Skip the work timer and wait for the overdue window to open
     [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
     ])
+
     // Assert the overdue timer counts up
-    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 05")).toBeVisible({ timeout: 6 * 1000 })
-    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 10")).toBeVisible({ timeout: 6 * 1000 })
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 00")).toBeVisible()
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 05")).toBeVisible()
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 10")).toBeVisible()
   });
 
   await test.step("Start break and verify break countdown", async () => {
     // Start the break from the overdue window
-    breakWindow.getByTestId("start-break").click()
+    await breakWindow.getByTestId("start-break").click();
     // Assert the break timer counts down
-    await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 25")).toBeVisible({ timeout: 6 * 1000 })
-    await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 20")).toBeVisible({ timeout: 6 * 1000 })
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 25")).toBeVisible()
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 20")).toBeVisible()
   });
 });
-
 
 test("App launches the overdue window properly when the timer countdown is reached", async ({ launchElectron, userDataDir }) => {
   // Seed a short countdown so the timer expires quickly
@@ -65,46 +73,57 @@ test("App launches the overdue window properly when the timer countdown is reach
     _bypassThreshold: true,
   })
 
-  const { settingsWindow, electronApp } = await launchElectron();
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
 
   await test.step("Verify timer counts down from seeded state", async () => {
-    // Assert the seeded countdown reaches near zero
-    await expect(settingsWindow.getByTestId('timer-time-display').getByText("00 : 0")).toBeVisible({ timeout: 3 * 1000 })
+    // Tick 4 times, countdown should be at 1 second
+    await testClock.fastForward(4);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("00 : 01")).toBeVisible()
   });
 
   await test.step("Verify overdue window appears and counts up", async () => {
-    // Wait for the overdue window to open on expiry
-    const breakWindow = await electronApp.waitForEvent('window', { timeout: 10 * 1000 });
+    // Listen for the window before the tick that triggers it
+    const [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      testClock.fastForward(1),
+    ]);
+
     // Assert the overdue timer counts up
-    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 05")).toBeVisible({ timeout: 6 * 1000 })
-    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 10")).toBeVisible({ timeout: 6 * 1000 })
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 05")).toBeVisible()
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 10")).toBeVisible()
   });
 });
 
 test("App pauses properly", async ({ launchElectron }) => {
-  const { settingsWindow } = await launchElectron();
-  // Capture the displayed time before pausing
-  const timerBeforePause = await settingsWindow.getByTestId('timer-time-display').textContent()
+  const { settingsWindow, testClock } = await launchElectron();
+
+  await test.step("Tick and capture initial state", async () => {
+    // Advance 5 seconds so we have a known display value
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible()
+  });
 
   await test.step("Pause and verify timer stops", async () => {
     // Pause the timer
     await settingsWindow.getByTestId('toggle-timer-button').click();
-    await settingsWindow.waitForTimeout(3 * 1000);
-    // Assert the time still shows the pre-pause value
-    await expect(settingsWindow.getByTestId('timer-time-display').getByText(timerBeforePause!)).toBeVisible({ timeout: 3 * 1000 })
+    // Tick while paused, timer should not move
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible()
   });
 
   await test.step("Unpause and verify timer resumes", async () => {
     // Unpause the timer
     await settingsWindow.getByTestId('toggle-timer-button').click();
-    await settingsWindow.waitForTimeout(3 * 1000);
-    // Assert the time has moved off the pre-pause value
-    await expect(settingsWindow.getByTestId('timer-time-display').getByText(timerBeforePause!)).not.toBeVisible({ timeout: 3 * 1000 })
+    // Tick after unpause, timer should now advance
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 50")).toBeVisible()
   });
 });
 
 test("Break window is unable to skip after all skips are exhausted", async ({ launchElectron }) => {
-  const { settingsWindow, electronApp } = await launchElectron();
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
 
   await test.step("Verify initial skip state", async () => {
     // Wait for the skipbox to render
@@ -122,16 +141,21 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
 
   for (let loopIdx = 0; loopIdx < totalNumberOfSkips; loopIdx++) {
     await test.step(`Exhaust skip ${loopIdx + 1} of ${totalNumberOfSkips}`, async () => {
-      // Go to break state
+      // Skip to overdue, skipTimer transitions directly, window opens
       const [breakWindow] = await Promise.all([
         electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
         settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
       ])
-      await breakWindow.getByTestId("start-break").click()
 
-      // Skip break
+      // Start the break, then skip it
+      await breakWindow.getByTestId("start-break").click()
+      const closePromise = breakWindow.waitForEvent('close');
       await breakWindow.getByTestId("break-skip").click()
-      await breakWindow.waitForEvent('close');
+      // Tick to process BREAK → RUNNING transition (skipBreak sets countdown to 0, needs a tick)
+      await testClock.fastForward(1);
+      await closePromise;
+
+      // Wait for settings window to update
       await settingsWindow.getByTestId("timer-skipbox").waitFor()
 
       // Assert that break window was closed
@@ -145,7 +169,7 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
   }
 
   await test.step("Verify skip is disabled after exhaustion", async () => {
-    // Go to break state
+    // Skip to overdue
     const [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
@@ -155,23 +179,23 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
     // Assert the skip break button is now disabled
     await expect(breakWindow.getByTestId("break-skip")).toBeDisabled();
 
-    // Force click the skip break button
-    await breakWindow.getByTestId("break-skip").click({ delay: 1 * 1000, force: true })
-    await breakWindow.waitForTimeout(2 * 1000)
+    // Force click the disabled skip button
+    await breakWindow.getByTestId("break-skip").click({ force: true })
+    // Tick to verify transition does NOT happen
+    await testClock.fastForward(1);
 
-    // Assert that it has not closed
+    // Assert the window is still open
     expect(breakWindow.isClosed()).toBeFalsy();
   });
 });
 
 test("Changing timer settings only updates after a break", async ({ userDataDir, launchElectron }) => {
-  const { settingsWindow, electronApp } = await launchElectron();
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
   const newTimerInterval = 10;
 
   await test.step("Change timer duration in settings", async () => {
     // Navigate to the Settings tab
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
-    await settingsWindow.waitForTimeout(1 * 1000);
     // Assert inputs start at their default values
     expect(Number(await settingsWindow.getByTestId("timer-duration").locator('input').inputValue())).toBe(convertMsToMinutes(DEFAULTS.DEFAULT_TIMER_DURATION_MS));
     expect(Number(await settingsWindow.getByTestId("break-duration").locator('input').inputValue())).toBe(convertMsToSeconds(DEFAULTS.DEFAULT_BREAK_DURATION_MS));
@@ -184,7 +208,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
   await test.step("Skip to break and verify setting not yet applied", async () => {
     // Navigate back to the Timer tab
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
-    // Go to break state
+    // Skip to overdue, skipTimer transitions directly
     const [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
@@ -194,10 +218,12 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
     );
     expect(initialTimerState.currentCountdownMs).not.toBe(convertMinutesToMs(newTimerInterval));
-    // Start and skip the break
+    // Start the break, then skip it
     await breakWindow.getByTestId("start-break").click()
+    const closePromise = breakWindow.waitForEvent('close');
     await breakWindow.getByTestId("break-skip").click()
-    await breakWindow.waitForEvent('close');
+    await testClock.fastForward(1);
+    await closePromise;
   });
 
   await test.step("Verify setting applied after break completes", async () => {
@@ -213,7 +239,6 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
   await test.step("Verify settings UI still reflects change", async () => {
     // Navigate to the Settings tab
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
-    await settingsWindow.waitForTimeout(1 * 1000);
     // Assert the inputs still show the saved values
     expect(Number(await settingsWindow.getByTestId("timer-duration").locator('input').inputValue())).toBe(newTimerInterval);
     expect(Number(await settingsWindow.getByTestId("break-duration").locator('input').inputValue())).toBe(convertMsToSeconds(DEFAULTS.DEFAULT_BREAK_DURATION_MS));
@@ -223,15 +248,17 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
 test("Data persists when app is closed", async ({ launchElectron, userDataDir }) => {
   let savedTimerState: TimerState;
 
-  await test.step("Launch app and pause after delay", async () => {
-    const { settingsWindow: firstWindow, electronApp } = await launchElectron();
-    // Capture the countdown right after launch
+  await test.step("Launch app, tick, pause, and capture state", async () => {
+    const { settingsWindow, electronApp, testClock } = await launchElectron();
+    // Read the initial state
     const initialTimerState: TimerState = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
     );
-    // Let the timer run, then pause
-    await firstWindow.getByTestId("timer-buttons-container").getByTestId('toggle-timer-button').click({ delay: 5 * 1000 });
-    // Capture the paused state and assert it advanced from launch
+    // Advance the timer
+    await testClock.fastForward(10);
+    // Pause the timer
+    await settingsWindow.getByTestId("timer-buttons-container").getByTestId('toggle-timer-button').click();
+    // Read the paused state and assert it advanced
     savedTimerState = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
     );
@@ -249,5 +276,77 @@ test("Data persists when app is closed", async ({ launchElectron, userDataDir })
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
     );
     expect(newTimerState.currentCountdownMs).toBe(savedTimerState.currentCountdownMs);
+  });
+});
+
+test("Overdue window grows in size across levels", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+  let breakWindow: Page;
+  let initialBounds: Electron.Rectangle | null
+
+  await test.step("Skip to overdue and capture initial window size", async () => {
+    [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+    ]);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 00")).toBeVisible();
+    await testClock.fastForward(1);
+    initialBounds = await getWindowBounds(electronApp, breakWindow);
+  });
+
+  await test.step("Verify window grows after crossing level 1 threshold", async () => {
+    await testClock.fastForward(convertMsToSeconds(DEFAULTS.DEFAULT_LEVEL_THRESHOLD_MS));
+    const level1Bounds = await getWindowBounds(electronApp, breakWindow);
+    expect(level1Bounds!.width).toBeGreaterThan(initialBounds!.width);
+    expect(level1Bounds!.height).toBeGreaterThan(initialBounds!.height);
+  });
+
+  await test.step("Verify window grows again after crossing level 2 threshold", async () => {
+    const beforeBounds = await getWindowBounds(electronApp, breakWindow);
+    await testClock.fastForward(convertMsToSeconds(DEFAULTS.DEFAULT_LEVEL_THRESHOLD_MS));
+    const level2Bounds = await getWindowBounds(electronApp, breakWindow);
+    expect(level2Bounds!.width).toBeGreaterThan(beforeBounds!.width);
+    expect(level2Bounds!.height).toBeGreaterThan(beforeBounds!.height);
+  });
+
+  await test.step("Verify window grows again after crossing level 3 threshold", async () => {
+    const beforeBounds = await getWindowBounds(electronApp, breakWindow);
+    await testClock.fastForward(convertMsToSeconds(DEFAULTS.DEFAULT_LEVEL_THRESHOLD_MS));
+    const level3Bounds = await getWindowBounds(electronApp, breakWindow);
+    expect(level3Bounds!.width).toBeGreaterThan(beforeBounds!.width);
+    expect(level3Bounds!.height).toBeGreaterThan(beforeBounds!.height);
+  });
+});
+
+test("Break window closes after break countdown finishes naturally", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+  let breakWindow: Page;
+
+  await test.step("Skip to overdue and start break", async () => {
+    [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+    ]);
+    await expect(breakWindow.getByTestId('overdue-time-display').getByText("00 : 00")).toBeVisible();
+    await breakWindow.getByTestId("start-break").click();
+  });
+
+  await test.step("Verify break is counting down", async () => {
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('break-time-display').getByText("00 : 25")).toBeVisible();
+  });
+
+  await test.step("Verify window closes when break finishes", async () => {
+    const closePromise = breakWindow.waitForEvent('close');
+    await testClock.fastForward(25);
+    await closePromise;
+    expect(breakWindow.isClosed()).toBeTruthy();
+  });
+
+  await test.step("Verify timer is back to running", async () => {
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId('timer-time-display')).toBeVisible();
+    const timerText = await settingsWindow.getByTestId('timer-time-display').textContent();
+    expect(timerText).not.toContain("00 : 00");
   });
 });
