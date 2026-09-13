@@ -3,7 +3,7 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-// Don't need vite for main process, only renderer
+// Only need Vite for renderer process
 export default defineConfig({
   plugins: [
     react(),
@@ -21,5 +21,13 @@ export default defineConfig({
       }
     }
   },
-
+  resolve: {
+    alias: {
+      '@assets': path.resolve(__dirname, 'src/assets'),
+    }
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 });

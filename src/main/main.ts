@@ -13,6 +13,8 @@ import {
 import { getOverdueConfigs, loadOverdueConfigs } from "./overdue/overdueConfigs";
 import { loadLimitConfigs } from "./limit/limitConfigs";
 import { loadTimerConfigs } from "./timer/timerConfigs";
+import { buildStatusIcons } from "./tray";
+export let tray: Tray | null = null;
 export let settingsWindow: BrowserWindow | null = null;
 export let breakWindow: BrowserWindow | null = null;
 
@@ -38,6 +40,7 @@ function initApp() {
   initLimits();
   initTimer();
   initEventListeners();
+  buildStatusIcons();
   createSettingsWindow();
   setOverdueLevelsArray();
 }
@@ -80,7 +83,11 @@ export const setOverdueLevelsArray = () => {
 // bypass the hide-to-tray logic 
 app.on('before-quit', () => {
   forceQuit = true;
-  // Close all windows manually before close in case any can't be closed (ex: closable = false)
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+  }
+  // Close all windows and timers manually before close in case any can't be closed (ex: closable = false)
+  destroyTimers();
   BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 
@@ -155,32 +162,33 @@ export function createSettingsWindow() {
     }
   });
 
-  // Set icon for app
-  const trayImage = nativeImage.createFromPath(
-    path.join(__dirname, "../assets/dog.png")
-  );
-  const tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
-  tray.setToolTip("Work Life");
+  if (!process.env.PLAYWRIGHT_TEST) {
+    // Set icon for app
+    const trayImage = nativeImage.createFromPath(
+      path.join(__dirname, "../assets/dog.png")
+    );
+    tray = new Tray(trayImage.resize({ width: 16, height: 16 }));
+    tray.setToolTip("Work Life");
 
-  // Build tray menu
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: "Show Settings",
-      click: () => {
-        settingsWindow!.show();
+    // Build tray menu
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: "Show Settings",
+        click: () => {
+          settingsWindow!.show();
+        },
       },
-    },
-    {
-      label: "Quit",
-      click: () => {
-        settingsWindow!.destroy();
-        app.quit();
+      {
+        label: "Quit",
+        click: () => {
+          settingsWindow!.destroy();
+          app.quit();
+        },
       },
-    },
-  ]);
+    ]);
 
-
-  tray.setContextMenu(contextMenu);
+    tray.setContextMenu(contextMenu);
+  }
   return settingsWindow;
 }
 

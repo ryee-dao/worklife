@@ -4,8 +4,8 @@
   "description": "Tool to reclaim work-life balance",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
-    "dev:debug": "npm run _dev:init && concurrently \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\"",
+    "dev": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
+    "dev:debug": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\"",
     "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
     "dist": "npm run build && electron-builder",
     "start": "npm run build && electron .",
@@ -89,6 +89,7 @@
     "electron-builder": "^26.0.12",
     "esbuild": "^0.27.1",
     "eslint": "^10.0.1",
+    "kill-port": "^2.0.1",
     "lint-staged": "^16.2.7",
     "lucide-react": "^1.33.0",
     "nodemon": "^3.1.11",

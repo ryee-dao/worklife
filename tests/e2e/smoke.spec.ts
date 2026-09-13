@@ -245,6 +245,7 @@ test("Break can be skipped directly from overdue without starting break first", 
     expect(await settingsWindow.locator('.used-skip').count()).toBe(1);
   });
 });
+
 test("Changing timer settings only updates after a break", async ({ userDataDir, launchElectron }) => {
   const { settingsWindow, electronApp, testClock } = await launchElectron();
   const newTimerInterval = 10;

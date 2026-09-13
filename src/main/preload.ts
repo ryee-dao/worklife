@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       callback(data);
     });
   },
+  onWarning: (callback: () => void) => {
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_WARNING, () => {
+      callback();
+    });
+  },
   pause: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_PAUSE);
   },

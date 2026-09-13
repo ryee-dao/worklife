@@ -13,6 +13,12 @@
     "types": [
       "vite/client"
     ],
+    "baseUrl": ".",
+    "paths": {
+      "@assets/*": [
+        "src/assets/*"
+      ]
+    },
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -35,5 +41,5 @@
     {
       "path": "./tsconfig.main.json"
     }
-  ]
+  ],
 }

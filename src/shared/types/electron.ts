@@ -5,6 +5,7 @@ import { OverdueConfigs } from "../../main/overdue/overdueConfigs";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => void;
+  onWarning: (callback: () => void) => void;
   pause: () => void;
   start: () => void;
   startBreak: () => void;

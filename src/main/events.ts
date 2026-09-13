@@ -1,4 +1,6 @@
 import { BrowserWindow, ipcMain } from "electron";
+import { updateTray } from './tray';
+import { tray } from './main';
 import { EVENTS } from "../shared/constants";
 import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
 import { increaseSkippedBreakCount } from "./limit/limitState";
@@ -39,6 +41,7 @@ export const broadcastStateToRendererWindows = (
 
 export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.RUNNING, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -47,6 +50,7 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.ON_BREAK, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -55,6 +59,7 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -63,10 +68,19 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.PAUSED, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
       EVENTS.IPC_CHANNELS.TIMER_UPDATE
+    );
+  });
+
+  timerEmitter.on(EVENTS.TIMER.WARNING, () => {
+    broadcastStateToRendererWindows(
+      null,
+      [settingsWindow],
+      EVENTS.IPC_CHANNELS.TIMER_WARNING
     );
   });
 

@@ -95,6 +95,13 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
 };
 
 export const emitTimerStatus = () => {
+  /*
+    NOTE: 
+      Use this function to emit the timer state if its in {TimerStatus},
+      otherwise, the timer status may be emitted to the UI without the state itself,
+      which may cause bugs
+  */ 
+
   // Given the status, emit the event and the state itself
   const statusMapper: Record<TimerStatus, string> = {
     RUNNING: EVENTS.TIMER.RUNNING,
@@ -170,11 +177,10 @@ const transitionToNextState = () => {
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
     case "BREAK":
-      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
+      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Place before changes so the configs update before status change
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerState.overdueTimeMs = 0;
-      timerEmitter.emit(EVENTS.TIMER.RUNNING);
       break;
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
