@@ -407,3 +407,58 @@ test("Break window closes after break countdown finishes naturally", async ({ la
     expect(timerText).not.toContain("00 : 00");
   });
 });
+
+test("Warning sound triggers when timer crosses warning threshold", async ({ launchElectron, userDataDir }) => {
+  // Seed countdown just above the warning threshold so one tick crosses it
+  const warningThresholdMs = DEFAULTS.DEFAULT_WARNING_THRESHOLD_MS;
+  userDataDir.seed(FILENAMES.TIMER.STATE, {
+    currentCountdownMs: warningThresholdMs + 5000,
+    status: "RUNNING",
+    _bypassThreshold: true,
+  });
+
+  const { settingsWindow, testClock } = await launchElectron();
+
+  interface WindowWithAudioSpy extends Window {
+    __audioPlayCalls: string[];
+  }
+
+  await test.step("Inject Audio spy before warning fires", async () => {
+    // Replace Audio in the renderer with a spy that tracks calls
+    await settingsWindow.evaluate(() => {
+      const w = window as unknown as WindowWithAudioSpy;
+      w.__audioPlayCalls = [];
+      window.Audio = class MockAudio {
+        src: string;
+        constructor(src?: string) {
+          this.src = src || '';
+        }
+        play() {
+          (window as unknown as WindowWithAudioSpy).__audioPlayCalls.push(this.src);
+          return Promise.resolve();
+        }
+      } as unknown as typeof Audio;
+    });
+  });
+
+  await test.step("Tick before warning threshold and verify sound was not triggered", async () => {
+    await testClock.fastForward(1);
+
+    const audioPlayCalls = await settingsWindow.evaluate(() => {
+      return (window as unknown as WindowWithAudioSpy).__audioPlayCalls;
+    });
+
+    expect(audioPlayCalls.length).toBe(0);
+  });
+
+  await test.step("Tick past warning threshold and verify sound was triggered", async () => {
+    await testClock.fastForward(10);
+
+    const audioPlayCalls = await settingsWindow.evaluate(() => {
+      return (window as unknown as WindowWithAudioSpy).__audioPlayCalls;
+    });
+
+    expect(audioPlayCalls.length).toBe(1);
+    expect(audioPlayCalls[0]).toContain('warning');
+  });
+});

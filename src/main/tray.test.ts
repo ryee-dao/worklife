@@ -96,7 +96,7 @@ describe('Tray status detection', () => {
 
     updateTray(mockTray as unknown as Electron.Tray, state);
 
-    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-red'));
+    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-orange'));
   });
 
   test('BREAK state shows blue icon', () => {

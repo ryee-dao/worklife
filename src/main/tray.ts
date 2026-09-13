@@ -11,7 +11,7 @@ const ICON_DIR = path.join(__dirname, '../assets/icons');
 const STATUS_ICON_PATHS = {
   RUNNING: path.join(ICON_DIR, 'tray-green.png'),
   WARNING: path.join(ICON_DIR, 'tray-yellow.png'),
-  OVERDUE: path.join(ICON_DIR, 'tray-red.png'),
+  OVERDUE: path.join(ICON_DIR, 'tray-orange.png'),
   BREAK: path.join(ICON_DIR, 'tray-blue.png'),
   PAUSED: path.join(ICON_DIR, 'tray-gray.png'),
 } as const;
