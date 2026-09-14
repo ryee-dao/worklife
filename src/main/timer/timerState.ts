@@ -16,7 +16,7 @@ export interface TimerState {
   status: TimerStatus;
   availableActions: AvailableActions[];
   remainingSkips: number,
-  allotedBreaks: number,
+  allottedBreaks: number,
   _bypassThreshold?: boolean
 }
 
@@ -115,7 +115,7 @@ export const emitTimerStatus = () => {
     ...timerState,
     availableActions: getAvailableActions(timerState.status),
     remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-    allotedBreaks: getLimitConfigs().allotedBreaks
+    allottedBreaks: getLimitConfigs().allottedBreaks
   };
   console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);

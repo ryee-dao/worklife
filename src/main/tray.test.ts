@@ -39,7 +39,7 @@ function createTimerState(overrides: Partial<TimerState> = {}): TimerState {
     overdueTimeMs: 0,
     availableActions: ['pause', 'skip'],
     remainingSkips: 3,
-    allotedBreaks: 3,
+    allottedBreaks: 3,
     ...overrides,
   };
 }

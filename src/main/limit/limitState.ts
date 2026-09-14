@@ -62,7 +62,7 @@ export function calculateRemainingBreakSkips() {
   const limitStateData = getLimitState();
   const limitConfigs = getLimitConfigs();
   return (
-    limitConfigs.allotedBreaks - limitStateData.skippedBreakCount
+    limitConfigs.allottedBreaks - limitStateData.skippedBreakCount
   );
 }
 

@@ -12,7 +12,7 @@ vi.mock('../limit/limitState', () => ({
 }));
 
 vi.mock('../limit/limitConfigs', () => ({
-  getLimitConfigs: vi.fn(() => ({ allotedBreaks: 3 })),
+  getLimitConfigs: vi.fn(() => ({ allottedBreaks: 3 })),
 }));
 
 vi.mock('./timerConfigs', () => ({
@@ -516,7 +516,7 @@ describe('State emission', () => {
 
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
     expect(emittedState.remainingSkips).toBe(2);
-    expect(emittedState.allotedBreaks).toBe(3);
+    expect(emittedState.allottedBreaks).toBe(3);
   });
 
   test('remainingSkips never goes below 0', () => {
