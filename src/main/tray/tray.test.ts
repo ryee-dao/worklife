@@ -1,10 +1,12 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { DEFAULTS } from '../shared/constants';
-import { updateTray, buildStatusIcons } from './tray';
-import { TimerState } from './timer/timerState';
-import { getTimerConfigs } from './timer/timerConfigs';
+import { describe, test, expect, vi, beforeEach, it } from 'vitest';
+import { DEFAULTS } from '../../shared/constants';
+import { updateTray, buildStatusIcons, ICON_DIR } from './tray';
+import { TimerState } from '../timer/timerState';
+import { getTimerConfigs } from '../timer/timerConfigs';
+import { existsSync } from 'fs';
+import path from 'path';
 
-vi.mock('./timer/timerConfigs', () => ({
+vi.mock('../timer/timerConfigs', () => ({
   getTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
@@ -248,5 +250,20 @@ describe('Tray tooltip', () => {
     updateTray(mockTray as unknown as Electron.Tray, state);
 
     expect(mockTray.setToolTip).toHaveBeenCalledWith('WorkLife — 01:05');
+  });
+});
+
+describe("asset paths", () => {
+
+  const expectedIcons = [
+    "tray-green.png",
+    "tray-yellow.png",
+    "tray-orange.png",
+    "tray-blue.png",
+    "tray-gray.png",
+  ];
+
+  it.each(expectedIcons)("%s exists", (filename) => {
+    expect(existsSync(path.join(ICON_DIR, filename))).toBe(true);
   });
 });

@@ -1,6 +1,5 @@
 import { BrowserWindow, ipcMain } from "electron";
-import { updateTray } from './tray';
-import { tray } from './main';
+import { tray, updateTray } from './tray/tray';
 import { EVENTS } from "../shared/constants";
 import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
 import { increaseSkippedBreakCount } from "./limit/limitState";
@@ -15,17 +14,10 @@ import {
   loadTimerConfigsIntoState,
   startBreak,
 } from "./timer/timerState";
-import {
-  activateKioskModeForBreakWindow,
-  breakWindow,
-  closeBreakWindow,
-  createBreakWindow,
-  resizeBreakWindow,
-  setOverdueLevelsArray,
-  settingsWindow,
-  showTimerOnTop,
-} from "./main";
+
 import { getOverdueConfigs, loadOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
+import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
+import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,

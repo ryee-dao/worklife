@@ -1,13 +1,13 @@
-import { app, Menu, nativeImage } from 'electron';
+import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
-import { TimerState, TimerStatus, pauseTimer, startTimer, startBreak, skipBreak, skipTimer } from './timer/timerState';
-import { getTimerConfigs } from './timer/timerConfigs';
-import { formatMsToMMSS } from '../shared/utils/time';
-import { settingsWindow } from './main';
+import { TimerState, TimerStatus, pauseTimer, startTimer, startBreak, skipBreak, skipTimer } from '../timer/timerState';
+import { getTimerConfigs } from '../timer/timerConfigs';
+import { formatMsToMMSS } from '../../shared/utils/time';
+import { settingsWindow } from '../windows/settingsWindow';
 
 type StatusKey = TimerStatus | 'WARNING';
 
-const ICON_DIR = path.join(__dirname, '../assets/icons');
+export const ICON_DIR = path.join(__dirname, '../../assets/icons');
 const STATUS_ICON_PATHS = {
   RUNNING: path.join(ICON_DIR, 'tray-green.png'),
   WARNING: path.join(ICON_DIR, 'tray-yellow.png'),
@@ -17,6 +17,7 @@ const STATUS_ICON_PATHS = {
 } as const;
 
 let statusIcons: Record<StatusKey, Electron.NativeImage>;
+export let tray: Tray | null = null;
 
 export function buildStatusIcons() {
   if (!process.env.PLAYWRIGHT_TEST) {
@@ -89,5 +90,16 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
 
   if (process.platform === 'win32' && settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.setOverlayIcon(statusIcons[statusKey], statusKey);
+  }
+}
+
+export function createTray(width: number = 16, height: number = 16) {
+  if (!process.env.PLAYWRIGHT_TEST) {
+    // Set icon for app
+    const trayImage = nativeImage.createFromPath(
+      path.join(__dirname, "../assets/dog.png")
+    );
+    tray = new Tray(trayImage.resize({ width, height }));
+    tray.setToolTip("Work Life");
   }
 }

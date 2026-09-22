@@ -1,5 +1,5 @@
 import { useState } from "react";
-// import { isDev } from "../../../common/constants";
+// import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 import { OverdueConfigs } from "../../../../main/overdue/overdueConfigs";

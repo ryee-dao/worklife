@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { LimitConfigs } from "../../../../main/limit/limitConfigs";
-import { isDev } from "../../../common/constants";
+import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 
 export default function LimitSettings() {
   const [allottedBreaks, setAllottedBreaks] = useState(0);
 
-  const breaksMaxLimit = isDev ? 9999999 : 5;
+  const breaksMaxLimit = IS_DEV ? 9999999 : 5;
   const allottedBreaksValid = allottedBreaks >= 0 && allottedBreaks <= breaksMaxLimit;
 
   return (
