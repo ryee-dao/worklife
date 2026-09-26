@@ -177,6 +177,24 @@ describe('Timer initialization and teardown', () => {
     expect(Number.isNaN(writtenState.currentCountdownMs)).toBe(false);
   });
 
+  test('relaunching during BREAK resets to RUNNING', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+    initTimer();
+    vi.advanceTimersByTime(1000); // → OVERDUE
+    startBreak();                 // → BREAK
+
+    const captured = vi.mocked(writeToUserDataFile).mock.lastCall![1] as StoredTimerState;
+    expect(captured.status).toBe('BREAK');
+    destroyTimers();
+
+    seedTimerState({ ...captured, _bypassThreshold: false });
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    expect(runningHandler.mock.lastCall![0].status).toBe('RUNNING');
+  });
 });
 
 describe('Timer countdown and transitions', () => {
@@ -227,6 +245,18 @@ describe('Timer countdown and transitions', () => {
     expect(overdueHandler.mock.lastCall![0].status).toBe('OVERDUE');
   });
 
+  test('startBreak from OVERDUE emits START_BREAK once', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const startBreakHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.START_BREAK, startBreakHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // → OVERDUE
+    startBreak();
+
+    expect(startBreakHandler).toHaveBeenCalledOnce();
+  });
 
   test('transitions back to RUNNING after break ends', () => {
     seedTimerState({ currentCountdownMs: 2000, status: 'RUNNING', _bypassThreshold: true });
@@ -578,8 +608,10 @@ describe('Action enforcement', () => {
   test('skipBreak during OVERDUE transitions to RUNNING', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
+    const startBreakHandler = vi.fn();
     const stopBreakHandler = vi.fn();
     const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.START_BREAK, startBreakHandler);
     timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
     timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
 
@@ -594,10 +626,12 @@ describe('Action enforcement', () => {
     // Assert the transition completed
     expect(stopBreakHandler).toHaveBeenCalled();
     expect(runningHandler).toHaveBeenCalled();
-
     const state = runningHandler.mock.lastCall![0];
     expect(state.status).toBe('RUNNING');
     expect(state.overdueTimeMs).toBe(0);
     expect(state.currentCountdownMs).toBeGreaterThan(0);
+
+    // Assert that start break was not triggered when a skip occursS
+    expect(startBreakHandler).not.toHaveBeenCalled();
   });
 });

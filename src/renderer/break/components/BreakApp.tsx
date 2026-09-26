@@ -7,6 +7,7 @@ import OverdueView from "./overdue/OverdueView";
 export default function BreakWindow() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
+    window.electronAPI.getTimerState().then(setTimerStateObject);
     window.electronAPI.onTimerUpdate((timerState) => {
       setTimerStateObject(timerState);
     });
@@ -18,7 +19,7 @@ export default function BreakWindow() {
         timerStateObject?.status === "OVERDUE" && <OverdueView timerState={timerStateObject} />
       }
       {
-        timerStateObject?.status === "BREAK" && <BreakView timerState={timerStateObject}/>
+        timerStateObject?.status === "BREAK" && <BreakView timerState={timerStateObject} />
       }
     </>
   )

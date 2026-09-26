@@ -3,7 +3,7 @@ import { setWorkArea, workArea } from "../display";
 import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "../env";
 import { getWorkArea, refreshWorkAreaForBounds } from "../display";
 import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "../overdue/overdueGeometry";
-import { emitTimerStatus, TimerState } from "../timer/timerState";
+import { emitTimerStatus, TimerState, getTimerState } from "../timer/timerState";
 import { getOverdueConfigs } from "../overdue/overdueConfigs";
 import path from "path";
 
@@ -39,6 +39,10 @@ export function createBreakWindow() {
     // Make this into "if !!IS_DEV" if you are developing and want the overdue window to always be on top
     if (!IS_DEV && !IS_TEST) {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
+    }
+
+    if (getTimerState().status === "BREAK") {
+      activateKioskModeForBreakWindow();
     }
   });
 
@@ -103,10 +107,12 @@ export function createBreakWindow() {
 export function activateKioskModeForBreakWindow() {
   // Make this into "if !!IS_DEV" if you are developing and want the break window to be full screen
   if (!IS_DEV && !IS_TEST) {
-    setTimeout(() => {
-      breakWindow!.setKiosk(true)
-      breakWindow!.setResizable(true)
-    }, 0);
+    // setTimeout(() => {
+    if (breakWindow) {
+      breakWindow.setResizable(true)
+      breakWindow.setKiosk(true)
+    }
+    // }, 0);
   }
 }
 

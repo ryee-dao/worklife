@@ -462,3 +462,55 @@ test("Warning sound triggers when timer crosses warning threshold", async ({ lau
     expect(audioPlayCalls[0]).toContain('warning');
   });
 });
+
+test('Closing the settings window hides it and keeps the app running', async ({ launchElectron }) => {
+  const { electronApp } = await launchElectron();
+
+  const getSettingsWindowState = () =>
+    electronApp.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('dashboard'));
+      return win ? { visible: win.isVisible(), destroyed: win.isDestroyed() } : null;
+    });
+
+  await test.step('Close the settings window', async () => {
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('dashboard'))!.close();
+    });
+  });
+
+  await test.step('Window is hidden, not destroyed', async () => {
+    // null = destroyed (close handler missing), visible = hide() didn't run
+    await expect.poll(getSettingsWindowState).toEqual({ visible: false, destroyed: false });
+  });
+});
+
+test('Display listeners are not re-registered when a break window opens', async ({ userDataDir, launchElectron }) => {
+  userDataDir.seed(FILENAMES.TIMER.STATE, {
+    currentCountdownMs: 1000,
+    status: 'RUNNING',
+    _bypassThreshold: true,
+  });
+  const { electronApp, testClock } = await launchElectron();
+  let listenersAtStartup: number;
+
+  const getDisplayListenerCount = () =>
+    electronApp.evaluate(({ screen }) => screen.listenerCount('display-metrics-changed'));
+
+
+  await test.step('Count display listeners at startup', async () => {
+    listenersAtStartup = await getDisplayListenerCount();
+  });
+
+  await test.step('Go overdue so the break window is created', async () => {
+    await testClock.fastForward(1);
+    await expect.poll(() =>
+      electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().some(w => w.webContents.getURL().includes('break'))
+      )
+    ).toBe(true);
+  });
+
+  await test.step('Display listener count is unchanged', async () => {
+    expect(await getDisplayListenerCount()).toBe(listenersAtStartup);
+  });
+});

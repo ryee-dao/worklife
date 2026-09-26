@@ -13,6 +13,7 @@ import {
   skipTimer,
   loadTimerConfigsIntoState,
   startBreak,
+  getTimerState,
 } from "./timer/timerState";
 
 import { getOverdueConfigs, loadOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
@@ -81,6 +82,7 @@ export const initEventListeners = () => {
   });
   timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
+  timerEmitter.on(EVENTS.TIMER.START_BREAK, activateKioskModeForBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // This ensures configs are loaded only after break
     loadOverdueConfigs();
@@ -91,11 +93,11 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, startBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, activateKioskModeForBreakWindow);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, increaseSkippedBreakCount);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, skipTimer);
 
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,

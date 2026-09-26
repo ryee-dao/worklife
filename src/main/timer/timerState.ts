@@ -100,7 +100,7 @@ export const emitTimerStatus = () => {
       Use this function to emit the timer state if its in {TimerStatus},
       otherwise, the timer status may be emitted to the UI without the state itself,
       which may cause bugs
-  */ 
+  */
 
   // Given the status, emit the event and the state itself
   const statusMapper: Record<TimerStatus, string> = {
@@ -111,12 +111,7 @@ export const emitTimerStatus = () => {
   };
 
   // Emit along additional data along with the timer state
-  const stateWithActions: TimerState = {
-    ...timerState,
-    availableActions: getAvailableActions(timerState.status),
-    remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-    allottedBreaks: getLimitConfigs().allottedBreaks
-  };
+  const stateWithActions = getTimerState();
   console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
@@ -218,8 +213,7 @@ export const startBreak = () => {
   if (!process.env.PLAYWRIGHT_TEST) {
     tickTimer = setInterval(onTick, tickIntervalMs);
   }
-  timerState.status = "BREAK";
-  timerState.currentCountdownMs = breakTimeMs;
+  transitionToNextState();
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
@@ -232,8 +226,8 @@ export const skipBreak = () => {
 
 export const skipTimer = () => {
   timerState.currentCountdownMs = 0;
+  transitionToNextState();
   emitTimerStatus();
-  transitionToNextState()
 };
 
 const loadTimerStateFromFile = () => {
@@ -253,9 +247,12 @@ export const loadTimerConfigsIntoState = () => {
   warningThresholdMs = timerConfigs.warningThresholdMs;
 };
 
-export const getTimerState = () => {
-  return timerState
-};
+export const getTimerState = (): TimerState => ({
+  ...timerState,
+  availableActions: getAvailableActions(timerState.status),
+  remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
+  allottedBreaks: getLimitConfigs().allottedBreaks,
+});
 
 // Expose a function that allows end to end tests to manually speed up timers 
 if (process.env.PLAYWRIGHT_TEST) {

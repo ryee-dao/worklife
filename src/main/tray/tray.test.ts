@@ -14,7 +14,7 @@ vi.mock('../timer/timerConfigs', () => ({
   })),
 }));
 
-vi.mock('./main', () => ({
+vi.mock('../main', () => ({
   settingsWindow: null,
 }));
 
@@ -87,7 +87,7 @@ describe('Tray status detection', () => {
     expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-green'));
   });
 
-  test('OVERDUE state shows red icon', () => {
+  test('OVERDUE state shows orange icon', () => {
     const mockTray = createMockTray();
     const state = createTimerState({
       status: 'OVERDUE',
