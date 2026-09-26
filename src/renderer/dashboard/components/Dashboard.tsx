@@ -17,11 +17,7 @@ export default function Dashboard() {
     });
   }, []);
 
-  useEffect(() => {
-    window.electronAPI.onWarning(() => {
-      playWarningSound();
-    });
-  }, []);
+  useEffect(() => window.electronAPI.onWarning(playWarningSound), []);
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col">

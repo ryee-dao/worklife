@@ -13,9 +13,9 @@ const electronAPI: ElectronAPI = {
     });
   },
   onWarning: (callback: () => void) => {
-    ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_WARNING, () => {
-      callback();
-    });
+    const listener = () => callback();
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_WARNING, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.TIMER_WARNING, listener);
   },
   getTimerState: async (): Promise<TimerState> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TIMER_GETSTATE);

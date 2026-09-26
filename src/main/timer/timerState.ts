@@ -223,7 +223,8 @@ export const skipBreak = () => {
   if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
   increaseSkippedBreakCount();
   timerState.status = "BREAK";
-  timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
+  transitionToNextState();
+  emitTimerStatus();
 };
 
 export const skipTimer = () => {

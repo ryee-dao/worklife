@@ -13,13 +13,13 @@ export default function OverdueButtons({ timerState }: OverdueButtonsProps) {
   const canSkip = timerState.availableActions.includes("skip");
 
   return (
-    <div className="flex gap-2 sm:gap-14 lg:gap-30">
+    <div className="flex gap-[4vw]">
 
       <CircularButton
         testId="overdue-window-skip-break-button"
         onClick={() => canSkip && window.electronAPI.skipBreak()}
         disabled={!canSkip}
-        className={`h-[30vh] bg-blue-100 border-slate-500 text-slate-600
+        className={`h-[min(30vh,40vw)] w-[min(30vh,40vw)] bg-blue-100 border-slate-500 text-slate-600
         hover:bg-slate-300 hover:text-slate-700`}
       >
         {canSkip ? (
@@ -33,7 +33,7 @@ export default function OverdueButtons({ timerState }: OverdueButtonsProps) {
         testId="overdue-window-start-break-button"
         onClick={() => canStartBreak && window.electronAPI.startBreak()}
         disabled={!canStartBreak}
-        className="h-[30vh] bg-blue-200 border-blue-500 text-green-800
+        className="h-[min(30vh,40vw)] w-[min(30vh,40vw)] bg-blue-200 border-blue-500 text-green-800
         hover:bg-blue-300"
       >
         <TreePalm className="size:8 xsm:size-12 sm:size-18 md:size-24 lg:size-32" />

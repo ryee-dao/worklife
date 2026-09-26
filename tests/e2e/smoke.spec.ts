@@ -226,7 +226,6 @@ test("Break can be skipped directly from overdue without starting break first", 
     // and transition straight back to running
     const closePromise = breakWindow.waitForEvent('close');
     await breakWindow.getByTestId("overdue-window-skip-break-button").click();
-    await testClock.fastForward(1);
     await closePromise;
     expect(breakWindow.isClosed()).toBeTruthy();
   });
