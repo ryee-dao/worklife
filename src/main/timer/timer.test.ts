@@ -9,6 +9,7 @@ vi.mock('../../shared/utils/files', () => ({
 
 vi.mock('../limit/limitState', () => ({
   calculateRemainingBreakSkips: vi.fn(() => 3),
+  increaseSkippedBreakCount: vi.fn(),
 }));
 
 vi.mock('../limit/limitConfigs', () => ({

@@ -2,7 +2,6 @@ import { BrowserWindow, ipcMain } from "electron";
 import { tray, updateTray } from './tray/tray';
 import { EVENTS } from "../shared/constants";
 import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
-import { increaseSkippedBreakCount } from "./limit/limitState";
 import { getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
@@ -94,7 +93,6 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, startBreak);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, increaseSkippedBreakCount);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, skipTimer);
 
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);

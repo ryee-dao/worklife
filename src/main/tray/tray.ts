@@ -97,7 +97,7 @@ export function createTray(width: number = 16, height: number = 16) {
   if (!process.env.PLAYWRIGHT_TEST) {
     // Set icon for app
     const trayImage = nativeImage.createFromPath(
-      path.join(__dirname, "../assets/dog.png")
+      path.join(__dirname, "../../assets/dog.png")
     );
     tray = new Tray(trayImage.resize({ width, height }));
     tray.setToolTip("Work Life");

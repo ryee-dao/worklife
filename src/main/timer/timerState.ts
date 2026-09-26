@@ -5,7 +5,7 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { calculateRemainingBreakSkips } from "../limit/limitState";
+import { calculateRemainingBreakSkips, increaseSkippedBreakCount } from "../limit/limitState";
 import { getLimitConfigs } from "../limit/limitConfigs";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
@@ -219,7 +219,9 @@ export const startBreak = () => {
 };
 
 export const skipBreak = () => {
+  if (calculateRemainingBreakSkips() <= 0) return;
   if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
+  increaseSkippedBreakCount();
   timerState.status = "BREAK";
   timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
 };
