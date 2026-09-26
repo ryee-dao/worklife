@@ -26,8 +26,6 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "outDir": "./.tsbuild",
-    "tsBuildInfoFile": "./.tsbuild/tsconfig.renderer.tsbuildinfo",
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

@@ -1,6 +1,6 @@
 /dist
 /node_modules
-.tsbuild
+*.tsbuildinfo
 .DS_Store
 .tmp
 test-results

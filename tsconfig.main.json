@@ -15,7 +15,6 @@
   "include": [
     "src/main/**/*",
     "src/shared/**/*",
-    "src/renderer/common/utils/sound.ts"
   ],
   "exclude": [
     "**/*.test.ts"
