@@ -1,7 +1,6 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
 import { TimerState, TimerStatus, pauseTimer, startTimer, startBreak, skipBreak, skipTimer } from '../timer/timerState';
-import { getTimerConfigs } from '../timer/timerConfigs';
 import { formatMsToMMSS } from '../../shared/utils/time';
 import { settingsWindow } from '../windows/settingsWindow';
 
@@ -29,13 +28,7 @@ export function buildStatusIcons() {
 }
 
 function getStatusKey(state: TimerState): StatusKey {
-  if (state.status === 'RUNNING') {
-    const warningMs = getTimerConfigs().warningThresholdMs;
-    if (warningMs && state.currentCountdownMs > 0 && state.currentCountdownMs <= warningMs) {
-      return 'WARNING';
-    }
-  }
-  return state.status;
+  return state.isWarning ? 'WARNING' : state.status;
 }
 
 export function updateTray(tray: Electron.Tray, state: TimerState) {

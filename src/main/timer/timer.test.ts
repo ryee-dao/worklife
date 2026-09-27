@@ -20,6 +20,7 @@ vi.mock('./timerConfigs', () => ({
   getTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
+    warningThresholdMs: 5000,
   })),
 }));
 
@@ -634,5 +635,53 @@ describe('Action enforcement', () => {
 
     // Assert that start break was not triggered when a skip occursS
     expect(startBreakHandler).not.toHaveBeenCalled();
+  });
+});
+
+describe('Warning state', () => {
+  test('isWarning is false above the threshold', () => {
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // 9000 left
+
+    expect(runningHandler.mock.lastCall![0].isWarning).toBe(false);
+  });
+
+  test('isWarning is true exactly at the threshold', () => {
+    // Catches < vs <= off-by-one
+    seedTimerState({ currentCountdownMs: 6000, status: 'RUNNING', _bypassThreshold: true });
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // 5000 left
+
+    expect(runningHandler.mock.lastCall![0].isWarning).toBe(true);
+  });
+
+  test('isWarning is false while paused inside the window', () => {
+    seedTimerState({ currentCountdownMs: 4000, status: 'RUNNING', _bypassThreshold: true });
+    const pausedHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.PAUSED, pausedHandler);
+
+    initTimer();
+    pauseTimer();
+    vi.advanceTimersByTime(1000);
+
+    expect(pausedHandler.mock.lastCall![0].isWarning).toBe(false);
+  });
+
+  test('isWarning is false once overdue', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(2000);
+
+    expect(overdueHandler.mock.lastCall![0].isWarning).toBe(false);
   });
 });

@@ -2,17 +2,8 @@ import { describe, test, expect, vi, beforeEach, it } from 'vitest';
 import { DEFAULTS } from '../../shared/constants';
 import { updateTray, buildStatusIcons, ICON_DIR } from './tray';
 import { TimerState } from '../timer/timerState';
-import { getTimerConfigs } from '../timer/timerConfigs';
 import { existsSync } from 'fs';
 import path from 'path';
-
-vi.mock('../timer/timerConfigs', () => ({
-  getTimerConfigs: vi.fn(() => ({
-    timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
-    breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
-    warningThresholdMs: DEFAULTS.DEFAULT_WARNING_THRESHOLD_MS,
-  })),
-}));
 
 vi.mock('../main', () => ({
   settingsWindow: null,
@@ -42,17 +33,12 @@ function createTimerState(overrides: Partial<TimerState> = {}): TimerState {
     availableActions: ['pause', 'skip'],
     remainingSkips: 3,
     allottedBreaks: 3,
+    isWarning: false,
     ...overrides,
   };
 }
 
 beforeEach(() => {
-  vi.mocked(getTimerConfigs).mockReset();
-  vi.mocked(getTimerConfigs).mockReturnValue({
-    timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
-    breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
-    warningThresholdMs: DEFAULTS.DEFAULT_WARNING_THRESHOLD_MS,
-  });
   buildStatusIcons();
 });
 
@@ -70,21 +56,12 @@ describe('Tray status detection', () => {
     const mockTray = createMockTray();
     const state = createTimerState({
       status: 'RUNNING',
-      currentCountdownMs: DEFAULTS.DEFAULT_WARNING_THRESHOLD_MS - 1000,
+      isWarning: true
     });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
 
     expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-yellow'));
-  });
-
-  test('RUNNING state at exactly zero does not trigger warning', () => {
-    const mockTray = createMockTray();
-    const state = createTimerState({ status: 'RUNNING', currentCountdownMs: 0 });
-
-    updateTray(mockTray as unknown as Electron.Tray, state);
-
-    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-green'));
   });
 
   test('OVERDUE state shows orange icon', () => {
@@ -124,6 +101,25 @@ describe('Tray status detection', () => {
     updateTray(mockTray as unknown as Electron.Tray, state);
 
     expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-gray'));
+  });
+
+  test('RUNNING state in warning window shows yellow icon', () => {
+    const mockTray = createMockTray();
+    const state = createTimerState({ status: 'RUNNING', isWarning: true });
+
+    updateTray(mockTray as unknown as Electron.Tray, state);
+
+    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-yellow'));
+  });
+
+  test('tray follows isWarning, not the countdown', () => {
+    // The timer decides the warning window; the tray must not recompute it.
+    const mockTray = createMockTray();
+    const state = createTimerState({ status: 'RUNNING', currentCountdownMs: 1000, isWarning: false });
+
+    updateTray(mockTray as unknown as Electron.Tray, state);
+
+    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-green'));
   });
 });
 
@@ -253,7 +249,7 @@ describe('Tray tooltip', () => {
   });
 });
 
-describe("asset paths", () => {
+describe("Asset paths", () => {
 
   const expectedIcons = [
     "tray-green.png",

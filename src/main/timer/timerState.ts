@@ -17,6 +17,7 @@ export interface TimerState {
   availableActions: AvailableActions[];
   remainingSkips: number,
   allottedBreaks: number,
+  isWarning: boolean;
   _bypassThreshold?: boolean
 }
 
@@ -233,6 +234,12 @@ export const skipTimer = () => {
   emitTimerStatus();
 };
 
+const isInWarning = () =>
+  timerState.status === "RUNNING" &&
+  !!warningThresholdMs &&
+  timerState.currentCountdownMs > 0 &&
+  timerState.currentCountdownMs <= warningThresholdMs;
+
 const loadTimerStateFromFile = () => {
   const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
 
@@ -255,6 +262,7 @@ export const getTimerState = (): TimerState => ({
   availableActions: getAvailableActions(timerState.status),
   remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
   allottedBreaks: getLimitConfigs().allottedBreaks,
+  isWarning: isInWarning(),
 });
 
 // Expose a function that allows end to end tests to manually speed up timers 
