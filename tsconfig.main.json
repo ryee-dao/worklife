@@ -1,5 +1,5 @@
 {
-/* This config file is for the main process */
+  /* This config file is for the main process */
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
@@ -9,8 +9,14 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "composite": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "tsBuildInfoFile": "./dist/tsconfig.main.tsbuildinfo",
   },
-  "include": ["src/main/**/*", "src/shared/**/*"],
-  "exclude": ["**/*.test.ts"],
+  "include": [
+    "src/main/**/*",
+    "src/shared/**/*",
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ],
 }

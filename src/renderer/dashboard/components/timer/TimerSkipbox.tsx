@@ -7,9 +7,9 @@ interface TimerSkipboxProps {
 }
 
 export default function TimerSkipbox({ timerState }: TimerSkipboxProps) {
-  const { remainingSkips, allotedBreaks } = timerState;
-  const usedSkips = allotedBreaks - remainingSkips;
-  const showSkipIcons = allotedBreaks <= 5 && allotedBreaks !== 0;
+  const { remainingSkips, allottedBreaks } = timerState;
+  const usedSkips = allottedBreaks - remainingSkips;
+  const showSkipIcons = allottedBreaks <= 5 && allottedBreaks !== 0;
 
   return (
     <div data-testid="timer-skipbox" className="
@@ -33,7 +33,7 @@ export default function TimerSkipbox({ timerState }: TimerSkipboxProps) {
             : <div className="grow flex justify-center items-center gap-2 lg:gap-4">
               <TimerSkipboxSkipIcon slashed={false} />
               <span className="font-semibold text-lg sm:text-xl lg:text-3xl">x {remainingSkips}</span>
-              {allotedBreaks !== 0 && <>
+              {allottedBreaks !== 0 && <>
                 <TimerSkipboxSkipIcon slashed={true} />
                 <span className="font-semibold text-lg sm:text-xl lg:text-3xl">x {usedSkips}</span>
               </>}

@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { TimerState, TimerStatus } from "../../../../main/timer/timerState";
 import { formatMsToMMSS } from "../../../../shared/utils/time";
 
@@ -6,43 +5,25 @@ interface TimerTimeDisplayProps {
   timerState: TimerState;
 }
 
+const timerColorMapper: Record<TimerStatus | "WARNING", string> = {
+  RUNNING: "text-green-600",
+  BREAK: "text-blue-600",
+  PAUSED: "text-slate-600",
+  WARNING: "text-yellow-600",
+  OVERDUE: "text-red-700",
+};
+
 export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) {
-  const [warningThresholdMs, setWarningThresholdMs] = useState<number | null>(null);
   const formattedTime = formatMsToMMSS(timerState.currentCountdownMs || timerState.overdueTimeMs);
-  const hours = formattedTime.split(":")[0];
-  const minutes = formattedTime.split(":")[1];
-  const warningThresholdMet = warningThresholdMs && timerState.currentCountdownMs <= warningThresholdMs
-
-  const timerColorMapper: Record<TimerStatus | "WARNING", string> = {
-    RUNNING: "text-green-600",
-    BREAK: "text-blue-600",
-    PAUSED: "text-slate-600",
-    WARNING: "text-yellow-600",
-    OVERDUE: "text-red-700",
-  };
-  const timerColor = timerColorMapper[timerState.status];
-
-  function determineTimerColor() {
-    if (timerState.status === "OVERDUE") {
-      return timerColorMapper['OVERDUE'];
-    }
-    if (warningThresholdMet && timerState.status !== "PAUSED") {
-      return timerColorMapper["WARNING"]
-    }
-    return timerColor;
-  }
-
-  useEffect(() => {
-    window.electronAPI.loadTimerConfigs().then(configs => {
-      setWarningThresholdMs(configs.warningThresholdMs);
-    });
-  }, []);
-
+  const [minutes, seconds] = formattedTime.split(":");
+  const timerColor = timerState.isWarning
+    ? timerColorMapper.WARNING
+    : timerColorMapper[timerState.status];
 
   return (
-    <div data-testid="timer-time-display" className={`h-2/3 font-bold text- flex justify-center items-center ${determineTimerColor()}`}>
+    <div data-testid="timer-time-display" className={`h-2/3 font-bold flex justify-center items-center ${timerColor}`}>
       <div className="tracking-widest text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
-        <span>{hours}</span> : <span>{minutes}</span>
+        <span>{minutes}</span> : <span>{seconds}</span>
       </div>
     </div>
   );

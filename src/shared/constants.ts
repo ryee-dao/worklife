@@ -16,6 +16,8 @@ export const EVENTS = {
     TIMER_STARTBREAK: "timer:start_break",
     TIMER_SKIPBREAK: "timer:skip_break",
     TIMER_SKIPTIMER: "timer:skip_timer",
+    TIMER_WARNING: 'timer:warning',
+    TIMER_GETSTATE: "timer:get_state",
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",

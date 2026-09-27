@@ -20,7 +20,7 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
 
   return (
     <>
-      {timerStatus !== "BREAK" && (
+      {timerStatus !== "BREAK" && timerStatus !== "OVERDUE" && (
         <div data-testid="timer-buttons-container" className="grow">
           <div className="h-full flex justify-center gap-8">
             {(canPause || canStart) && (

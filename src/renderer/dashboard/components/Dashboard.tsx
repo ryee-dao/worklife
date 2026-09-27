@@ -7,6 +7,7 @@ import { TimerState } from "../../../main/timer/timerState";
 import TimeSettings from "./settings/TimerSettings";
 import LimitSettings from "./settings/LimitSettings";
 import OverdueConfigsForm from "./settings/OverdueConfigsForm";
+import { playWarningSound } from "../../common/utils/sound";
 
 export default function Dashboard() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
@@ -16,6 +17,8 @@ export default function Dashboard() {
     });
   }, []);
 
+  useEffect(() => window.electronAPI.onWarning(playWarningSound), []);
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col">
       <HashRouter>
@@ -24,9 +27,9 @@ export default function Dashboard() {
           <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
           <Route path="/settings" element={<Settings />}>
             <Route index element={<Navigate replace to="/settings/timer" />} />
-            <Route path="timer" element={<TimeSettings />}/>
-            <Route path="limits" element={<LimitSettings />}/>
-            <Route path="overdue" element={<OverdueConfigsForm />}/>
+            <Route path="timer" element={<TimeSettings />} />
+            <Route path="limits" element={<LimitSettings />} />
+            <Route path="overdue" element={<OverdueConfigsForm />} />
           </Route>
 
           {/* Default route */}

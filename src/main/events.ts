@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from "electron";
+import { tray, updateTray } from './tray/tray';
 import { EVENTS } from "../shared/constants";
 import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
-import { increaseSkippedBreakCount } from "./limit/limitState";
 import { getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
@@ -12,18 +12,12 @@ import {
   skipTimer,
   loadTimerConfigsIntoState,
   startBreak,
+  getTimerState,
 } from "./timer/timerState";
-import {
-  activateKioskModeForBreakWindow,
-  breakWindow,
-  closeBreakWindow,
-  createBreakWindow,
-  resizeBreakWindow,
-  setOverdueLevelsArray,
-  settingsWindow,
-  showTimerOnTop,
-} from "./main";
+
 import { getOverdueConfigs, loadOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
+import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
+import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -39,6 +33,7 @@ export const broadcastStateToRendererWindows = (
 
 export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.RUNNING, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -47,6 +42,7 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.ON_BREAK, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -55,6 +51,7 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
@@ -63,10 +60,19 @@ export const initEventListeners = () => {
   });
 
   timerEmitter.on(EVENTS.TIMER.PAUSED, (state: TimerState) => {
+    updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
       [settingsWindow, breakWindow],
       EVENTS.IPC_CHANNELS.TIMER_UPDATE
+    );
+  });
+
+  timerEmitter.on(EVENTS.TIMER.WARNING, () => {
+    broadcastStateToRendererWindows(
+      null,
+      [settingsWindow],
+      EVENTS.IPC_CHANNELS.TIMER_WARNING
     );
   });
 
@@ -75,6 +81,7 @@ export const initEventListeners = () => {
   });
   timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
+  timerEmitter.on(EVENTS.TIMER.START_BREAK, activateKioskModeForBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // This ensures configs are loaded only after break
     loadOverdueConfigs();
@@ -85,11 +92,10 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, startBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, activateKioskModeForBreakWindow);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, increaseSkippedBreakCount);
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, skipTimer);
 
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,

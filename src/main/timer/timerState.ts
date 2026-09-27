@@ -5,7 +5,7 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { calculateRemainingBreakSkips } from "../limit/limitState";
+import { calculateRemainingBreakSkips, increaseSkippedBreakCount } from "../limit/limitState";
 import { getLimitConfigs } from "../limit/limitConfigs";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
@@ -16,7 +16,8 @@ export interface TimerState {
   status: TimerStatus;
   availableActions: AvailableActions[];
   remainingSkips: number,
-  allotedBreaks: number,
+  allottedBreaks: number,
+  isWarning: boolean;
   _bypassThreshold?: boolean
 }
 
@@ -80,18 +81,28 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
     case "PAUSED":
       availableActions.push("start");
       return availableActions;
+    case "OVERDUE":
+      availableActions.push("breaktime");
+      if (calculateRemainingBreakSkips() > 0) {
+        availableActions.push("skip");
+      }
+      return availableActions;
     case "BREAK":
       if (calculateRemainingBreakSkips() > 0) {
         availableActions.push("skip");
       }
       return availableActions;
-    case "OVERDUE":
-      availableActions.push("breaktime");
-      return availableActions;
   }
 };
 
 export const emitTimerStatus = () => {
+  /*
+    NOTE: 
+      Use this function to emit the timer state if its in {TimerStatus},
+      otherwise, the timer status may be emitted to the UI without the state itself,
+      which may cause bugs
+  */
+
   // Given the status, emit the event and the state itself
   const statusMapper: Record<TimerStatus, string> = {
     RUNNING: EVENTS.TIMER.RUNNING,
@@ -101,12 +112,7 @@ export const emitTimerStatus = () => {
   };
 
   // Emit along additional data along with the timer state
-  const stateWithActions: TimerState = {
-    ...timerState,
-    availableActions: getAvailableActions(timerState.status),
-    remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-    allotedBreaks: getLimitConfigs().allotedBreaks
-  };
+  const stateWithActions = getTimerState();
   console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
@@ -167,11 +173,10 @@ const transitionToNextState = () => {
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
     case "BREAK":
-      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK);
+      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Place before changes so the configs update before status change
       timerState.status = "RUNNING";
       timerState.currentCountdownMs = newTimerTimeMs;
       timerState.overdueTimeMs = 0;
-      timerEmitter.emit(EVENTS.TIMER.RUNNING);
       break;
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
@@ -209,22 +214,31 @@ export const startBreak = () => {
   if (!process.env.PLAYWRIGHT_TEST) {
     tickTimer = setInterval(onTick, tickIntervalMs);
   }
-  timerState.status = "BREAK";
-  timerState.currentCountdownMs = breakTimeMs;
+  transitionToNextState();
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const skipBreak = () => {
-  if (timerState.status !== "BREAK") return; // Guard against wrong state
-  timerState.currentCountdownMs = 0;   // next tick transitions BREAK → RUNNING
+  if (calculateRemainingBreakSkips() <= 0) return;
+  if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
+  increaseSkippedBreakCount();
+  timerState.status = "BREAK";
+  transitionToNextState();
+  emitTimerStatus();
 };
 
 export const skipTimer = () => {
   timerState.currentCountdownMs = 0;
+  transitionToNextState();
   emitTimerStatus();
-  transitionToNextState()
 };
+
+const isInWarning = () =>
+  timerState.status === "RUNNING" &&
+  !!warningThresholdMs &&
+  timerState.currentCountdownMs > 0 &&
+  timerState.currentCountdownMs <= warningThresholdMs;
 
 const loadTimerStateFromFile = () => {
   const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
@@ -243,9 +257,13 @@ export const loadTimerConfigsIntoState = () => {
   warningThresholdMs = timerConfigs.warningThresholdMs;
 };
 
-export const getTimerState = () => {
-  return timerState
-};
+export const getTimerState = (): TimerState => ({
+  ...timerState,
+  availableActions: getAvailableActions(timerState.status),
+  remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
+  allottedBreaks: getLimitConfigs().allottedBreaks,
+  isWarning: isInWarning(),
+});
 
 // Expose a function that allows end to end tests to manually speed up timers 
 if (process.env.PLAYWRIGHT_TEST) {

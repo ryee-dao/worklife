@@ -6,7 +6,7 @@ import {
   convertSecondsToMs,
 } from "../../../../shared/utils/time";
 import { TimerConfigs } from "../../../../main/timer/timerConfigs";
-import { isDev } from "../../../common/constants";
+import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 
@@ -16,7 +16,7 @@ export default function TimerSettings() {
   const [warningThresholdInMinutes, setWarningThresholdInMinutes] = useState(0);
 
   const timerValid = timerDurationInMinutes >= 1 && timerDurationInMinutes <= 600;
-  const breakValid = breakDurationInSeconds >= (isDev ? 1 : 10) && breakDurationInSeconds <= 600;
+  const breakValid = breakDurationInSeconds >= (IS_DEV ? 1 : 10) && breakDurationInSeconds <= 600;
   const warningMax = Math.max(1, timerDurationInMinutes - 1);
   const warningValid = warningThresholdInMinutes >= 1 && warningThresholdInMinutes <= warningMax;
 
@@ -53,13 +53,13 @@ export default function TimerSettings() {
       <div data-testid="break-duration" className="tracking-wider p-2">
         <label>
           This break will last{" "}
-          <NumberInput min={isDev ? 1 : 10} max={600} value={breakDurationInSeconds}
+          <NumberInput min={IS_DEV ? 1 : 10} max={600} value={breakDurationInSeconds}
             onChange={(e) => setBreakDurationInSeconds(Number(e.target.value))} />{" "}
           seconds
         </label>
         {!breakValid && (
           <p className="text-sm text-red-600 mt-1">
-            Must be between {isDev ? 1 : 10} and 600 seconds
+            Must be between {IS_DEV ? 1 : 10} and 600 seconds
           </p>
         )}
       </div>

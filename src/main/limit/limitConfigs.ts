@@ -2,11 +2,11 @@ import { DEFAULTS, FILENAMES } from "../../shared/constants";
 import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
 
 const defaultLimitConfigs: LimitConfigs = {
-  allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
+  allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
 };
 
 export interface LimitConfigs {
-  allotedBreaks: number;
+  allottedBreaks: number;
 }
 
 let limitConfigs: LimitConfigs;

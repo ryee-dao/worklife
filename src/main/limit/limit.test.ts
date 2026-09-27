@@ -16,7 +16,7 @@ vi.mock('../../shared/utils/date', () => ({
 }));
 
 vi.mock('./limitConfigs', () => ({
-  getLimitConfigs: vi.fn(() => ({ allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS }))
+  getLimitConfigs: vi.fn(() => ({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS }))
 }))
 
 
@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
   vi.mocked(getLimitConfigs).mockReset();
-  vi.mocked(getLimitConfigs).mockReturnValue({ allotedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
+  vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
 });
 
 afterEach(() => {
@@ -104,7 +104,7 @@ describe('Limit configs effects', () => {
 
   test('remaining skips reflects custom allotted breaks config', () => {
     // Override the config mock for this test
-    vi.mocked(getLimitConfigs).mockReturnValue({ allotedBreaks: 5 });
+    vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: 5 });
 
     initLimits();
 

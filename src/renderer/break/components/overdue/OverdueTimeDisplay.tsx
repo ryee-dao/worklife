@@ -10,8 +10,8 @@ export default function OverdueTimeDisplay({ timerState }: OverdueTimeDisplayPro
 
   return (
     <div
-      data-testid="overdue-time-display"
-      className="text-red-700 font-bold text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-wide md:tracking-widest"
+      data-testid="overdue-window-time-display"
+      className="text-red-700 font-bold text-xl xsm:text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-normal xsm:tracking-wide md:tracking-widest"
     >
       <span>{minutes}</span> : <span>{seconds}</span>
     </div>
