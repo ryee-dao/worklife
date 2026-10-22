@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@assets/sounds/warning-1.mp3', () => ({
-  default: '/mocked/warning-1.mp3',
+vi.mock('@assets/sounds/warning-2.mp3', () => ({
+  default: '/mocked/warning-2.mp3',
 }));
 
 const mockPlay = vi.fn();
@@ -27,7 +27,7 @@ describe('playWarningSound', () => {
   test('plays audio with default sound file', () => {
     playWarningSound();
 
-    expect(lastAudioSrc).toBe('/mocked/warning-1.mp3');
+    expect(lastAudioSrc).toBe('/mocked/warning-2.mp3');
     expect(mockPlay).toHaveBeenCalledOnce();
   });
 
