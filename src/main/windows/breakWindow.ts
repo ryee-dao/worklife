@@ -4,7 +4,7 @@ import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "../env";
 import { getWorkArea, refreshWorkAreaForBounds } from "../display";
 import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "../overdue/overdueGeometry";
 import { emitTimerStatus, TimerState, getTimerState } from "../timer/timerState";
-import { getOverdueConfigs } from "../overdue/overdueConfigs";
+import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
 import path from "path";
 
 // Constants related to overdue resizing logic
@@ -153,7 +153,7 @@ export const resizeBreakWindow = (timerState: TimerState) => {
 
 let overdueLevelsArray: OverdueLevelObject[];
 export const setOverdueLevelsArray = () => {
-  const overdueConfigs = getOverdueConfigs()
+  const overdueConfigs = getAppliedOverdueConfigs()
   overdueLevelsArray = createOverdueLevelsArray(overdueConfigs);
 }
 

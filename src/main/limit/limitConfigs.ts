@@ -10,11 +10,22 @@ export interface LimitConfigs {
 }
 
 let limitConfigs: LimitConfigs;
+// The configs the app runs on. Saved changes are only applied after a break
+let appliedLimitConfigs: LimitConfigs;
 
 export const loadLimitConfigs = () => {
   const limitConfigsData = getUserDataFromFile<LimitConfigs>(FILENAMES.LIMIT.CONFIGS);
   limitConfigs = { ...defaultLimitConfigs, ...limitConfigsData?.fileContent };
   writeToUserDataFile(FILENAMES.LIMIT.CONFIGS, limitConfigs);
+  applyLimitConfigs();
+}
+
+export const applyLimitConfigs = () => {
+  appliedLimitConfigs = { ...limitConfigs };
+}
+
+export const getAppliedLimitConfigs = () => {
+  return appliedLimitConfigs;
 }
 
 export const getLimitConfigs = () => {

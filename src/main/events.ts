@@ -1,8 +1,8 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { tray, updateTray } from './tray/tray';
 import { EVENTS } from "../shared/constants";
-import { getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
-import { getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
+import { applyLimitConfigs, getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
+import { applyTimerConfigs, getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
   pauseTimer,
@@ -10,12 +10,11 @@ import {
   skipBreak,
   TimerState,
   skipTimer,
-  loadTimerConfigsIntoState,
   startBreak,
   getTimerState,
 } from "./timer/timerState";
 
-import { getOverdueConfigs, loadOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
+import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 
@@ -83,10 +82,11 @@ export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
   timerEmitter.on(EVENTS.TIMER.START_BREAK, activateKioskModeForBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
-  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // This ensures configs are loaded only after break
-    loadOverdueConfigs();
+  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // Saved configs only take effect after a break
+    applyTimerConfigs();
+    applyLimitConfigs();
+    applyOverdueConfigs();
     setOverdueLevelsArray();
-    loadTimerConfigsIntoState();
   });
 
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);

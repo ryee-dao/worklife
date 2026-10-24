@@ -3,7 +3,7 @@ import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/fil
 import { destroyTimers, timerEmitter } from '../timer/timerState';
 import { calculateRemainingBreakSkips, getLimitState, increaseSkippedBreakCount, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
 import { DEFAULTS } from "../../shared/constants"
-import { getLimitConfigs } from './limitConfigs';
+import { getAppliedLimitConfigs } from './limitConfigs';
 
 // Add mocks
 vi.mock('../../shared/utils/files', () => ({
@@ -16,7 +16,7 @@ vi.mock('../../shared/utils/date', () => ({
 }));
 
 vi.mock('./limitConfigs', () => ({
-  getLimitConfigs: vi.fn(() => ({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS }))
+  getAppliedLimitConfigs: vi.fn(() => ({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS }))
 }))
 
 
@@ -25,8 +25,8 @@ beforeEach(() => {
   vi.mocked(writeToUserDataFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
-  vi.mocked(getLimitConfigs).mockReset();
-  vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
+  vi.mocked(getAppliedLimitConfigs).mockReset();
+  vi.mocked(getAppliedLimitConfigs).mockReturnValue({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
 });
 
 afterEach(() => {
@@ -104,7 +104,7 @@ describe('Limit configs effects', () => {
 
   test('remaining skips reflects custom allotted breaks config', () => {
     // Override the config mock for this test
-    vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: 5 });
+    vi.mocked(getAppliedLimitConfigs).mockReturnValue({ allottedBreaks: 5 });
 
     initLimits();
 

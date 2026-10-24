@@ -1,4 +1,4 @@
-import { _electron as electron, ElectronApplication, Page } from "playwright";
+import { _electron as electron, ElectronApplication, Locator, Page } from "playwright";
 import { mkdtempSync, rmSync, existsSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -32,7 +32,7 @@ export function cleanupTestUserDataDir(dir: string): void {
   }
 }
 
-export async function launchApp(userDataDir: string) {
+export async function launchApp(userDataDir: string, withTray = false) {
   // Launch Electron app.
   const electronApp = await electron.launch({
     args: [
@@ -42,6 +42,7 @@ export async function launchApp(userDataDir: string) {
     env: {
       ...process.env,
       PLAYWRIGHT_TEST: "1",
+      PLAYWRIGHT_TRAY: withTray ? "1" : "",
     },
     cwd: path.join(__dirname, "../.."),  // project root
   });
@@ -89,4 +90,35 @@ export async function getWindowBounds(electronApp: ElectronApplication, page: Pa
     );
     return win?.getBounds() ?? null;
   }, url);
+}
+// The labels in the tray menu, without separators
+export async function getTrayMenuLabels(electronApp: ElectronApplication) {
+  return electronApp.evaluate(() => {
+    const menu = global.__test_getTrayMenu!()!;
+    return menu.items
+      .filter((item) => item.type !== "separator")
+      .map((item) => item.label);
+  });
+}
+
+// Clicks a tray menu item the way a user would after right-clicking the tray
+export async function clickTrayMenuItem(electronApp: ElectronApplication, label: string) {
+  await electronApp.evaluate((_, label) => {
+    const menu = global.__test_getTrayMenu!()!;
+    const item = menu.items.find((item) => item.label === label);
+    if (!item) {
+      throw new Error(`Tray menu has no item called "${label}"`);
+    }
+    item.click();
+  }, label);
+}
+
+// Clicks a button that closes its own window, then waits for the window to close
+export async function clickAndWaitForClose(window: Page, button: Locator) {
+  const closed = window.waitForEvent('close');
+  // The window can close before Playwright finishes the click, which it reports as an error
+  await button.click().catch((error) => {
+    if (!window.isClosed()) throw error;
+  });
+  await closed;
 }

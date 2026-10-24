@@ -14,11 +14,22 @@ export interface TimerConfigs {
 }
 
 let timerConfigs: TimerConfigs;
+// The configs the app runs on. Saved changes are only applied after a break
+let appliedTimerConfigs: TimerConfigs;
 
 export const loadTimerConfigs = () => {
   const timerConfigsData = getUserDataFromFile<TimerConfigs>(FILENAMES.TIMER.CONFIGS);
   timerConfigs = { ...defaultTimerConfigs, ...timerConfigsData?.fileContent };
   writeToUserDataFile(FILENAMES.TIMER.CONFIGS, timerConfigs);
+  applyTimerConfigs();
+}
+
+export const applyTimerConfigs = () => {
+  appliedTimerConfigs = { ...timerConfigs };
+}
+
+export const getAppliedTimerConfigs = () => {
+  return appliedTimerConfigs;
 }
 
 export const getTimerConfigs = () => {

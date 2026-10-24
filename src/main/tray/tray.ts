@@ -18,12 +18,17 @@ const STATUS_ICON_PATHS = {
 let statusIcons: Record<StatusKey, Electron.NativeImage>;
 export let tray: Tray | null = null;
 
+// updateTray runs every tick, but on Linux setting the menu closes it if it's open.
+// So remember what was last shown and only replace the icon or menu when it changes.
+let lastUpdatedTray: Tray | null = null;
+let lastStatusKey: StatusKey | null = null;
+let lastMenuLabels = "";
+let trayMenu: Electron.Menu | null = null;
+
 export function buildStatusIcons() {
-  if (!process.env.PLAYWRIGHT_TEST) {
-    statusIcons = {} as Record<StatusKey, Electron.NativeImage>;
-    for (const [key, iconPath] of Object.entries(STATUS_ICON_PATHS)) {
-      statusIcons[key as StatusKey] = nativeImage.createFromPath(iconPath);
-    }
+  statusIcons = {} as Record<StatusKey, Electron.NativeImage>;
+  for (const [key, iconPath] of Object.entries(STATUS_ICON_PATHS)) {
+    statusIcons[key as StatusKey] = nativeImage.createFromPath(iconPath);
   }
 }
 
@@ -39,7 +44,13 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
     state.status === 'OVERDUE' ? state.overdueTimeMs : state.currentCountdownMs
   );
 
-  tray.setImage(statusIcons[statusKey]);
+  const isNewTray = tray !== lastUpdatedTray;
+  lastUpdatedTray = tray;
+
+  if (isNewTray || statusKey !== lastStatusKey) {
+    tray.setImage(statusIcons[statusKey]);
+    lastStatusKey = statusKey;
+  }
 
   if (process.platform === 'darwin') {
     tray.setTitle(` ${displayTime}`);
@@ -75,7 +86,13 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
 
   menuTemplate.push({ type: 'separator' });
   menuTemplate.push({ label: 'Quit', click: () => app.quit() });
-  tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
+
+  const menuLabels = menuTemplate.map((item) => item.label).join(",");
+  if (isNewTray || menuLabels !== lastMenuLabels) {
+    trayMenu = Menu.buildFromTemplate(menuTemplate);
+    tray.setContextMenu(trayMenu);
+    lastMenuLabels = menuLabels;
+  }
 
   // if (process.platform === 'darwin') {
   //   app.dock!.setIcon(statusIcons[statusKey]);
@@ -87,12 +104,20 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
 }
 
 export function createTray(width: number = 16, height: number = 16) {
-  if (!process.env.PLAYWRIGHT_TEST) {
-    // Set icon for app
-    const trayImage = nativeImage.createFromPath(
-      path.join(__dirname, "../../assets/dog.png")
-    );
-    tray = new Tray(trayImage.resize({ width, height }));
-    tray.setToolTip("Work Life");
+  // Each test run would add another icon to the taskbar, so only tray tests turn it on
+  if (process.env.PLAYWRIGHT_TEST && !process.env.PLAYWRIGHT_TRAY) {
+    return;
   }
+
+  // Set icon for app
+  const trayImage = nativeImage.createFromPath(
+    path.join(__dirname, "../../assets/dog.png")
+  );
+  tray = new Tray(trayImage.resize({ width, height }));
+  tray.setToolTip("Work Life");
+}
+
+// Tests can't right-click the real tray, so they click the menu items directly
+if (process.env.PLAYWRIGHT_TEST) {
+  global.__test_getTrayMenu = () => trayMenu;
 }

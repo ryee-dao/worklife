@@ -249,6 +249,38 @@ describe('Tray tooltip', () => {
   });
 });
 
+describe('Tray only replaces what changed', () => {
+  // Regression: replacing the menu every tick closed it while open on Linux
+  test('menu is not replaced when only the countdown changes', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ currentCountdownMs: 600000 }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ currentCountdownMs: 599000 }));
+
+    expect(mockTray.setContextMenu).toHaveBeenCalledOnce();
+  });
+
+  test('menu is replaced when its items change', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ status: 'RUNNING' }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ status: 'PAUSED', availableActions: ['start'] }));
+
+    expect(mockTray.setContextMenu).toHaveBeenCalledTimes(2);
+  });
+
+  test('icon is only replaced when the status changes', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ currentCountdownMs: 600000 }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ currentCountdownMs: 599000 }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ isWarning: true }));
+
+    expect(mockTray.setImage).toHaveBeenCalledTimes(2);
+    expect(mockTray.setImage).toHaveBeenLastCalledWith(expect.stringContaining('tray-yellow'));
+  });
+});
+
 describe("Asset paths", () => {
 
   const expectedIcons = [

@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     strategy:
-      # Let every OS finish so one platform's failure doesn't hide another's
+      # Keep running the other OSes when one fails, so every failure shows up
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -23,27 +23,26 @@ jobs:
           cache: npm
 
       - run: npm ci
-
       - run: npm run lint
-
       - run: npm run test:unit
 
-      # Ubuntu 24 blocks the unprivileged namespaces Electron's sandbox needs
-      - name: Allow Electron sandbox (Linux)
+      # Ubuntu blocks the sandbox Electron needs unless this is turned off
+      - name: Allow Electron sandbox
         if: runner.os == 'Linux'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      # Linux runners have no display; Electron needs one
-      - name: E2E (Linux)
+      # Linux runners have no screen, so give Electron a virtual one
+      - name: E2E tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum npm run test:e2e
 
-      - name: E2E
+      - name: E2E tests
         if: runner.os != 'Linux'
         run: npm run test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Playwright report
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.os }}
           path: |

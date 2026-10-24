@@ -14,7 +14,7 @@ export default function LimitSettings() {
     <SettingsPanel<LimitConfigs>
       title="Limit Settings"
       isValid={allottedBreaksValid}
-      successMessage="Settings saved successfully. Limits will reset after midnight"
+      successMessage="Settings saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadLimitConfigs()}
       save={(configs) => window.electronAPI.saveLimitConfigs(configs)}
       buildConfig={() => ({ allottedBreaks })}

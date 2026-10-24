@@ -9,7 +9,7 @@ type UserDataDir = {
   path: string;
   seed: (filename: string, data: object) => void;
 };
-type LaunchElectron = () => Promise<{
+type LaunchElectron = (options?: { withTray?: boolean }) => Promise<{
   electronApp: ElectronApplication;
   settingsWindow: Page,
   context: BrowserContext,
@@ -34,8 +34,8 @@ const test = base.extend<{
     const apps: ElectronApplication[] = [];
     const tracedContexts = new Set();
 
-    await use(async () => {
-      const result = await launchApp(userDataDir.path);
+    await use(async (options) => {
+      const result = await launchApp(userDataDir.path, options?.withTray);
       apps.push(result.electronApp);
 
       await startTracingForWindow(result.settingsWindow, tracedContexts);

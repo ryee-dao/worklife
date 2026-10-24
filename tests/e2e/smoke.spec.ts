@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import { TimerState } from "../../src/main/timer/timerState"
 import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds } from "../../src/shared/utils/time"
-import { getWindowBounds } from "./helpers";
+import { clickAndWaitForClose, clickTrayMenuItem, getTrayMenuLabels, getWindowBounds } from "./helpers";
 
 test.describe.configure({ mode: 'parallel' });
 
@@ -42,7 +42,7 @@ test("App launches with a visible window and starts up with valid components & s
   await test.step("Skip to overdue and verify overdue timer", async () => {
     // Skip the work timer and wait for the overdue window to open
     [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
     ])
 
@@ -84,7 +84,7 @@ test("App launches the overdue window properly when the timer countdown is reach
   await test.step("Verify overdue window appears and counts up", async () => {
     // Listen for the window before the tick that triggers it
     const [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       testClock.fastForward(1),
     ]);
 
@@ -146,24 +146,18 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
     await test.step(`Exhaust skip ${loopIdx + 1} of ${totalNumberOfSkips} (from ${skipFromOverdue ? 'overdue' : 'break'})`, async () => {
       // Skip to overdue to open the break window
       const [breakWindow] = await Promise.all([
-        electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+        electronApp.waitForEvent('window'),
         settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
       ]);
 
       if (skipFromOverdue) {
         // Skip break directly from overdue without starting break first
         await expect(breakWindow.getByTestId('overdue-window-time-display')).toBeVisible();
-        const closePromise = breakWindow.waitForEvent('close');
-        await breakWindow.getByTestId("overdue-window-skip-break-button").click();
-        await testClock.fastForward(1);
-        await closePromise;
+        await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("overdue-window-skip-break-button"));
       } else {
         // Start break first, then skip from break screen
         await breakWindow.getByTestId("overdue-window-start-break-button").click();
-        const closePromise = breakWindow.waitForEvent('close');
-        await breakWindow.getByTestId("break-window-skip-break-button").click();
-        await testClock.fastForward(1);
-        await closePromise;
+        await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("break-window-skip-break-button"));
       }
 
       // Verify the skip was registered: window closed and used-skip count increased
@@ -179,7 +173,7 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
   await test.step("Verify skip is disabled on overdue and break screens after exhaustion", async () => {
     // Open a new overdue window with all skips exhausted
     const [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
     ]);
 
@@ -209,7 +203,7 @@ test("Break can be skipped directly from overdue without starting break first", 
   await test.step("Skip to overdue", async () => {
     // Skip the work timer to trigger the overdue window
     [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
@@ -224,9 +218,7 @@ test("Break can be skipped directly from overdue without starting break first", 
   await test.step("Skip break directly from overdue and verify window closes", async () => {
     // Clicking skip from overdue should bypass the break screen entirely
     // and transition straight back to running
-    const closePromise = breakWindow.waitForEvent('close');
-    await breakWindow.getByTestId("overdue-window-skip-break-button").click();
-    await closePromise;
+    await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("overdue-window-skip-break-button"));
     expect(breakWindow.isClosed()).toBeTruthy();
   });
 
@@ -246,7 +238,7 @@ test("Break can be skipped directly from overdue without starting break first", 
 });
 
 test("Changing timer settings only updates after a break", async ({ userDataDir, launchElectron }) => {
-  const { settingsWindow, electronApp, testClock } = await launchElectron();
+  const { settingsWindow, electronApp } = await launchElectron();
   const newTimerInterval = 10;
 
   await test.step("Change timer duration in settings", async () => {
@@ -266,7 +258,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
     // Skip to overdue, skipTimer transitions directly
     const [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
     ])
     // Assert the new duration has NOT taken effect mid-session
@@ -276,10 +268,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
     expect(initialTimerState.currentCountdownMs).not.toBe(convertMinutesToMs(newTimerInterval));
     // Start the break, then skip it
     await breakWindow.getByTestId("overdue-window-start-break-button").click()
-    const closePromise = breakWindow.waitForEvent('close');
-    await breakWindow.getByTestId("break-window-skip-break-button").click()
-    await testClock.fastForward(1);
-    await closePromise;
+    await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("break-window-skip-break-button"));
   });
 
   await test.step("Verify setting applied after break completes", async () => {
@@ -335,6 +324,41 @@ test("Data persists when app is closed", async ({ launchElectron, userDataDir })
   });
 });
 
+test("Changing limit settings only updates after a break", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+  const newAllottedBreaks = 1;
+
+  await test.step("Change the number of skips in settings", async () => {
+    await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
+    await settingsWindow.getByRole('link', { name: 'Limits' }).click();
+    await settingsWindow.getByTestId("allowed-break-count").locator('input').fill(String(newAllottedBreaks));
+    await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
+    await settingsWindow.getByText('Settings saved successfully').waitFor();
+    await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
+  });
+
+  await test.step("Verify the skips are unchanged before the break", async () => {
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId("timer-skip-icon")).toHaveCount(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
+  });
+
+  await test.step("Take a full break", async () => {
+    const [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window'),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+    ]);
+    await breakWindow.getByTestId("overdue-window-start-break-button").click();
+    const closePromise = breakWindow.waitForEvent('close');
+    await testClock.fastForward(convertMsToSeconds(DEFAULTS.DEFAULT_BREAK_DURATION_MS), 0);
+    await closePromise;
+  });
+
+  await test.step("Verify the new skip count applies after the break", async () => {
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId("timer-skip-icon")).toHaveCount(newAllottedBreaks);
+  });
+});
+
 test("Overdue window grows in size across levels", async ({ launchElectron }) => {
   const { settingsWindow, electronApp, testClock } = await launchElectron();
   let breakWindow: Page;
@@ -342,7 +366,7 @@ test("Overdue window grows in size across levels", async ({ launchElectron }) =>
 
   await test.step("Skip to overdue and capture initial window size", async () => {
     [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
@@ -380,7 +404,7 @@ test("Break window closes after break countdown finishes naturally", async ({ la
 
   await test.step("Skip to overdue and start break", async () => {
     [breakWindow] = await Promise.all([
-      electronApp.waitForEvent('window', { timeout: 10 * 1000 }),
+      electronApp.waitForEvent('window'),
       settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
@@ -511,5 +535,51 @@ test('Display listeners are not re-registered when a break window opens', async 
 
   await test.step('Display listener count is unchanged', async () => {
     expect(await getDisplayListenerCount()).toBe(listenersAtStartup);
+  });
+});
+test("Tray menu shows the right actions and controls the timer", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron({ withTray: true });
+  let breakWindow: Page;
+
+  await test.step("Running: menu offers Pause and Skip to Break", async () => {
+    // The tray menu is built on the first tick
+    await testClock.fastForward(1);
+    expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Pause", "Skip to Break", "Quit"]);
+  });
+
+  await test.step("Pause from the tray stops the timer", async () => {
+    await clickTrayMenuItem(electronApp, "Pause");
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 59")).toBeVisible();
+    expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Resume", "Quit"]);
+  });
+
+  await test.step("Resume from the tray restarts the timer", async () => {
+    await clickTrayMenuItem(electronApp, "Resume");
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 54")).toBeVisible();
+  });
+
+  await test.step("Skip to Break from the tray opens the overdue window", async () => {
+    [breakWindow] = await Promise.all([
+      electronApp.waitForEvent('window'),
+      clickTrayMenuItem(electronApp, "Skip to Break"),
+    ]);
+    await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
+    expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Start Break", "Skip Break", "Quit"]);
+  });
+
+  await test.step("Start Break from the tray starts the break", async () => {
+    await clickTrayMenuItem(electronApp, "Start Break");
+    await testClock.fastForward(5);
+    await expect(breakWindow.getByTestId('break-window-time-display').getByText("00 : 25")).toBeVisible();
+  });
+
+  await test.step("Skip Break from the tray ends the break and uses a skip", async () => {
+    const closePromise = breakWindow.waitForEvent('close');
+    await clickTrayMenuItem(electronApp, "Skip Break");
+    await closePromise;
+    await settingsWindow.getByTestId("timer-skipbox").waitFor();
+    expect(await settingsWindow.locator('.used-skip').count()).toBe(1);
   });
 });
