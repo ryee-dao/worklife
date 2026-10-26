@@ -1,11 +1,14 @@
 import { app, BrowserWindow } from "electron";
+import path from "path";
 import { destroyTimers, initTimer } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
 import { IS_DEV } from "./env";
 import { setWorkArea } from "./display";
 import { loadOverdueConfigs } from "./overdue/overdueConfigs";
-import { loadLimitConfigs } from "./limit/limitConfigs";
+import { loadDifficultyConfigs } from "./difficulty/difficultyConfigs";
+import { loadWorkdayConfigs } from "./workday/workdayConfigs";
+import { destroyWorkday, initWorkday } from "./workday/workday";
 import { loadTimerConfigs } from "./timer/timerConfigs";
 import { buildStatusIcons, createTray, tray } from "./tray/tray";
 import { registerDisplayListenersForBreakWindow, setOverdueLevelsArray } from "./windows/breakWindow";
@@ -17,13 +20,15 @@ export let forceQuit = false; // Allows app.quit() to bypass logic to minimize o
 // If in dev, set a different app name so if there's a prod version running, it doesn't clash
 if (IS_DEV) {
   app.setName('WorkLife-Dev');
-  app.setPath('userData', app.getPath('userData').replace('WorkLife', 'WorkLife-Dev'));
+  // Set the folder directly, since whether setName also renames it differs by platform
+  app.setPath('userData', path.join(app.getPath('appData'), 'WorkLife-Dev'));
 }
 
 function initConfigs() {
   loadTimerConfigs();
-  loadLimitConfigs();
+  loadDifficultyConfigs();
   loadOverdueConfigs();
+  loadWorkdayConfigs();
 }
 
 function initApp() {
@@ -33,6 +38,7 @@ function initApp() {
   initLimits();
   initStats();
   initTimer();
+  initWorkday();
   initEventListeners();
   buildStatusIcons();
   createSettingsWindow();
@@ -53,6 +59,7 @@ app.on('before-quit', () => {
   }
   // Close all windows and timers manually before close in case any can't be closed (ex: closable = false)
   destroyTimers();
+  destroyWorkday();
   BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 

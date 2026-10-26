@@ -1,6 +1,7 @@
 import { TimerState } from "../../main/timer/timerState";
 import { TimerConfigs } from "../../main/timer/timerConfigs"
-import { LimitConfigs } from "../../main/limit/limitConfigs";
+import { DifficultyConfigs } from "../../main/difficulty/difficultyConfigs";
+import { WorkdayConfigs } from "../../main/workday/workdayConfigs";
 import { OverdueConfigs } from "../../main/overdue/overdueConfigs";
 
 export interface ElectronAPI {
@@ -13,11 +14,13 @@ export interface ElectronAPI {
   skipBreak: () => void;
   skipTimer: () => void;
   saveTimerConfigs: (arg0: TimerConfigs) => Promise<void>;
-  saveLimitConfigs: (arg0: LimitConfigs) => Promise<void>;
+  saveDifficultyConfigs: (arg0: DifficultyConfigs) => Promise<void>;
   saveOverdueConfigs: (arg0: OverdueConfigs) => Promise<void>;
+  saveWorkdayConfigs: (arg0: WorkdayConfigs) => Promise<void>;
   loadTimerConfigs: () => Promise<TimerConfigs>;
-  loadLimitConfigs: () => Promise<LimitConfigs>
+  loadDifficultyConfigs: () => Promise<DifficultyConfigs>
   loadOverdueConfigs: () => Promise<OverdueConfigs>
+  loadWorkdayConfigs: () => Promise<WorkdayConfigs>
 }
 
 declare global {

@@ -6,10 +6,10 @@ import {
   writeToUserDataFile,
 } from "../../shared/utils/files";
 import { calculateRemainingBreakSkips, increaseSkippedBreakCount } from "../limit/limitState";
-import { getAppliedLimitConfigs } from "../limit/limitConfigs";
+import { getAllottedBreaks, getBreakDurationMs } from "../difficulty/difficulty";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
-export type Source = "WINDOW" | "TRAY"; // Where the user triggered an action from
+export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday
 
 // What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
 export type TimerTransition =
@@ -183,7 +183,7 @@ const transitionToNextState = () => {
       break;
     case "OVERDUE":
       timerState.status = "BREAK";
-      timerState.currentCountdownMs = getAppliedTimerConfigs().breakDurationMs;
+      timerState.currentCountdownMs = getBreakDurationMs();
       timerState.overdueTimeMs = 0;
       timerEmitter.emit(EVENTS.TIMER.START_BREAK);
       break;
@@ -209,9 +209,8 @@ export const pauseTimer = (source: Source) => {
 };
 
 export const startTimer = (source: Source) => {
-  if (timerState.status === "PAUSED") {
-    emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
-  }
+  if (timerState.status !== "PAUSED") return; // A stale menu or window can send this after the status changed
+  emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
   runTimer();
 };
 
@@ -254,7 +253,7 @@ export const skipBreak = (source: Source) => {
     source,
     from: timerState.status,
     overdueMs: timerState.overdueTimeMs,
-    breakElapsedMs: isBreak ? getAppliedTimerConfigs().breakDurationMs - timerState.currentCountdownMs : 0,
+    breakElapsedMs: isBreak ? getBreakDurationMs() - timerState.currentCountdownMs : 0,
     skipsLeft: calculateRemainingBreakSkips(),
   });
   timerState.status = "BREAK";
@@ -296,7 +295,7 @@ export const getTimerState = (): TimerState => ({
   ...timerState,
   availableActions: getAvailableActions(timerState.status),
   remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-  allottedBreaks: getAppliedLimitConfigs().allottedBreaks,
+  allottedBreaks: getAllottedBreaks(),
   isWarning: isInWarning(),
 });
 

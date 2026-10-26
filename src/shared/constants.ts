@@ -22,13 +22,15 @@ export const EVENTS = {
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",
-        LIMIT: "configs:save:limit",
+        DIFFICULTY: "configs:save:difficulty",
         OVERDUE: "configs:save:overdue",
+        WORKDAY: "configs:save:workday",
       },
       LOAD: {
         TIMER: "configs:load:timer",
-        LIMIT: "configs:load:limit",
+        DIFFICULTY: "configs:load:difficulty",
         OVERDUE: "configs:load:overdue",
+        WORKDAY: "configs:load:workday",
       },
     },
   },
@@ -36,17 +38,26 @@ export const EVENTS = {
 
 export const DEFAULTS = {
   DEFAULT_TIMER_DURATION_MS: 45 * 60 * 1000, // 45 minutes
-  DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds
+  DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds, the starting value for the custom difficulty
   DEFAULT_WARNING_THRESHOLD_MS: 2 * 60 * 1000, // 2 minutes
-  DEFAULT_ALLOTTED_BREAKS: 3,
+  DEFAULT_ALLOTTED_BREAKS: 3, // The starting value for the custom difficulty
   DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
 } as const;
 
 export const FILENAMES = {
   TIMER: { CONFIGS: "timerConfigs.json", STATE: "timerState.json" },
-  LIMIT: { CONFIGS: "limitConfigs.json", STATE: "limitState.json" },
+  LIMIT: { STATE: "limitState.json" },
+  DIFFICULTY: { CONFIGS: "difficultyConfigs.json" },
+  WORKDAY: { CONFIGS: "workdayConfigs.json", STATE: "workdayState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
   STATS: { EVENTS: "events.jsonl" },
+} as const;
+
+// Break length is a share of the timer, so it scales with longer work sessions
+export const DIFFICULTY_PRESETS = {
+  EASY: { breakRatio: 0.02, allottedBreaks: 5 },
+  NORMAL: { breakRatio: 0.05, allottedBreaks: 3 },
+  HARD: { breakRatio: 0.10, allottedBreaks: 1 },
 } as const;
 
 export const CONSTRAINTS = {

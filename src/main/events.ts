@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { tray, updateTray } from './tray/tray';
 import { EVENTS } from "../shared/constants";
-import { applyLimitConfigs, getLimitConfigs, LimitConfigs, setLimitConfigs } from "./limit/limitConfigs";
+import { applyDifficultyConfigs, DifficultyConfigs, getDifficultyConfigs, setDifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { applyTimerConfigs, getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
@@ -15,6 +15,7 @@ import {
 } from "./timer/timerState";
 
 import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
+import { getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 
@@ -84,7 +85,7 @@ export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // Saved configs only take effect after a break
     applyTimerConfigs();
-    applyLimitConfigs();
+    applyDifficultyConfigs();
     applyOverdueConfigs();
     setOverdueLevelsArray();
   });
@@ -105,12 +106,11 @@ export const initEventListeners = () => {
     }
   );
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.LIMIT, getLimitConfigs);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.DIFFICULTY, getDifficultyConfigs);
   ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT,
-    (event, configs: LimitConfigs) => {
-      // throw new Error("test error")
-      setLimitConfigs(configs);
+    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY,
+    (event, configs: DifficultyConfigs) => {
+      setDifficultyConfigs(configs);
     }
   );
 
@@ -119,6 +119,14 @@ export const initEventListeners = () => {
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE,
     (event, configs: OverdueConfigs) => {
       setOverdueConfigs(configs);
+    }
+  );
+
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.WORKDAY, getWorkdayConfigs);
+  ipcMain.handle(
+    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY,
+    (event, configs: WorkdayConfigs) => {
+      setWorkdayConfigs(configs);
     }
   );
 };

@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import { EVENTS } from "../shared/constants";
 import { TimerState } from "./timer/timerState";
 import { TimerConfigs } from "./timer/timerConfigs";
-import { LimitConfigs } from "./limit/limitConfigs";
+import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
+import { WorkdayConfigs } from "./workday/workdayConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "../shared/types/electron";
 
@@ -38,20 +39,26 @@ const electronAPI: ElectronAPI = {
   loadTimerConfigs: async (): Promise<TimerConfigs> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER);
   },
-  loadLimitConfigs: async () => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.LIMIT);
+  loadDifficultyConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.DIFFICULTY);
   },
   loadOverdueConfigs: async () => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE);
   },
+  loadWorkdayConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.WORKDAY);
+  },
   saveTimerConfigs: async (configs: TimerConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, configs);
   },
-  saveLimitConfigs: async (configs: LimitConfigs) => {
-    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.LIMIT, configs);
+  saveDifficultyConfigs: async (configs: DifficultyConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY, configs);
   },
   saveOverdueConfigs: async (configs: OverdueConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, configs);
+  },
+  saveWorkdayConfigs: async (configs: WorkdayConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, configs);
   },
 }
 

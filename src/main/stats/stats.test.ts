@@ -13,8 +13,17 @@ vi.mock('../limit/limitState', () => ({
   increaseSkippedBreakCount: vi.fn(),
 }));
 
-vi.mock('../limit/limitConfigs', () => ({
-  getAppliedLimitConfigs: vi.fn(() => ({ allottedBreaks: 3 })),
+vi.mock('../difficulty/difficulty', () => ({
+  getAllottedBreaks: vi.fn(() => 3),
+  getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
+}));
+
+vi.mock('../difficulty/difficultyConfigs', () => ({
+  getAppliedDifficultyConfigs: vi.fn(() => ({ level: 'NORMAL' })),
+}));
+
+vi.mock('../workday/workdayConfigs', () => ({
+  getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoPauseAtEnd: false })),
 }));
 
 vi.mock('../overdue/overdueConfigs', () => ({
@@ -24,7 +33,6 @@ vi.mock('../overdue/overdueConfigs', () => ({
 vi.mock('../timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
-    breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
     warningThresholdMs: 5000,
   })),
 }));
@@ -84,7 +92,9 @@ describe('Event format', () => {
         breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
         warningThresholdMs: 5000,
         allottedBreaks: 3,
+        difficulty: 'NORMAL',
         levelThresholdMs: 180000,
+        workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoPauseAtEnd: false },
       },
       type: 'APP_STARTED',
       previousStatus: null,

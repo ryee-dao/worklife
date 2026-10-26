@@ -4,6 +4,7 @@ import { ElectronApplication, Page } from "playwright";
 import { launchApp, createTestUserDataDir, TestClock } from "./helpers";
 import fs from "fs";
 import path from "path";
+import { DEFAULTS, FILENAMES } from "../../src/shared/constants";
 
 type UserDataDir = {
   path: string;
@@ -22,12 +23,15 @@ const test = base.extend<{
 }>({
   userDataDir: async ({ }, use) => {
     const dir = createTestUserDataDir();
-    await use({
-      path: dir,
-      seed(filename: string, data: object) {
-        fs.writeFileSync(path.join(dir, filename), JSON.stringify(data));
-      },
+    const seed = (filename: string, data: object) => {
+      fs.writeFileSync(path.join(dir, filename), JSON.stringify(data));
+    };
+    // Tests run on a short custom break so break countdowns stay quick and predictable
+    seed(FILENAMES.DIFFICULTY.CONFIGS, {
+      level: "CUSTOM",
+      custom: { breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS, allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS },
     });
+    await use({ path: dir, seed });
   },
 
   launchElectron: async ({ userDataDir }, use, testInfo) => {

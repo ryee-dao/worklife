@@ -12,14 +12,14 @@ vi.mock('../limit/limitState', () => ({
   increaseSkippedBreakCount: vi.fn(),
 }));
 
-vi.mock('../limit/limitConfigs', () => ({
-  getAppliedLimitConfigs: vi.fn(() => ({ allottedBreaks: 3 })),
+vi.mock('../difficulty/difficulty', () => ({
+  getAllottedBreaks: vi.fn(() => 3),
+  getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
 }));
 
 vi.mock('./timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
-    breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
     warningThresholdMs: 5000,
   })),
 }));
@@ -685,6 +685,43 @@ describe('Action enforcement', () => {
     skipTimer("TRAY");
 
     expect(startBreakHandler).not.toHaveBeenCalled();
+  });
+
+  test('startTimer is a no-op during OVERDUE', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    timerEmitter.on(EVENTS.TIMER.START_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    runningHandler.mockClear();
+    startTimer("TRAY"); // Stale tray menu still showing Resume
+    vi.advanceTimersByTime(1000);
+
+    expect(runningHandler).not.toHaveBeenCalled();
+    expect(overdueHandler).toHaveBeenCalledOnce(); // No second overdue window
+  });
+
+  test('startTimer is a no-op during BREAK', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    const breakHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    startBreak("WINDOW");
+    runningHandler.mockClear();
+    startTimer("TRAY"); // Would end the break without using a skip
+    vi.advanceTimersByTime(1000);
+
+    expect(runningHandler).not.toHaveBeenCalled();
+    expect(breakHandler.mock.lastCall![0].status).toBe('BREAK');
   });
 
   test('skipTimer is a no-op during BREAK', () => {

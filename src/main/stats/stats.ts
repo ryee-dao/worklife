@@ -3,8 +3,10 @@ import { EVENTS, FILENAMES } from "../../shared/constants";
 import { appendToUserDataFile } from "../../shared/utils/files";
 import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
-import { getAppliedLimitConfigs } from "../limit/limitConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
+import { getAllottedBreaks, getBreakDurationMs } from "../difficulty/difficulty";
+import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
+import { getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
 
@@ -19,7 +21,9 @@ export type StatsEvent = {
     breakDurationMs: number;
     warningThresholdMs: number;
     allottedBreaks: number;
+    difficulty: DifficultyLevel;
     levelThresholdMs: number;
+    workday: WorkdayConfigs;
   };
 } & (TimerTransition | AppQuit);
 
@@ -30,9 +34,13 @@ const recordEvent = (event: TimerTransition | AppQuit) => {
     at: Date.now(),
     tzOffsetMin: -new Date().getTimezoneOffset(), // getTimezoneOffset is positive west of UTC
     config: {
-      ...getAppliedTimerConfigs(),
-      allottedBreaks: getAppliedLimitConfigs().allottedBreaks,
+      timerDurationMs: getAppliedTimerConfigs().timerDurationMs,
+      breakDurationMs: getBreakDurationMs(),
+      warningThresholdMs: getAppliedTimerConfigs().warningThresholdMs,
+      allottedBreaks: getAllottedBreaks(),
+      difficulty: getAppliedDifficultyConfigs().level,
       levelThresholdMs: getAppliedOverdueConfigs().levelThresholdMs,
+      workday: getAppliedWorkdayConfigs(),
     },
     ...event,
   };

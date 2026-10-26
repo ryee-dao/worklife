@@ -1,6 +1,6 @@
 import { expect, Page } from "@playwright/test";
 import { test } from "./fixtures";
-import { FILENAMES, DEFAULTS } from "./../../src/shared/constants"
+import { FILENAMES, DEFAULTS, DIFFICULTY_PRESETS } from "./../../src/shared/constants"
 import fs from "fs";
 import path from "path";
 import { TimerState } from "../../src/main/timer/timerState"
@@ -261,7 +261,6 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
     // Assert inputs start at their default values
     expect(Number(await settingsWindow.getByTestId("timer-duration").locator('input').inputValue())).toBe(convertMsToMinutes(DEFAULTS.DEFAULT_TIMER_DURATION_MS));
-    expect(Number(await settingsWindow.getByTestId("break-duration").locator('input').inputValue())).toBe(convertMsToSeconds(DEFAULTS.DEFAULT_BREAK_DURATION_MS));
     // Change the timer duration and save
     await settingsWindow.getByTestId("timer-duration").locator('input').fill(String(newTimerInterval));
     await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
@@ -301,7 +300,6 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
     // Assert the inputs still show the saved values
     expect(Number(await settingsWindow.getByTestId("timer-duration").locator('input').inputValue())).toBe(newTimerInterval);
-    expect(Number(await settingsWindow.getByTestId("break-duration").locator('input').inputValue())).toBe(convertMsToSeconds(DEFAULTS.DEFAULT_BREAK_DURATION_MS));
   });
 });
 
@@ -339,14 +337,14 @@ test("Data persists when app is closed", async ({ launchElectron, userDataDir })
   });
 });
 
-test("Changing limit settings only updates after a break", async ({ launchElectron }) => {
+test("Changing difficulty only updates after a break", async ({ launchElectron }) => {
   const { settingsWindow, electronApp, testClock } = await launchElectron();
-  const newAllottedBreaks = 1;
+  const newAllottedBreaks = DIFFICULTY_PRESETS.HARD.allottedBreaks;
 
-  await test.step("Change the number of skips in settings", async () => {
+  await test.step("Change the difficulty to hard in settings", async () => {
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
-    await settingsWindow.getByRole('link', { name: 'Limits' }).click();
-    await settingsWindow.getByTestId("allowed-break-count").locator('input').fill(String(newAllottedBreaks));
+    await settingsWindow.getByRole('link', { name: 'Difficulty' }).click();
+    await settingsWindow.getByTestId("difficulty-level").getByRole('radio', { name: /Hard/ }).check();
     await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
     await settingsWindow.getByText('Settings saved successfully').waitFor();
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
@@ -371,6 +369,33 @@ test("Changing limit settings only updates after a break", async ({ launchElectr
   await test.step("Verify the new skip count applies after the break", async () => {
     await testClock.fastForward(1);
     await expect(settingsWindow.getByTestId("timer-skip-icon")).toHaveCount(newAllottedBreaks);
+  });
+});
+
+test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
+  const { settingsWindow } = await launchElectron();
+
+  await test.step("Change the workday in settings", async () => {
+    await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
+    await settingsWindow.getByRole('link', { name: 'Workday' }).click();
+    await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: 'Sat' }).check();
+    await settingsWindow.getByTestId("workday-hours").locator('input').first().fill("08:30");
+    await settingsWindow.getByTestId("workday-auto-pause").getByRole('checkbox').check();
+    await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
+    await settingsWindow.getByText('Settings saved successfully').waitFor();
+  });
+
+  await test.step("Verify the workday was written to file", async () => {
+    const workdayConfigs = JSON.parse(
+      fs.readFileSync(path.join(userDataDir.path, FILENAMES.WORKDAY.CONFIGS), "utf-8")
+    );
+    expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "17:00", autoPauseAtEnd: true });
+  });
+
+  await test.step("Verify an end before the start can't be saved", async () => {
+    await settingsWindow.getByTestId("workday-hours").locator('input').last().fill("08:00");
+    await expect(settingsWindow.getByText("The workday must end after it starts")).toBeVisible();
+    await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeDisabled();
   });
 });
 

@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { applyTimerConfigs, getAppliedTimerConfigs, loadTimerConfigs, setTimerConfigs } from './timer/timerConfigs';
-import { applyLimitConfigs, getAppliedLimitConfigs, loadLimitConfigs, setLimitConfigs } from './limit/limitConfigs';
+import { applyDifficultyConfigs, getAppliedDifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs, DifficultyConfigs } from './difficulty/difficultyConfigs';
+import { applyWorkdayConfigs, getAppliedWorkdayConfigs, loadWorkdayConfigs, setWorkdayConfigs } from './workday/workdayConfigs';
 import { applyOverdueConfigs, getAppliedOverdueConfigs, loadOverdueConfigs, setOverdueConfigs } from './overdue/overdueConfigs';
 
 vi.mock('../shared/utils/files', () => ({
@@ -12,7 +13,7 @@ describe('Saved configs only take effect once applied', () => {
   test('timer configs', () => {
     loadTimerConfigs();
     const configsBefore = getAppliedTimerConfigs();
-    const newConfigs = { timerDurationMs: 10 * 60 * 1000, breakDurationMs: 60 * 1000, warningThresholdMs: 30 * 1000 };
+    const newConfigs = { timerDurationMs: 10 * 60 * 1000, warningThresholdMs: 30 * 1000 };
 
     setTimerConfigs(newConfigs);
     expect(getAppliedTimerConfigs()).toEqual(configsBefore);
@@ -21,16 +22,16 @@ describe('Saved configs only take effect once applied', () => {
     expect(getAppliedTimerConfigs()).toEqual(newConfigs);
   });
 
-  test('limit configs', () => {
-    loadLimitConfigs();
-    const configsBefore = getAppliedLimitConfigs();
-    const newConfigs = { allottedBreaks: 1 };
+  test('difficulty configs', () => {
+    loadDifficultyConfigs();
+    const configsBefore = getAppliedDifficultyConfigs();
+    const newConfigs: DifficultyConfigs = { level: 'HARD', custom: { breakDurationMs: 60 * 1000, allottedBreaks: 1 } };
 
-    setLimitConfigs(newConfigs);
-    expect(getAppliedLimitConfigs()).toEqual(configsBefore);
+    setDifficultyConfigs(newConfigs);
+    expect(getAppliedDifficultyConfigs()).toEqual(configsBefore);
 
-    applyLimitConfigs();
-    expect(getAppliedLimitConfigs()).toEqual(newConfigs);
+    applyDifficultyConfigs();
+    expect(getAppliedDifficultyConfigs()).toEqual(newConfigs);
   });
 
   test('overdue configs', () => {
@@ -43,5 +44,17 @@ describe('Saved configs only take effect once applied', () => {
 
     applyOverdueConfigs();
     expect(getAppliedOverdueConfigs()).toEqual(newConfigs);
+  });
+
+  test('workday configs', () => {
+    loadWorkdayConfigs();
+    const configsBefore = getAppliedWorkdayConfigs();
+    const newConfigs = { days: [0, 6], start: '10:00', end: '14:00', autoPauseAtEnd: true };
+
+    setWorkdayConfigs(newConfigs);
+    expect(getAppliedWorkdayConfigs()).toEqual(configsBefore);
+
+    applyWorkdayConfigs();
+    expect(getAppliedWorkdayConfigs()).toEqual(newConfigs);
   });
 });

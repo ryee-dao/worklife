@@ -5,7 +5,8 @@ import Timer from "./timer/Timer";
 import Settings from "./settings/Settings";
 import { TimerState } from "../../../main/timer/timerState";
 import TimeSettings from "./settings/TimerSettings";
-import LimitSettings from "./settings/LimitSettings";
+import WorkdaySettings from "./settings/WorkdaySettings";
+import DifficultySettings from "./settings/DifficultySettings";
 import OverdueConfigsForm from "./settings/OverdueConfigsForm";
 import { playWarningSound } from "../../common/utils/sound";
 
@@ -28,7 +29,8 @@ export default function Dashboard() {
           <Route path="/settings" element={<Settings />}>
             <Route index element={<Navigate replace to="/settings/timer" />} />
             <Route path="timer" element={<TimeSettings />} />
-            <Route path="limits" element={<LimitSettings />} />
+            <Route path="workday" element={<WorkdaySettings />} />
+            <Route path="difficulty" element={<DifficultySettings />} />
             <Route path="overdue" element={<OverdueConfigsForm />} />
           </Route>
 
