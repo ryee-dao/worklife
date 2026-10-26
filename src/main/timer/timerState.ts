@@ -9,6 +9,18 @@ import { calculateRemainingBreakSkips, increaseSkippedBreakCount } from "../limi
 import { getAppliedLimitConfigs } from "../limit/limitConfigs";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
+export type Source = "WINDOW" | "TRAY"; // Where the user triggered an action from
+
+// What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
+export type TimerTransition =
+  | { type: "APP_STARTED"; previousStatus: TimerStatus | null } // null = first run ever
+  | { type: "PAUSED"; source: Source; countdownMs: number }
+  | { type: "RESUMED"; source: Source; countdownMs: number }
+  | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
+  | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number }
+  | { type: "BREAK_STARTED"; source: Source; overdueMs: number }
+  | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; skipsLeft: number }
+  | { type: "BREAK_COMPLETED" };
 export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
 export interface TimerState {
   overdueTimeMs: number;
@@ -42,14 +54,19 @@ const defaultTimerData: StoredTimerState = {
 };
 
 export const timerEmitter = new EventEmitter();
+const emitTransition = (transition: TimerTransition) => {
+  timerEmitter.emit(EVENTS.TIMER.TRANSITION, transition);
+};
+
 export const initTimer = () => {
-  loadTimerStateFromFile();
+  const previousStatus = loadTimerStateFromFile();
+  emitTransition({ type: "APP_STARTED", previousStatus });
   if (!timerState._bypassThreshold) {
     fallbackTimer();
   }
   timerState.overdueTimeMs = 0;
   tickCount = 0;
-  startTimer();
+  runTimer();
 };
 
 export const destroyTimers = () => {
@@ -139,12 +156,14 @@ const checkTimer = () => {
         timerEmitter.emit(EVENTS.TIMER.WARNING);
       }
       if (timerState.currentCountdownMs <= 0) {
+        emitTransition({ type: "OVERDUE_STARTED", cause: "COUNTDOWN_ENDED" });
         transitionToNextState();
       }
       break;
     case "BREAK":
       timerState.currentCountdownMs -= tickIntervalMs;
       if (timerState.currentCountdownMs <= 0) {
+        emitTransition({ type: "BREAK_COMPLETED" });
         transitionToNextState();
       }
       break;
@@ -180,14 +199,23 @@ const transitionToNextState = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const pauseTimer = () => {
+export const pauseTimer = (source: Source) => {
+  if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
+  emitTransition({ type: "PAUSED", source, countdownMs: timerState.currentCountdownMs });
   // clearInterval(tickTimer);
   timerState.status = "PAUSED";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const startTimer = () => {
+export const startTimer = (source: Source) => {
+  if (timerState.status === "PAUSED") {
+    emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
+  }
+  runTimer();
+};
+
+const runTimer = () => {
   clearInterval(tickTimer);
   // When running e2e tests, we don't set an interval to control the timing
   // This is to prevent flakiness in tests
@@ -199,10 +227,11 @@ export const startTimer = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const startBreak = () => {
+export const startBreak = (source: Source) => {
   if (timerState.status !== "OVERDUE") {
     return;
   }
+  emitTransition({ type: "BREAK_STARTED", source, overdueMs: timerState.overdueTimeMs });
   clearInterval(tickTimer); // Clear any existing tick intervals
 
   // When running e2e tests, we don't set an interval to control the timing
@@ -215,16 +244,27 @@ export const startBreak = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const skipBreak = () => {
+export const skipBreak = (source: Source) => {
   if (calculateRemainingBreakSkips() <= 0) return;
   if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
   increaseSkippedBreakCount();
+  const isBreak = timerState.status === "BREAK";
+  emitTransition({
+    type: "BREAK_SKIPPED",
+    source,
+    from: timerState.status,
+    overdueMs: timerState.overdueTimeMs,
+    breakElapsedMs: isBreak ? getAppliedTimerConfigs().breakDurationMs - timerState.currentCountdownMs : 0,
+    skipsLeft: calculateRemainingBreakSkips(),
+  });
   timerState.status = "BREAK";
   transitionToNextState();
   emitTimerStatus();
 };
 
-export const skipTimer = () => {
+export const skipTimer = (source: Source) => {
+  if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
+  emitTransition({ type: "OVERDUE_STARTED", cause: "TIMER_SKIPPED", source, countdownMs: timerState.currentCountdownMs });
   timerState.currentCountdownMs = 0;
   transitionToNextState();
   emitTimerStatus();
@@ -240,7 +280,8 @@ const isInWarning = () => {
   );
 };
 
-const loadTimerStateFromFile = () => {
+// Returns the status saved by the last run, or null on the first run ever
+const loadTimerStateFromFile = (): TimerStatus | null => {
   const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
 
   // If no timer data is returned, set new state in file
@@ -248,6 +289,7 @@ const loadTimerStateFromFile = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 
   console.log("init timer", JSON.stringify(timerState));
+  return timerData?.fileContent?.status ?? null;
 };
 
 export const getTimerState = (): TimerState => ({

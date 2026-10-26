@@ -65,21 +65,21 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
 
   switch (state.status) {
     case 'RUNNING':
-      menuTemplate.push({ label: 'Pause', click: pauseTimer });
-      menuTemplate.push({ label: 'Skip to Break', click: skipTimer });
+      menuTemplate.push({ label: 'Pause', click: () => pauseTimer('TRAY') });
+      menuTemplate.push({ label: 'Skip to Break', click: () => skipTimer('TRAY') });
       break;
     case 'PAUSED':
-      menuTemplate.push({ label: 'Resume', click: startTimer });
+      menuTemplate.push({ label: 'Resume', click: () => startTimer('TRAY') });
       break;
     case 'OVERDUE':
-      menuTemplate.push({ label: 'Start Break', click: startBreak });
+      menuTemplate.push({ label: 'Start Break', click: () => startBreak('TRAY') });
       if (state.availableActions.includes('skip')) {
-        menuTemplate.push({ label: 'Skip Break', click: skipBreak });
+        menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
       }
       break;
     case 'BREAK':
       if (state.availableActions.includes('skip')) {
-        menuTemplate.push({ label: 'Skip Break', click: skipBreak });
+        menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
       }
       break;
   }

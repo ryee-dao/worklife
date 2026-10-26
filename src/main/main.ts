@@ -10,6 +10,7 @@ import { loadTimerConfigs } from "./timer/timerConfigs";
 import { buildStatusIcons, createTray, tray } from "./tray/tray";
 import { registerDisplayListenersForBreakWindow, setOverdueLevelsArray } from "./windows/breakWindow";
 import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow } from "./windows/settingsWindow";
+import { initStats, recordAppQuit } from "./stats/stats";
 
 export let forceQuit = false; // Allows app.quit() to bypass logic to minimize on close
 
@@ -30,6 +31,7 @@ function initApp() {
   registerDisplayListenersForBreakWindow()
   initConfigs();
   initLimits();
+  initStats();
   initTimer();
   initEventListeners();
   buildStatusIcons();
@@ -42,6 +44,9 @@ function initApp() {
 // When the app.close() signal is emitted, set a flag {forceQuit}, that tells the app: 
 // bypass the hide-to-tray logic 
 app.on('before-quit', () => {
+  if (!forceQuit) {
+    recordAppQuit(); // app.quit() can be called more than once, so only record the first
+  }
   forceQuit = true;
   if (tray && !tray.isDestroyed()) {
     tray.destroy();

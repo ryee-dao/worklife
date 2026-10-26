@@ -8,6 +8,7 @@ export const EVENTS = {
     ON_OVERDUE: "timer_on_overdue",
     STOP_BREAK: "timer_stop_break",
     WARNING: "timer_warning",
+    TRANSITION: "timer_transition",
   },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
@@ -45,6 +46,7 @@ export const FILENAMES = {
   TIMER: { CONFIGS: "timerConfigs.json", STATE: "timerState.json" },
   LIMIT: { CONFIGS: "limitConfigs.json", STATE: "limitState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
+  STATS: { EVENTS: "events.jsonl" },
 } as const;
 
 export const CONSTRAINTS = {

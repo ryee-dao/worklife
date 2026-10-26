@@ -89,11 +89,11 @@ export const initEventListeners = () => {
     setOverdueLevelsArray();
   });
 
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, pauseTimer);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, startTimer);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, startBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, skipBreak);
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, skipTimer);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, () => pauseTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, () => startTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, () => startBreak("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, () => skipBreak("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, () => skipTimer("WINDOW"));
 
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);

@@ -4,6 +4,7 @@ import { FILENAMES, DEFAULTS } from "./../../src/shared/constants"
 import fs from "fs";
 import path from "path";
 import { TimerState } from "../../src/main/timer/timerState"
+import { StatsEvent } from "../../src/main/stats/stats"
 import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds } from "../../src/shared/utils/time"
 import { clickAndWaitForClose, clickTrayMenuItem, getTrayMenuLabels, getWindowBounds } from "./helpers";
 
@@ -62,6 +63,20 @@ test("App launches with a visible window and starts up with valid components & s
     await expect(breakWindow.getByTestId('break-window-time-display').getByText("00 : 25")).toBeVisible()
     await testClock.fastForward(5);
     await expect(breakWindow.getByTestId('break-window-time-display').getByText("00 : 20")).toBeVisible()
+  });
+
+  await test.step("Quit and verify the stats events were logged in order", async () => {
+    await electronApp.close();
+    // Each line of the events file is one event
+    const events: StatsEvent[] = fs.readFileSync(path.join(userDataDir.path, FILENAMES.STATS.EVENTS), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+
+    expect(events.map((event) => event.type)).toEqual(["APP_STARTED", "OVERDUE_STARTED", "BREAK_STARTED", "APP_QUIT"]);
+    expect.soft(events[1]).toMatchObject({ cause: "TIMER_SKIPPED", source: "WINDOW", countdownMs: convertMinutesToMs(44) + 50 * 1000 });
+    expect.soft(events[2]).toMatchObject({ source: "WINDOW", overdueMs: 10 * 1000 });
+    expect.soft(events[3]).toMatchObject({ status: "BREAK" });
   });
 });
 
