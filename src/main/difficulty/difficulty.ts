@@ -4,14 +4,19 @@ import { getAppliedDifficultyConfigs } from "./difficultyConfigs";
 
 const breakRoundingMs = 15 * 1000;
 const minimumBreakMs = 30 * 1000;
+const snoozeRoundingMs = 60 * 1000;
+const minimumSnoozeMs = 60 * 1000;
+
+const roundToNearest = (ms: number, stepMs: number) => {
+  return Math.round(ms / stepMs) * stepMs;
+};
 
 export const getBreakDurationMs = () => {
   const { level, custom } = getAppliedDifficultyConfigs();
   if (level === "CUSTOM") return custom.breakDurationMs;
 
   const breakMs = getAppliedTimerConfigs().timerDurationMs * DIFFICULTY_PRESETS[level].breakRatio;
-  const roundedBreakMs = Math.round(breakMs / breakRoundingMs) * breakRoundingMs;
-  return Math.max(roundedBreakMs, minimumBreakMs);
+  return Math.max(roundToNearest(breakMs, breakRoundingMs), minimumBreakMs);
 };
 
 export const getAllottedBreaks = () => {
@@ -19,4 +24,19 @@ export const getAllottedBreaks = () => {
   if (level === "CUSTOM") return custom.allottedBreaks;
 
   return DIFFICULTY_PRESETS[level].allottedBreaks;
+};
+
+export const getSnoozeDurationMs = () => {
+  const { level, custom } = getAppliedDifficultyConfigs();
+  if (level === "CUSTOM") return custom.snoozeDurationMs;
+
+  const snoozeMs = getAppliedTimerConfigs().timerDurationMs * DIFFICULTY_PRESETS[level].snoozeRatio;
+  return Math.max(roundToNearest(snoozeMs, snoozeRoundingMs), minimumSnoozeMs);
+};
+
+export const getAllottedSnoozes = () => {
+  const { level, custom } = getAppliedDifficultyConfigs();
+  if (level === "CUSTOM") return custom.allottedSnoozes;
+
+  return DIFFICULTY_PRESETS[level].allottedSnoozes;
 };

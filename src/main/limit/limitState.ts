@@ -4,11 +4,12 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { getAllottedBreaks } from "../difficulty/difficulty";
+import { getAllottedBreaks, getAllottedSnoozes } from "../difficulty/difficulty";
 
 export interface LimitState {
   lastResetDate: string;
   skippedBreakCount: number;
+  snoozedCount: number;
 }
 
 let limitState: LimitState;
@@ -27,6 +28,7 @@ export function loadLimitStateFromFile() {
   const defaultLimitData = {
     lastResetDate: getTodayDateAsString(),
     skippedBreakCount: 0,
+    snoozedCount: 0,
   }
 
   if (!limitStateData.fileContent) {
@@ -44,6 +46,7 @@ export function resetDailyLimits() {
     setLimitState({
       lastResetDate: getTodayDateAsString(),
       skippedBreakCount: 0,
+      snoozedCount: 0,
     });
   }
 }
@@ -63,6 +66,15 @@ export function calculateRemainingBreakSkips() {
   return (
     getAllottedBreaks() - limitStateData.skippedBreakCount
   );
+}
+
+export function increaseSnoozedCount() {
+  const limitStateData = getLimitState();
+  setLimitState({ ...limitStateData, snoozedCount: limitStateData.snoozedCount + 1 });
+}
+
+export function calculateRemainingSnoozes() {
+  return getAllottedSnoozes() - getLimitState().snoozedCount;
 }
 
 function setLimitState(newLimitState: LimitState) {

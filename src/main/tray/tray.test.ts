@@ -30,9 +30,12 @@ function createTimerState(overrides: Partial<TimerState> = {}): TimerState {
     currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     status: 'RUNNING',
     overdueTimeMs: 0,
-    availableActions: ['pause', 'skip'],
+    availableActions: ['stop', 'skip'],
     remainingSkips: 3,
     allottedBreaks: 3,
+    remainingSnoozes: 3,
+    allottedSnoozes: 3,
+    snoozeDurationMs: 7 * 60 * 1000,
     isWarning: false,
     ...overrides,
   };
@@ -91,10 +94,10 @@ describe('Tray status detection', () => {
     expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-blue'));
   });
 
-  test('PAUSED state shows gray icon', () => {
+  test('STOPPED state shows gray icon', () => {
     const mockTray = createMockTray();
     const state = createTimerState({
-      status: 'PAUSED',
+      status: 'STOPPED',
       availableActions: ['start'],
     });
 
@@ -124,7 +127,7 @@ describe('Tray status detection', () => {
 });
 
 describe('Tray context/dropdown menu actions', () => {
-  test('RUNNING state offers Pause and Skip to Break', () => {
+  test('RUNNING state offers Stop and Skip to Break', () => {
     const mockTray = createMockTray();
     const state = createTimerState({ status: 'RUNNING' });
 
@@ -132,21 +135,43 @@ describe('Tray context/dropdown menu actions', () => {
 
     const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
     const labels = menuTemplate.map((item) => item.label).filter(Boolean);
-    expect(labels).toContain('Pause');
+    expect(labels).toContain('Stop');
     expect(labels).toContain('Skip to Break');
     expect(labels).not.toContain('Resume');
   });
 
-  test('PAUSED state offers Resume', () => {
+  test('RUNNING state offers Snooze with its length when snoozes remain', () => {
     const mockTray = createMockTray();
-    const state = createTimerState({ status: 'PAUSED', availableActions: ['start'] });
+    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'skip', 'snooze'] });
+
+    updateTray(mockTray as unknown as Electron.Tray, state);
+
+    const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
+    const labels = menuTemplate.map((item) => item.label).filter(Boolean);
+    expect(labels).toContain('Snooze +7 min');
+  });
+
+  test('RUNNING state hides Snooze when no snoozes remain', () => {
+    const mockTray = createMockTray();
+    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'skip'] });
+
+    updateTray(mockTray as unknown as Electron.Tray, state);
+
+    const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
+    const labels = menuTemplate.map((item) => item.label).filter(Boolean);
+    expect(labels).not.toContain('Snooze +7 min');
+  });
+
+  test('STOPPED state offers Resume', () => {
+    const mockTray = createMockTray();
+    const state = createTimerState({ status: 'STOPPED', availableActions: ['start'] });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
 
     const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
     const labels = menuTemplate.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('Resume');
-    expect(labels).not.toContain('Pause');
+    expect(labels).not.toContain('Stop');
   });
 
   test('OVERDUE state offers Start Break and Skip Break when skips remain', () => {
@@ -264,7 +289,7 @@ describe('Tray only replaces what changed', () => {
     const mockTray = createMockTray();
 
     updateTray(mockTray as unknown as Electron.Tray, createTimerState({ status: 'RUNNING' }));
-    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ status: 'PAUSED', availableActions: ['start'] }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ status: 'STOPPED', availableActions: ['start'] }));
 
     expect(mockTray.setContextMenu).toHaveBeenCalledTimes(2);
   });

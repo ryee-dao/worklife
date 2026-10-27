@@ -6,7 +6,7 @@ export interface WorkdayConfigs {
   days: number[];   // 0 = Sunday, matching Date.getDay()
   start: string;    // Local time as "HH:MM"
   end: string;      // Local time as "HH:MM"
-  autoPauseAtEnd: boolean;
+  autoStopAtEnd: boolean;
 }
 
 // The configs the app runs on and the day they were applied. Saved so a restart keeps today's hours
@@ -19,7 +19,7 @@ const defaultWorkdayConfigs: WorkdayConfigs = {
   days: [1, 2, 3, 4, 5],
   start: "09:00",
   end: "17:00",
-  autoPauseAtEnd: false,
+  autoStopAtEnd: false,
 };
 
 let workdayConfigs: WorkdayConfigs;

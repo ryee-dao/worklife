@@ -5,23 +5,24 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { calculateRemainingBreakSkips, increaseSkippedBreakCount } from "../limit/limitState";
-import { getAllottedBreaks, getBreakDurationMs } from "../difficulty/difficulty";
+import { calculateRemainingBreakSkips, calculateRemainingSnoozes, increaseSkippedBreakCount, increaseSnoozedCount } from "../limit/limitState";
+import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 
-export type TimerStatus = "RUNNING" | "OVERDUE" | "PAUSED" | "BREAK";
+export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK";
 export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday
 
 // What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
 export type TimerTransition =
   | { type: "APP_STARTED"; previousStatus: TimerStatus | null } // null = first run ever
-  | { type: "PAUSED"; source: Source; countdownMs: number }
+  | { type: "STOPPED"; source: Source; countdownMs: number }
   | { type: "RESUMED"; source: Source; countdownMs: number }
   | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
   | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number }
   | { type: "BREAK_STARTED"; source: Source; overdueMs: number }
   | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; skipsLeft: number }
-  | { type: "BREAK_COMPLETED" };
-export type AvailableActions = "start" | "pause" | "skip" | "breaktime";
+  | { type: "BREAK_COMPLETED" }
+  | { type: "SNOOZED"; source: Source; snoozeMs: number; countdownMs: number; snoozesLeft: number };
+export type AvailableActions = "start" | "stop" | "skip" | "breaktime" | "snooze";
 export interface TimerState {
   overdueTimeMs: number;
   currentCountdownMs: number;
@@ -29,6 +30,9 @@ export interface TimerState {
   availableActions: AvailableActions[];
   remainingSkips: number,
   allottedBreaks: number,
+  remainingSnoozes: number,
+  allottedSnoozes: number,
+  snoozeDurationMs: number,
   isWarning: boolean;
   _bypassThreshold?: boolean
 }
@@ -88,10 +92,13 @@ const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   const availableActions: AvailableActions[] = [];
   switch (status) {
     case "RUNNING":
-      availableActions.push("pause");
+      availableActions.push("stop");
       availableActions.push("skip");
+      if (calculateRemainingSnoozes() > 0) {
+        availableActions.push("snooze");
+      }
       return availableActions;
-    case "PAUSED":
+    case "STOPPED":
       availableActions.push("start");
       return availableActions;
     case "OVERDUE":
@@ -120,7 +127,7 @@ export const emitTimerStatus = () => {
   const statusMapper: Record<TimerStatus, string> = {
     RUNNING: EVENTS.TIMER.RUNNING,
     BREAK: EVENTS.TIMER.ON_BREAK,
-    PAUSED: EVENTS.TIMER.PAUSED,
+    STOPPED: EVENTS.TIMER.STOPPED,
     OVERDUE: EVENTS.TIMER.ON_OVERDUE,
   };
 
@@ -131,7 +138,7 @@ export const emitTimerStatus = () => {
 };
 
 const onTick = () => {
-  // Using ticks to count down, otherwise paused status will also count down timer
+  // Using ticks to count down, otherwise stopped status will also count down timer
   tickCount++;
   checkTimer();
   emitTimerStatus();
@@ -148,7 +155,7 @@ const checkTimer = () => {
 
   // Perform logic on timerState based on status
   switch (timerState.status) {
-    case "PAUSED":
+    case "STOPPED":
       break;
     case "RUNNING":
       timerState.currentCountdownMs -= tickIntervalMs;
@@ -199,17 +206,17 @@ const transitionToNextState = () => {
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
-export const pauseTimer = (source: Source) => {
+export const stopTimer = (source: Source) => {
   if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
-  emitTransition({ type: "PAUSED", source, countdownMs: timerState.currentCountdownMs });
+  emitTransition({ type: "STOPPED", source, countdownMs: timerState.currentCountdownMs });
   // clearInterval(tickTimer);
-  timerState.status = "PAUSED";
+  timerState.status = "STOPPED";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const startTimer = (source: Source) => {
-  if (timerState.status !== "PAUSED") return; // A stale menu or window can send this after the status changed
+  if (timerState.status !== "STOPPED") return; // A stale menu or window can send this after the status changed
   emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
   runTimer();
 };
@@ -269,6 +276,23 @@ export const skipTimer = (source: Source) => {
   emitTimerStatus();
 };
 
+export const snoozeTimer = (source: Source) => {
+  if (timerState.status !== "RUNNING") return; // Once overdue, a skip is the way out
+  if (calculateRemainingSnoozes() <= 0) return;
+  increaseSnoozedCount();
+  const snoozeMs = getSnoozeDurationMs();
+  emitTransition({
+    type: "SNOOZED",
+    source,
+    snoozeMs,
+    countdownMs: timerState.currentCountdownMs,
+    snoozesLeft: calculateRemainingSnoozes(),
+  });
+  timerState.currentCountdownMs += snoozeMs;
+  emitTimerStatus();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
 const isInWarning = () => {
   const { warningThresholdMs } = getAppliedTimerConfigs();
   return (
@@ -296,6 +320,9 @@ export const getTimerState = (): TimerState => ({
   availableActions: getAvailableActions(timerState.status),
   remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
   allottedBreaks: getAllottedBreaks(),
+  remainingSnoozes: Math.max(0, calculateRemainingSnoozes()),
+  allottedSnoozes: getAllottedSnoozes(),
+  snoozeDurationMs: getSnoozeDurationMs(),
   isWarning: isInWarning(),
 });
 

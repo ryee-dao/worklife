@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
 import { EVENTS, FILENAMES } from "../../shared/constants";
-import { appendToUserDataFile } from "../../shared/utils/files";
+import { appendToUserDataFile, readUserDataTextFile } from "../../shared/utils/files";
 import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
-import { getAllottedBreaks, getBreakDurationMs } from "../difficulty/difficulty";
+import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
 import { getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
 
@@ -21,6 +21,8 @@ export type StatsEvent = {
     breakDurationMs: number;
     warningThresholdMs: number;
     allottedBreaks: number;
+    snoozeDurationMs: number;
+    allottedSnoozes: number;
     difficulty: DifficultyLevel;
     levelThresholdMs: number;
     workday: WorkdayConfigs;
@@ -38,6 +40,8 @@ const recordEvent = (event: TimerTransition | AppQuit) => {
       breakDurationMs: getBreakDurationMs(),
       warningThresholdMs: getAppliedTimerConfigs().warningThresholdMs,
       allottedBreaks: getAllottedBreaks(),
+      snoozeDurationMs: getSnoozeDurationMs(),
+      allottedSnoozes: getAllottedSnoozes(),
       difficulty: getAppliedDifficultyConfigs().level,
       levelThresholdMs: getAppliedOverdueConfigs().levelThresholdMs,
       workday: getAppliedWorkdayConfigs(),
@@ -55,4 +59,22 @@ export const initStats = () => {
 export const recordAppQuit = () => {
   const { status, currentCountdownMs, overdueTimeMs } = getTimerState();
   recordEvent({ type: "APP_QUIT", status, countdownMs: currentCountdownMs, overdueMs: overdueTimeMs });
+};
+
+// A damaged line (like one cut off by a crash mid-write) is skipped so the rest of the log stays usable
+export const parseEvents = (text: string): StatsEvent[] => {
+  const events: StatsEvent[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      events.push(JSON.parse(line));
+    } catch {
+      console.warn(`Skipping damaged stats line: ${line}`);
+    }
+  }
+  return events;
+};
+
+export const readEvents = () => {
+  return parseEvents(readUserDataTextFile(FILENAMES.STATS.EVENTS));
 };

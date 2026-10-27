@@ -8,7 +8,7 @@ interface TimerTimeDisplayProps {
 const timerColorMapper: Record<TimerStatus | "WARNING", string> = {
   RUNNING: "text-green-600",
   BREAK: "text-blue-600",
-  PAUSED: "text-slate-600",
+  STOPPED: "text-slate-600",
   WARNING: "text-yellow-600",
   OVERDUE: "text-red-700",
 };

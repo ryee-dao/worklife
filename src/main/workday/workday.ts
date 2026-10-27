@@ -1,4 +1,4 @@
-import { pauseTimer, startTimer } from "../timer/timerState";
+import { stopTimer, startTimer } from "../timer/timerState";
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "./workdayConfigs";
 
 const workdayCheckIntervalMs = 60 * 1000; // 1 minute
@@ -30,10 +30,10 @@ const checkWorkday = () => {
 
   // Only act the moment the workday starts or ends, so a stop in the middle of the day is left alone
   if (workdayStarted) {
-    startTimer("SCHEDULE"); // Only resumes a paused timer
+    startTimer("SCHEDULE"); // Only resumes a stopped timer
   }
-  if (workdayEnded && configs.autoPauseAtEnd) {
-    pauseTimer("SCHEDULE");
+  if (workdayEnded && configs.autoStopAtEnd) {
+    stopTimer("SCHEDULE");
   }
   wasInWorkday = inWorkday;
 };

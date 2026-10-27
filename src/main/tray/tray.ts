@@ -1,6 +1,7 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
-import { TimerState, TimerStatus, pauseTimer, startTimer, startBreak, skipBreak, skipTimer } from '../timer/timerState';
+import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, skipTimer, snoozeTimer } from '../timer/timerState';
+import { convertMsToMinutes } from '../../shared/utils/time';
 import { formatMsToMMSS } from '../../shared/utils/time';
 import { settingsWindow } from '../windows/settingsWindow';
 
@@ -12,7 +13,7 @@ const STATUS_ICON_PATHS = {
   WARNING: path.join(ICON_DIR, 'tray-yellow.png'),
   OVERDUE: path.join(ICON_DIR, 'tray-orange.png'),
   BREAK: path.join(ICON_DIR, 'tray-blue.png'),
-  PAUSED: path.join(ICON_DIR, 'tray-gray.png'),
+  STOPPED: path.join(ICON_DIR, 'tray-gray.png'),
 } as const;
 
 let statusIcons: Record<StatusKey, Electron.NativeImage>;
@@ -65,10 +66,13 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
 
   switch (state.status) {
     case 'RUNNING':
-      menuTemplate.push({ label: 'Pause', click: () => pauseTimer('TRAY') });
+      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
       menuTemplate.push({ label: 'Skip to Break', click: () => skipTimer('TRAY') });
+      if (state.availableActions.includes('snooze')) {
+        menuTemplate.push({ label: `Snooze +${convertMsToMinutes(state.snoozeDurationMs)} min`, click: () => snoozeTimer('TRAY') });
+      }
       break;
-    case 'PAUSED':
+    case 'STOPPED':
       menuTemplate.push({ label: 'Resume', click: () => startTimer('TRAY') });
       break;
     case 'OVERDUE':

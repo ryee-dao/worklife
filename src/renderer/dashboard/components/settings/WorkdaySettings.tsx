@@ -8,7 +8,7 @@ export default function WorkdaySettings() {
   const [days, setDays] = useState<number[]>([]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [autoPauseAtEnd, setAutoPauseAtEnd] = useState(false);
+  const [autoStopAtEnd, setAutoStopAtEnd] = useState(false);
 
   // shortcut: overnight workdays aren't supported yet, so the end must come after the start
   const hoursValid = start < end; // "HH:MM" strings compare correctly as text
@@ -25,12 +25,12 @@ export default function WorkdaySettings() {
       successMessage="Settings saved successfully. Changes will reflect starting tomorrow"
       load={() => window.electronAPI.loadWorkdayConfigs()}
       save={(configs) => window.electronAPI.saveWorkdayConfigs(configs)}
-      buildConfig={() => ({ days, start, end, autoPauseAtEnd })}
+      buildConfig={() => ({ days, start, end, autoStopAtEnd })}
       onLoaded={(configs) => {
         setDays(configs.days);
         setStart(configs.start);
         setEnd(configs.end);
-        setAutoPauseAtEnd(configs.autoPauseAtEnd);
+        setAutoStopAtEnd(configs.autoStopAtEnd);
       }}
     >
       <div data-testid="workday-days" className="tracking-wider p-2">
@@ -59,11 +59,11 @@ export default function WorkdaySettings() {
         )}
       </div>
 
-      <div data-testid="workday-auto-pause" className="tracking-wider p-2">
+      <div data-testid="workday-auto-stop" className="tracking-wider p-2">
         <label>
-          <input type="checkbox" checked={autoPauseAtEnd}
-            onChange={(e) => setAutoPauseAtEnd(e.target.checked)} />{" "}
-          Pause the timer when my workday ends
+          <input type="checkbox" checked={autoStopAtEnd}
+            onChange={(e) => setAutoStopAtEnd(e.target.checked)} />{" "}
+          Stop the timer when my workday ends
         </label>
       </div>
     </SettingsPanel>

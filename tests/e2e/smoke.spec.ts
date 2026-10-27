@@ -111,7 +111,7 @@ test("App launches the overdue window properly when the timer countdown is reach
   });
 });
 
-test("App pauses properly", async ({ launchElectron }) => {
+test("App stops properly", async ({ launchElectron }) => {
   const { settingsWindow, testClock } = await launchElectron();
 
   await test.step("Tick and capture initial state", async () => {
@@ -120,20 +120,37 @@ test("App pauses properly", async ({ launchElectron }) => {
     await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible()
   });
 
-  await test.step("Pause and verify timer stops", async () => {
-    // Pause the timer
+  await test.step("Stop and verify timer stops", async () => {
+    // Stop the timer
     await settingsWindow.getByTestId('toggle-timer-button').click();
-    // Tick while paused, timer should not move
+    // Tick while stopped, timer should not move
     await testClock.fastForward(5);
     await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible()
   });
 
-  await test.step("Unpause and verify timer resumes", async () => {
-    // Unpause the timer
+  await test.step("Resume and verify timer resumes", async () => {
+    // Resume the timer
     await settingsWindow.getByTestId('toggle-timer-button').click();
-    // Tick after unpause, timer should now advance
+    // Tick after resuming, timer should now advance
     await testClock.fastForward(5);
     await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 50")).toBeVisible()
+  });
+});
+
+test("Snooze adds time and uses one snooze", async ({ launchElectron }) => {
+  const { settingsWindow, testClock } = await launchElectron();
+  const snoozeButton = settingsWindow.getByTestId("snooze-button");
+
+  await test.step("Snooze shows its length and how many are left", async () => {
+    await testClock.fastForward(1);
+    await expect(snoozeButton).toContainText("+5m");
+    await expect(snoozeButton).toContainText(`${DEFAULTS.DEFAULT_ALLOTTED_SNOOZES} left`);
+  });
+
+  await test.step("Snoozing adds 5 minutes to the countdown", async () => {
+    await snoozeButton.click();
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("49 : 59")).toBeVisible();
+    await expect(snoozeButton).toContainText(`${DEFAULTS.DEFAULT_ALLOTTED_SNOOZES - 1} left`);
   });
 });
 
@@ -306,7 +323,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
 test("Data persists when app is closed", async ({ launchElectron, userDataDir }) => {
   let savedTimerState: TimerState;
 
-  await test.step("Launch app, tick, pause, and capture state", async () => {
+  await test.step("Launch app, tick, stop, and capture state", async () => {
     const { settingsWindow, electronApp, testClock } = await launchElectron();
     // Read the initial state
     const initialTimerState: TimerState = JSON.parse(
@@ -314,9 +331,9 @@ test("Data persists when app is closed", async ({ launchElectron, userDataDir })
     );
     // Advance the timer
     await testClock.fastForward(10);
-    // Pause the timer
+    // Stop the timer
     await settingsWindow.getByTestId("timer-buttons-container").getByTestId('toggle-timer-button').click();
-    // Read the paused state and assert it advanced
+    // Read the stopped state and assert it advanced
     savedTimerState = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
     );
@@ -380,7 +397,7 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     await settingsWindow.getByRole('link', { name: 'Workday' }).click();
     await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: 'Sat' }).check();
     await settingsWindow.getByTestId("workday-hours").locator('input').first().fill("08:30");
-    await settingsWindow.getByTestId("workday-auto-pause").getByRole('checkbox').check();
+    await settingsWindow.getByTestId("workday-auto-stop").getByRole('checkbox').check();
     await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
     await settingsWindow.getByText('Settings saved successfully').waitFor();
   });
@@ -389,7 +406,7 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     const workdayConfigs = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.WORKDAY.CONFIGS), "utf-8")
     );
-    expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "17:00", autoPauseAtEnd: true });
+    expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "17:00", autoStopAtEnd: true });
   });
 
   await test.step("Verify an end before the start can't be saved", async () => {
@@ -581,14 +598,14 @@ test("Tray menu shows the right actions and controls the timer", async ({ launch
   const { settingsWindow, electronApp, testClock } = await launchElectron({ withTray: true });
   let breakWindow: Page;
 
-  await test.step("Running: menu offers Pause and Skip to Break", async () => {
+  await test.step("Running: menu offers Stop, Skip to Break and Snooze", async () => {
     // The tray menu is built on the first tick
     await testClock.fastForward(1);
-    expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Pause", "Skip to Break", "Quit"]);
+    expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Stop", "Skip to Break", "Snooze +5 min", "Quit"]);
   });
 
-  await test.step("Pause from the tray stops the timer", async () => {
-    await clickTrayMenuItem(electronApp, "Pause");
+  await test.step("Stop from the tray stops the timer", async () => {
+    await clickTrayMenuItem(electronApp, "Stop");
     await testClock.fastForward(5);
     await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 59")).toBeVisible();
     expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Resume", "Quit"]);

@@ -11,11 +11,15 @@ vi.mock('../../shared/utils/files', () => ({
 vi.mock('../limit/limitState', () => ({
   calculateRemainingBreakSkips: vi.fn(() => 2),
   increaseSkippedBreakCount: vi.fn(),
+  calculateRemainingSnoozes: vi.fn(() => 2),
+  increaseSnoozedCount: vi.fn(),
 }));
 
 vi.mock('../difficulty/difficulty', () => ({
   getAllottedBreaks: vi.fn(() => 3),
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
+  getAllottedSnoozes: vi.fn(() => 3),
+  getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
 }));
 
 vi.mock('../difficulty/difficultyConfigs', () => ({
@@ -23,7 +27,7 @@ vi.mock('../difficulty/difficultyConfigs', () => ({
 }));
 
 vi.mock('../workday/workdayConfigs', () => ({
-  getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoPauseAtEnd: false })),
+  getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false })),
 }));
 
 vi.mock('../overdue/overdueConfigs', () => ({
@@ -37,8 +41,8 @@ vi.mock('../timer/timerConfigs', () => ({
   })),
 }));
 
-import { initStats, recordAppQuit, StatsEvent } from './stats';
-import { initTimer, destroyTimers, pauseTimer, startTimer, skipTimer, startBreak, skipBreak, timerEmitter, StoredTimerState } from '../timer/timerState';
+import { initStats, parseEvents, recordAppQuit, StatsEvent } from './stats';
+import { initTimer, destroyTimers, stopTimer, startTimer, skipTimer, startBreak, skipBreak, snoozeTimer, timerEmitter, StoredTimerState } from '../timer/timerState';
 import { appendToUserDataFile, getUserDataFromFile } from '../../shared/utils/files';
 
 beforeEach(() => {
@@ -92,9 +96,11 @@ describe('Event format', () => {
         breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
         warningThresholdMs: 5000,
         allottedBreaks: 3,
+        snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
+        allottedSnoozes: 3,
         difficulty: 'NORMAL',
         levelThresholdMs: 180000,
-        workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoPauseAtEnd: false },
+        workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false },
       },
       type: 'APP_STARTED',
       previousStatus: null,
@@ -104,7 +110,7 @@ describe('Event format', () => {
   test('each event gets a unique id', () => {
     initStats();
     initTimer();
-    pauseTimer("WINDOW");
+    stopTimer("WINDOW");
 
     const [first, second] = getRecordedEvents();
     expect(first.id).not.toBe(second.id);
@@ -121,8 +127,8 @@ describe('App start and quit', () => {
     expect(getRecordedEvents()[0]).toMatchObject({ type: 'APP_STARTED', previousStatus: 'BREAK' });
   });
 
-  test('APP_STARTED is the only event on launch, even when resuming from PAUSED', () => {
-    seedTimerState({ currentCountdownMs: 100000, status: 'PAUSED', _bypassThreshold: true });
+  test('APP_STARTED is the only event on launch, even when resuming from STOPPED', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'STOPPED', _bypassThreshold: true });
 
     initStats();
     initTimer();
@@ -144,17 +150,17 @@ describe('App start and quit', () => {
 });
 
 describe('Timer transitions', () => {
-  test('pause and resume record the source and remaining countdown', () => {
+  test('stop and resume record the source and remaining countdown', () => {
     seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
 
     initStats();
     initTimer();
     vi.advanceTimersByTime(5000);
-    pauseTimer("TRAY");
+    stopTimer("TRAY");
     startTimer("WINDOW");
 
-    const [, paused, resumed] = getRecordedEvents();
-    expect(paused).toMatchObject({ type: 'PAUSED', source: 'TRAY', countdownMs: 95000 });
+    const [, stopped, resumed] = getRecordedEvents();
+    expect(stopped).toMatchObject({ type: 'STOPPED', source: 'TRAY', countdownMs: 95000 });
     expect(resumed).toMatchObject({ type: 'RESUMED', source: 'WINDOW', countdownMs: 95000 });
   });
 
@@ -224,6 +230,18 @@ describe('Timer transitions', () => {
     });
   });
 
+  test('snoozing records how long and how much countdown was left', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    initStats();
+    initTimer();
+    snoozeTimer("TRAY");
+
+    expect(getRecordedEvents().at(-1)).toMatchObject({
+      type: 'SNOOZED', source: 'TRAY', snoozeMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS, countdownMs: 100000, snoozesLeft: 2,
+    });
+  });
+
   test('actions the current status blocks record nothing', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
@@ -231,9 +249,27 @@ describe('Timer transitions', () => {
     initTimer();
     startBreak("WINDOW"); // Not overdue yet
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
-    pauseTimer("TRAY");
+    stopTimer("TRAY");
     skipTimer("TRAY");
 
     expect(getRecordedEvents().map((e) => e.type)).toEqual(['APP_STARTED', 'OVERDUE_STARTED']);
+  });
+});
+
+describe('Reading events', () => {
+  test('each line becomes one event', () => {
+    const text = '{"type":"APP_STARTED"}\n{"type":"APP_QUIT"}\n';
+
+    expect(parseEvents(text).map((e) => e.type)).toEqual(['APP_STARTED', 'APP_QUIT']);
+  });
+
+  test('a damaged line is skipped and the rest are kept', () => {
+    const text = '{"type":"APP_STARTED"}\n{"type":"STOPP\n{"type":"APP_QUIT"}\n';
+
+    expect(parseEvents(text).map((e) => e.type)).toEqual(['APP_STARTED', 'APP_QUIT']);
+  });
+
+  test('an empty or missing file has no events', () => {
+    expect(parseEvents('')).toEqual([]);
   });
 });

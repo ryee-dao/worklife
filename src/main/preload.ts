@@ -21,8 +21,8 @@ const electronAPI: ElectronAPI = {
   getTimerState: async (): Promise<TimerState> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TIMER_GETSTATE);
   },
-  pause: () => {
-    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_PAUSE);
+  stop: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_STOP);
   },
   start: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_BEGIN);
@@ -35,6 +35,9 @@ const electronAPI: ElectronAPI = {
   },
   skipTimer: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER);
+  },
+  snooze: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SNOOZE);
   },
   loadTimerConfigs: async (): Promise<TimerConfigs> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER);

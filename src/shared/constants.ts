@@ -1,7 +1,7 @@
 export const EVENTS = {
   TIMER: {
     RUNNING: "timer_running",
-    PAUSED: "timer_paused",
+    STOPPED: "timer_stopped",
     START_BREAK: "timer_start_break",
     ON_BREAK: "timer_on_break",
     START_OVERDUE: "timer_start_overdue",
@@ -12,11 +12,12 @@ export const EVENTS = {
   },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
-    TIMER_PAUSE: "timer:pause",
+    TIMER_STOP: "timer:stop",
     TIMER_BEGIN: "timer:begin",
     TIMER_STARTBREAK: "timer:start_break",
     TIMER_SKIPBREAK: "timer:skip_break",
     TIMER_SKIPTIMER: "timer:skip_timer",
+    TIMER_SNOOZE: "timer:snooze",
     TIMER_WARNING: 'timer:warning',
     TIMER_GETSTATE: "timer:get_state",
     CONFIGS: {
@@ -41,6 +42,8 @@ export const DEFAULTS = {
   DEFAULT_BREAK_DURATION_MS: 30 * 1000, // 30 seconds, the starting value for the custom difficulty
   DEFAULT_WARNING_THRESHOLD_MS: 2 * 60 * 1000, // 2 minutes
   DEFAULT_ALLOTTED_BREAKS: 3, // The starting value for the custom difficulty
+  DEFAULT_SNOOZE_DURATION_MS: 5 * 60 * 1000, // 5 minutes, the starting value for the custom difficulty
+  DEFAULT_ALLOTTED_SNOOZES: 3, // The starting value for the custom difficulty
   DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
 } as const;
 
@@ -53,11 +56,11 @@ export const FILENAMES = {
   STATS: { EVENTS: "events.jsonl" },
 } as const;
 
-// Break length is a share of the timer, so it scales with longer work sessions
+// Break and snooze lengths are a share of the timer, so they scale with longer work sessions
 export const DIFFICULTY_PRESETS = {
-  EASY: { breakRatio: 0.02, allottedBreaks: 5 },
-  NORMAL: { breakRatio: 0.05, allottedBreaks: 3 },
-  HARD: { breakRatio: 0.10, allottedBreaks: 1 },
+  EASY: { breakRatio: 0.02, allottedBreaks: 5, snoozeRatio: 0.20, allottedSnoozes: 5 },
+  NORMAL: { breakRatio: 0.05, allottedBreaks: 3, snoozeRatio: 0.15, allottedSnoozes: 3 },
+  HARD: { breakRatio: 0.10, allottedBreaks: 1, snoozeRatio: 0.10, allottedSnoozes: 1 },
 } as const;
 
 export const CONSTRAINTS = {

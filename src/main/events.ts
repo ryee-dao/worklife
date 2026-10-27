@@ -5,11 +5,12 @@ import { applyDifficultyConfigs, DifficultyConfigs, getDifficultyConfigs, setDif
 import { applyTimerConfigs, getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {
   timerEmitter,
-  pauseTimer,
+  stopTimer,
   startTimer,
   skipBreak,
   TimerState,
   skipTimer,
+  snoozeTimer,
   startBreak,
   getTimerState,
 } from "./timer/timerState";
@@ -59,7 +60,7 @@ export const initEventListeners = () => {
     );
   });
 
-  timerEmitter.on(EVENTS.TIMER.PAUSED, (state: TimerState) => {
+  timerEmitter.on(EVENTS.TIMER.STOPPED, (state: TimerState) => {
     updateTray(tray!, state);
     broadcastStateToRendererWindows(
       state,
@@ -90,11 +91,12 @@ export const initEventListeners = () => {
     setOverdueLevelsArray();
   });
 
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_PAUSE, () => pauseTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STOP, () => stopTimer("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, () => startTimer("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, () => startBreak("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, () => skipBreak("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, () => skipTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, () => snoozeTimer("WINDOW"));
 
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);

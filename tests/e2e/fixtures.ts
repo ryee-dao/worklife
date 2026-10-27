@@ -29,7 +29,12 @@ const test = base.extend<{
     // Tests run on a short custom break so break countdowns stay quick and predictable
     seed(FILENAMES.DIFFICULTY.CONFIGS, {
       level: "CUSTOM",
-      custom: { breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS, allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS },
+      custom: {
+        breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
+        allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
+        snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
+        allottedSnoozes: DEFAULTS.DEFAULT_ALLOTTED_SNOOZES,
+      },
     });
     await use({ path: dir, seed });
   },

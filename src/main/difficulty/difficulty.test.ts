@@ -11,11 +11,16 @@ vi.mock('../timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(),
 }));
 
-import { getAllottedBreaks, getBreakDurationMs } from './difficulty';
+import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getSnoozeDurationMs } from './difficulty';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
 import { getAppliedTimerConfigs } from '../timer/timerConfigs';
 
-const customConfigs: DifficultyConfigs['custom'] = { breakDurationMs: 40 * 1000, allottedBreaks: 2 };
+const customConfigs: DifficultyConfigs['custom'] = {
+  breakDurationMs: 40 * 1000,
+  allottedBreaks: 2,
+  snoozeDurationMs: 8 * 60 * 1000,
+  allottedSnoozes: 4,
+};
 
 // Helper: run with a difficulty level and timer length
 const useDifficulty = (level: DifficultyConfigs['level'], timerDurationMinutes = 45) => {
@@ -74,12 +79,41 @@ describe('Preset difficulties', () => {
   });
 });
 
+describe('Snooze', () => {
+  test.each([
+    { level: 'EASY', snoozeMinutes: 9, allottedSnoozes: 5 },   // 20% of 45 min = 9 min
+    { level: 'NORMAL', snoozeMinutes: 7, allottedSnoozes: 3 }, // 15% of 45 min = 6.75 min, rounded to 7
+    { level: 'HARD', snoozeMinutes: 5, allottedSnoozes: 1 },   // 10% of 45 min = 4.5 min, rounded to 5
+  ] as const)('$level with a 45 minute timer', ({ level, snoozeMinutes, allottedSnoozes }) => {
+    useDifficulty(level);
+
+    expect(getSnoozeDurationMs()).toBe(snoozeMinutes * 60 * 1000);
+    expect(getAllottedSnoozes()).toBe(allottedSnoozes);
+  });
+
+  test('snooze length rounds to the nearest minute', () => {
+    useDifficulty('NORMAL', 42); // 6.3 min
+    expect(getSnoozeDurationMs()).toBe(6 * 60 * 1000);
+
+    useDifficulty('NORMAL', 50); // 7.5 min
+    expect(getSnoozeDurationMs()).toBe(8 * 60 * 1000);
+  });
+
+  test('snooze length never goes below 1 minute', () => {
+    useDifficulty('HARD', 4); // 0.4 min
+
+    expect(getSnoozeDurationMs()).toBe(60 * 1000);
+  });
+});
+
 describe('Custom difficulty', () => {
   test('uses the chosen break length and skips as they are', () => {
     useDifficulty('CUSTOM');
 
     expect(getBreakDurationMs()).toBe(customConfigs.breakDurationMs);
     expect(getAllottedBreaks()).toBe(customConfigs.allottedBreaks);
+    expect(getSnoozeDurationMs()).toBe(customConfigs.snoozeDurationMs);
+    expect(getAllottedSnoozes()).toBe(customConfigs.allottedSnoozes);
   });
 
   test('ignores the timer length', () => {

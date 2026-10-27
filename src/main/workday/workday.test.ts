@@ -9,15 +9,15 @@ vi.mock('../../shared/utils/files', () => ({
 
 vi.mock('../timer/timerState', () => ({
   startTimer: vi.fn(),
-  pauseTimer: vi.fn(),
+  stopTimer: vi.fn(),
 }));
 
 import { destroyWorkday, initWorkday, isInWorkday } from './workday';
 import { applyWorkdayConfigs, getAppliedWorkdayConfigs, loadWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from './workdayConfigs';
-import { pauseTimer, startTimer } from '../timer/timerState';
+import { stopTimer, startTimer } from '../timer/timerState';
 import { getUserDataFromFile } from '../../shared/utils/files';
 
-const defaultWorkday: WorkdayConfigs = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoPauseAtEnd: false };
+const defaultWorkday: WorkdayConfigs = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false };
 const oneMinuteMs = 60 * 1000;
 
 // Helper: a local time on Monday, October 26, 2026
@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
   vi.mocked(startTimer).mockReset();
-  vi.mocked(pauseTimer).mockReset();
+  vi.mocked(stopTimer).mockReset();
   vi.setSystemTime(monday(0, 0)); // Load on the same day the tests run, so the configs aren't from another day
   loadWorkdayConfigs();
 });
@@ -87,15 +87,15 @@ describe('Auto start', () => {
   });
 });
 
-describe('Auto pause', () => {
-  test('pauses when the workday ends if turned on', () => {
-    useWorkday({ ...defaultWorkday, autoPauseAtEnd: true });
+describe('Auto stop', () => {
+  test('stops when the workday ends if turned on', () => {
+    useWorkday({ ...defaultWorkday, autoStopAtEnd: true });
     vi.setSystemTime(monday(16, 59));
 
     initWorkday();
     vi.advanceTimersByTime(oneMinuteMs); // 17:00
 
-    expect(pauseTimer).toHaveBeenCalledExactlyOnceWith('SCHEDULE');
+    expect(stopTimer).toHaveBeenCalledExactlyOnceWith('SCHEDULE');
   });
 
   test('keeps running when the workday ends if turned off', () => {
@@ -104,7 +104,7 @@ describe('Auto pause', () => {
     initWorkday();
     vi.advanceTimersByTime(oneMinuteMs);
 
-    expect(pauseTimer).not.toHaveBeenCalled();
+    expect(stopTimer).not.toHaveBeenCalled();
   });
 });
 

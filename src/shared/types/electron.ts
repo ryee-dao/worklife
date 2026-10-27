@@ -8,11 +8,12 @@ export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => void;
   onWarning: (callback: () => void) => void;
   getTimerState: () => Promise<TimerState>;
-  pause: () => void;
+  stop: () => void;
   start: () => void;
   startBreak: () => void;
   skipBreak: () => void;
   skipTimer: () => void;
+  snooze: () => void;
   saveTimerConfigs: (arg0: TimerConfigs) => Promise<void>;
   saveDifficultyConfigs: (arg0: DifficultyConfigs) => Promise<void>;
   saveOverdueConfigs: (arg0: OverdueConfigs) => Promise<void>;

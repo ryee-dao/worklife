@@ -25,7 +25,7 @@ describe('Saved configs only take effect once applied', () => {
   test('difficulty configs', () => {
     loadDifficultyConfigs();
     const configsBefore = getAppliedDifficultyConfigs();
-    const newConfigs: DifficultyConfigs = { level: 'HARD', custom: { breakDurationMs: 60 * 1000, allottedBreaks: 1 } };
+    const newConfigs: DifficultyConfigs = { level: 'HARD', custom: { breakDurationMs: 60 * 1000, allottedBreaks: 1, snoozeDurationMs: 2 * 60 * 1000, allottedSnoozes: 1 } };
 
     setDifficultyConfigs(newConfigs);
     expect(getAppliedDifficultyConfigs()).toEqual(configsBefore);
@@ -49,7 +49,7 @@ describe('Saved configs only take effect once applied', () => {
   test('workday configs', () => {
     loadWorkdayConfigs();
     const configsBefore = getAppliedWorkdayConfigs();
-    const newConfigs = { days: [0, 6], start: '10:00', end: '14:00', autoPauseAtEnd: true };
+    const newConfigs = { days: [0, 6], start: '10:00', end: '14:00', autoStopAtEnd: true };
 
     setWorkdayConfigs(newConfigs);
     expect(getAppliedWorkdayConfigs()).toEqual(configsBefore);

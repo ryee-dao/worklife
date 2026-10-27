@@ -20,6 +20,11 @@ export function writeToUserDataFile(fileName: string, fileContent: unknown) {
   console.log(`Wrote ${JSON.stringify(fileContent)} to file: ${fileName}`);
 }
 
+export function readUserDataTextFile(fileName: string) {
+  const filePath = path.join(app.getPath("userData"), fileName);
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "";
+}
+
 export function appendToUserDataFile(fileName: string, content: string) {
   fs.appendFileSync(path.join(app.getPath("userData"), fileName), content);
 }

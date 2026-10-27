@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DifficultyConfigs, DifficultyLevel } from "../../../../main/difficulty/difficultyConfigs";
 import { DIFFICULTY_PRESETS } from "../../../../shared/constants";
-import { convertMsToSeconds, convertSecondsToMs } from "../../../../shared/utils/time";
+import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs } from "../../../../shared/utils/time";
 import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
@@ -14,37 +14,49 @@ const levelNames: Record<DifficultyLevel, string> = {
 };
 
 const describeLevel = (level: DifficultyLevel) => {
-  if (level === "CUSTOM") return "choose your own break length and skips";
-  const { breakRatio, allottedBreaks } = DIFFICULTY_PRESETS[level];
-  return `breaks are ${breakRatio * 100}% of your timer, ${allottedBreaks} skip(s) per day`;
+  if (level === "CUSTOM") return "choose your own breaks, skips and snoozes";
+  const { breakRatio, allottedBreaks, snoozeRatio, allottedSnoozes } = DIFFICULTY_PRESETS[level];
+  return `breaks are ${breakRatio * 100}% of your timer, ${allottedBreaks} skip(s) per day, `
+    + `${allottedSnoozes} snooze(s) of ${snoozeRatio * 100}% of your timer`;
 };
 
 export default function DifficultySettings() {
   const [level, setLevel] = useState<DifficultyLevel>("NORMAL");
   const [breakDurationInSeconds, setBreakDurationInSeconds] = useState(0);
   const [allottedBreaks, setAllottedBreaks] = useState(0);
+  const [snoozeDurationInMinutes, setSnoozeDurationInMinutes] = useState(0);
+  const [allottedSnoozes, setAllottedSnoozes] = useState(0);
 
   const breakMinSeconds = IS_DEV ? 1 : 10;
   const breaksMaxLimit = IS_DEV ? 9999999 : 5;
   const breakValid = breakDurationInSeconds >= breakMinSeconds && breakDurationInSeconds <= 600;
   const allottedBreaksValid = allottedBreaks >= 0 && allottedBreaks <= breaksMaxLimit;
+  const snoozeValid = snoozeDurationInMinutes >= 1 && snoozeDurationInMinutes <= 60;
+  const allottedSnoozesValid = allottedSnoozes >= 0 && allottedSnoozes <= breaksMaxLimit;
   const isCustom = level === "CUSTOM";
 
   return (
     <SettingsPanel<DifficultyConfigs>
       title="Difficulty Settings"
-      isValid={!isCustom || (breakValid && allottedBreaksValid)}
+      isValid={!isCustom || (breakValid && allottedBreaksValid && snoozeValid && allottedSnoozesValid)}
       successMessage="Settings saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadDifficultyConfigs()}
       save={(configs) => window.electronAPI.saveDifficultyConfigs(configs)}
       buildConfig={() => ({
         level,
-        custom: { breakDurationMs: convertSecondsToMs(breakDurationInSeconds), allottedBreaks },
+        custom: {
+          breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
+          allottedBreaks,
+          snoozeDurationMs: convertMinutesToMs(snoozeDurationInMinutes),
+          allottedSnoozes,
+        },
       })}
       onLoaded={(configs) => {
         setLevel(configs.level);
         setBreakDurationInSeconds(convertMsToSeconds(configs.custom.breakDurationMs));
         setAllottedBreaks(configs.custom.allottedBreaks);
+        setSnoozeDurationInMinutes(convertMsToMinutes(configs.custom.snoozeDurationMs));
+        setAllottedSnoozes(configs.custom.allottedSnoozes);
       }}
     >
       <div data-testid="difficulty-level" className="tracking-wider p-2">
@@ -81,6 +93,32 @@ export default function DifficultySettings() {
               break(s) per day
             </label>
             {!allottedBreaksValid && (
+              <p className="text-sm text-red-600 mt-1">
+                Must be between 0 and {breaksMaxLimit}
+              </p>
+            )}
+          </div>
+
+          <div data-testid="snooze-duration" className="tracking-wider p-2">
+            <label>
+              A snooze adds{" "}
+              <NumberInput min={1} max={60} value={snoozeDurationInMinutes}
+                onChange={(e) => setSnoozeDurationInMinutes(Number(e.target.value))} />{" "}
+              minutes
+            </label>
+            {!snoozeValid && (
+              <p className="text-sm text-red-600 mt-1">Must be between 1 and 60 minutes</p>
+            )}
+          </div>
+
+          <div data-testid="allowed-snooze-count" className="tracking-wider p-2">
+            <label>
+              I will be able to snooze{" "}
+              <NumberInput min={0} max={breaksMaxLimit} value={allottedSnoozes}
+                onChange={(e) => setAllottedSnoozes(Number(e.target.value))} />{" "}
+              time(s) per day
+            </label>
+            {!allottedSnoozesValid && (
               <p className="text-sm text-red-600 mt-1">
                 Must be between 0 and {breaksMaxLimit}
               </p>
