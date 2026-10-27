@@ -15,4 +15,9 @@ export default defineConfig({
   ],
   timeout: 90 * 1000,
   retries: 1,
+  projects: [
+    { name: "smoke", testMatch: "smoke.spec.ts" },       // Does the app start and basically work
+    { name: "layout", testMatch: "layout.spec.ts" },     // Nothing is hidden, wrapped or overlapping
+    { name: "features", testMatch: "features/**/*.spec.ts" },
+  ],
 });

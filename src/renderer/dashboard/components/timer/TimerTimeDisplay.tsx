@@ -24,10 +24,10 @@ export default function TimerTimeDisplay({ timerState, todayScore }: TimerTimeDi
     : timerColorMapper[timerState.status];
 
   return (
-    // Ring sits at the bottom, leaving room for the skip box above it
-    <div data-testid="timer-time-display" className={`h-2/3 font-bold flex justify-center items-end ${timerColor}`}>
+    // Top padding is the skip box's height (see TimerSkipbox) plus a gap, so the ring always sits below it
+    <div data-testid="timer-time-display" className={`h-2/3 pt-6 xsm:pt-11 sm:pt-13 md:pt-15 font-bold flex justify-center items-center ${timerColor}`}>
       <ComplianceRing todayScore={todayScore}>
-        <div className="whitespace-nowrap tracking-wider text-[17cqw] leading-none">
+        <div data-testid="timer-time-digits" className="whitespace-nowrap tracking-wider text-[17cqw] leading-none">
           <span>{minutes}</span> : <span>{seconds}</span>
         </div>
       </ComplianceRing>

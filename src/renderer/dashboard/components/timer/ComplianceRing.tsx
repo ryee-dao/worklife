@@ -36,7 +36,7 @@ export default function ComplianceRing({ todayScore, children }: ComplianceRingP
   return (
     <div
       data-testid="compliance-ring"
-      className={`relative h-[85%] aspect-square rounded-full p-[4%] ${todayScore?.violatingNow ? "animate-pulse" : ""}`}
+      className={`relative h-full aspect-square rounded-full p-[4%] ${todayScore?.violatingNow ? "animate-pulse" : ""}`}
       style={{
         background: `conic-gradient(${fillColor} 0 ${compliantDeg}deg, ${RING_COLORS.reachable} 0 ${reachableDeg}deg, ${RING_COLORS.track} 0)`,
       }}

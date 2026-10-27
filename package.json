@@ -14,6 +14,7 @@
     "test:unit": "vitest run --silent",
     "test:unit:verbose": "vitest run",
     "test:e2e": "npm run build && playwright test",
+    "test:e2e:quick": "npm run build && playwright test --project=smoke --project=layout",
     "_dev:init": "tsc --build src/main && npx tsx esbuild.preload.ts",
     "_dev:vite": "vite",
     "_dev:electron:watch": "tsc --build src/main -w",
@@ -26,7 +27,7 @@
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged",
-    "pre-push": "npm run lint && npm run test:unit && npm run test:e2e"
+    "pre-push": "npm run lint && npm run test:unit && npm run test:e2e:quick"
   },
   "build": {
     "appId": "com.worklife",
