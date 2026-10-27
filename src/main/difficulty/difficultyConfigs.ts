@@ -6,7 +6,7 @@ export type DifficultyLevel = keyof typeof DIFFICULTY_PRESETS | "CUSTOM";
 export interface DifficultyConfigs {
   level: DifficultyLevel;
   // Only used when level is CUSTOM
-  custom: { breakDurationMs: number; allottedBreaks: number; snoozeDurationMs: number; allottedSnoozes: number };
+  custom: { breakDurationMs: number; allottedBreaks: number; snoozeDurationMs: number; allottedSnoozes: number; partialThreshold: number };
 }
 
 const defaultDifficultyConfigs: DifficultyConfigs = {
@@ -16,6 +16,7 @@ const defaultDifficultyConfigs: DifficultyConfigs = {
     allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
     snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
     allottedSnoozes: DEFAULTS.DEFAULT_ALLOTTED_SNOOZES,
+    partialThreshold: DEFAULTS.DEFAULT_PARTIAL_THRESHOLD,
   },
 };
 

@@ -108,6 +108,20 @@ describe('Auto stop', () => {
   });
 });
 
+describe('End of the workday', () => {
+  test('lets the app know when the workday ends', () => {
+    const onWorkdayEnd = vi.fn();
+    vi.setSystemTime(monday(16, 58));
+
+    initWorkday(onWorkdayEnd);
+    vi.advanceTimersByTime(oneMinuteMs); // 16:59
+    expect(onWorkdayEnd).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(oneMinuteMs); // 17:00
+    expect(onWorkdayEnd).toHaveBeenCalledOnce();
+  });
+});
+
 describe('Changing the workday', () => {
   test('saved changes only apply from the next day', () => {
     const newWorkday = { ...defaultWorkday, start: '08:00' };

@@ -389,13 +389,34 @@ test("Changing difficulty only updates after a break", async ({ launchElectron }
   });
 });
 
+test("Stats tab shows today's score and the clean-day calendar", async ({ launchElectron }) => {
+  const { settingsWindow, testClock } = await launchElectron();
+  const today = new Date().toLocaleDateString("en-CA");
+
+  await test.step("The ring around the timer shows today's score", async () => {
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId("compliance-ring-label")).toHaveText(/^Today \d+%$/);
+  });
+
+  await test.step("The Stats tab shows the total and today on the calendar", async () => {
+    await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Stats' }).click();
+    await expect(settingsWindow.getByTestId("total-clean-days")).toHaveText("0");
+    await expect(settingsWindow.getByTestId(`calendar-day-${today}`)).toBeVisible();
+  });
+
+  await test.step("Picking today shows its card, still in progress", async () => {
+    await settingsWindow.getByTestId(`calendar-day-${today}`).click();
+    await expect(settingsWindow.getByTestId("day-card-result")).toHaveText("Day in progress");
+  });
+});
+
 test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
   const { settingsWindow } = await launchElectron();
 
   await test.step("Change the workday in settings", async () => {
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
     await settingsWindow.getByRole('link', { name: 'Workday' }).click();
-    await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: 'Sat' }).check();
+    await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: 'Sun' }).uncheck();
     await settingsWindow.getByTestId("workday-hours").locator('input').first().fill("08:30");
     await settingsWindow.getByTestId("workday-auto-stop").getByRole('checkbox').check();
     await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
@@ -406,7 +427,7 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     const workdayConfigs = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.WORKDAY.CONFIGS), "utf-8")
     );
-    expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "17:00", autoStopAtEnd: true });
+    expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "23:59", autoStopAtEnd: true });
   });
 
   await test.step("Verify an end before the start can't be saved", async () => {
@@ -602,6 +623,8 @@ test("Tray menu shows the right actions and controls the timer", async ({ launch
     // The tray menu is built on the first tick
     await testClock.fastForward(1);
     expect(await getTrayMenuLabels(electronApp)).toEqual(["Show Settings", "Stop", "Skip to Break", "Snooze +5 min", "Quit"]);
+    const header = await electronApp.evaluate(() => global.__test_getTrayMenu!()!.items[0].label);
+    expect(header).toMatch(/^Today \d+% · /);
   });
 
   await test.step("Stop from the tray stops the timer", async () => {

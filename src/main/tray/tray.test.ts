@@ -2,6 +2,7 @@ import { describe, test, expect, vi, beforeEach, it } from 'vitest';
 import { DEFAULTS } from '../../shared/constants';
 import { updateTray, buildStatusIcons, ICON_DIR } from './tray';
 import { TimerState } from '../timer/timerState';
+import { DayScore } from '../stats/cleanDays';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -318,5 +319,45 @@ describe("Asset paths", () => {
 
   it.each(expectedIcons)("%s exists", (filename) => {
     expect(existsSync(path.join(ICON_DIR, filename))).toBe(true);
+  });
+});
+describe('Tray shows today\'s score', () => {
+  const getLabels = (mockTray: ReturnType<typeof createMockTray>) => {
+    const menuTemplate = mockTray.setContextMenu.mock.calls.at(-1)![0] as Electron.MenuItemConstructorOptions[];
+    return menuTemplate.map((item) => item.label).filter(Boolean);
+  };
+  const createScore = (overrides: Partial<DayScore>) => ({ compliance: 0.58, cleanPossible: true, partialPossible: true, ...overrides }) as DayScore;
+
+  test('the menu starts with today\'s score while on track for a clean day', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({}));
+
+    expect(getLabels(mockTray)[0]).toBe('Today 58% · ★ on track');
+    expect(mockTray.setToolTip).toHaveBeenLastCalledWith(expect.stringContaining('Today 58% · ★ on track'));
+  });
+
+  test('says when only a partial is still possible', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ cleanPossible: false }));
+
+    expect(getLabels(mockTray)[0]).toBe('Today 58% · ½ still possible');
+  });
+
+  test('says when the day is lost', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ cleanPossible: false, partialPossible: false }));
+
+    expect(getLabels(mockTray)[0]).toBe('Today 58% · day lost');
+  });
+
+  test('has no score on a day off', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), null);
+
+    expect(getLabels(mockTray)[0]).toBe('Show Settings');
   });
 });

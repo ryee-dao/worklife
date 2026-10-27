@@ -15,9 +15,10 @@ const levelNames: Record<DifficultyLevel, string> = {
 
 const describeLevel = (level: DifficultyLevel) => {
   if (level === "CUSTOM") return "choose your own breaks, skips and snoozes";
-  const { breakRatio, allottedBreaks, snoozeRatio, allottedSnoozes } = DIFFICULTY_PRESETS[level];
+  const { breakRatio, allottedBreaks, snoozeRatio, allottedSnoozes, partialThreshold } = DIFFICULTY_PRESETS[level];
   return `breaks are ${breakRatio * 100}% of your timer, ${allottedBreaks} skip(s) per day, `
-    + `${allottedSnoozes} snooze(s) of ${snoozeRatio * 100}% of your timer`;
+    + `${allottedSnoozes} snooze(s) of ${snoozeRatio * 100}% of your timer, `
+    + `${partialThreshold * 100}% compliant for a partial after stopping`;
 };
 
 export default function DifficultySettings() {
@@ -26,6 +27,7 @@ export default function DifficultySettings() {
   const [allottedBreaks, setAllottedBreaks] = useState(0);
   const [snoozeDurationInMinutes, setSnoozeDurationInMinutes] = useState(0);
   const [allottedSnoozes, setAllottedSnoozes] = useState(0);
+  const [partialThresholdPercent, setPartialThresholdPercent] = useState(0);
 
   const breakMinSeconds = IS_DEV ? 1 : 10;
   const breaksMaxLimit = IS_DEV ? 9999999 : 5;
@@ -33,12 +35,13 @@ export default function DifficultySettings() {
   const allottedBreaksValid = allottedBreaks >= 0 && allottedBreaks <= breaksMaxLimit;
   const snoozeValid = snoozeDurationInMinutes >= 1 && snoozeDurationInMinutes <= 60;
   const allottedSnoozesValid = allottedSnoozes >= 0 && allottedSnoozes <= breaksMaxLimit;
+  const partialThresholdValid = partialThresholdPercent >= 1 && partialThresholdPercent <= 100;
   const isCustom = level === "CUSTOM";
 
   return (
     <SettingsPanel<DifficultyConfigs>
       title="Difficulty Settings"
-      isValid={!isCustom || (breakValid && allottedBreaksValid && snoozeValid && allottedSnoozesValid)}
+      isValid={!isCustom || (breakValid && allottedBreaksValid && snoozeValid && allottedSnoozesValid && partialThresholdValid)}
       successMessage="Settings saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadDifficultyConfigs()}
       save={(configs) => window.electronAPI.saveDifficultyConfigs(configs)}
@@ -49,6 +52,7 @@ export default function DifficultySettings() {
           allottedBreaks,
           snoozeDurationMs: convertMinutesToMs(snoozeDurationInMinutes),
           allottedSnoozes,
+          partialThreshold: partialThresholdPercent / 100,
         },
       })}
       onLoaded={(configs) => {
@@ -57,6 +61,7 @@ export default function DifficultySettings() {
         setAllottedBreaks(configs.custom.allottedBreaks);
         setSnoozeDurationInMinutes(convertMsToMinutes(configs.custom.snoozeDurationMs));
         setAllottedSnoozes(configs.custom.allottedSnoozes);
+        setPartialThresholdPercent(Math.round(configs.custom.partialThreshold * 100));
       }}
     >
       <div data-testid="difficulty-level" className="tracking-wider p-2">
@@ -122,6 +127,18 @@ export default function DifficultySettings() {
               <p className="text-sm text-red-600 mt-1">
                 Must be between 0 and {breaksMaxLimit}
               </p>
+            )}
+          </div>
+
+          <div data-testid="partial-threshold" className="tracking-wider p-2">
+            <label>
+              After stopping, I still get a partial clean if I'm compliant for{" "}
+              <NumberInput min={1} max={100} value={partialThresholdPercent}
+                onChange={(e) => setPartialThresholdPercent(Number(e.target.value))} />{" "}
+              % of my workday
+            </label>
+            {!partialThresholdValid && (
+              <p className="text-sm text-red-600 mt-1">Must be between 1% and 100%</p>
             )}
           </div>
         </>

@@ -19,6 +19,7 @@ import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfi
 import { getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
+import { getAllDayScores, getCurrentDayScore, takeUnseenSummaryDate } from "./stats/stats";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -32,42 +33,19 @@ export const broadcastStateToRendererWindows = (
   }
 };
 
+// Sends every timer update, along with today's score, to the tray and windows
+const onTimerUpdate = (state: TimerState) => {
+  const todayScore = getCurrentDayScore();
+  updateTray(tray!, state, todayScore);
+  broadcastStateToRendererWindows(state, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
+  broadcastStateToRendererWindows(todayScore, [settingsWindow], EVENTS.IPC_CHANNELS.STATS_TODAY);
+};
+
 export const initEventListeners = () => {
-  timerEmitter.on(EVENTS.TIMER.RUNNING, (state: TimerState) => {
-    updateTray(tray!, state);
-    broadcastStateToRendererWindows(
-      state,
-      [settingsWindow, breakWindow],
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE
-    );
-  });
-
-  timerEmitter.on(EVENTS.TIMER.ON_BREAK, (state: TimerState) => {
-    updateTray(tray!, state);
-    broadcastStateToRendererWindows(
-      state,
-      [settingsWindow, breakWindow],
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE
-    );
-  });
-
-  timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, (state: TimerState) => {
-    updateTray(tray!, state);
-    broadcastStateToRendererWindows(
-      state,
-      [settingsWindow, breakWindow],
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE
-    );
-  });
-
-  timerEmitter.on(EVENTS.TIMER.STOPPED, (state: TimerState) => {
-    updateTray(tray!, state);
-    broadcastStateToRendererWindows(
-      state,
-      [settingsWindow, breakWindow],
-      EVENTS.IPC_CHANNELS.TIMER_UPDATE
-    );
-  });
+  timerEmitter.on(EVENTS.TIMER.RUNNING, onTimerUpdate);
+  timerEmitter.on(EVENTS.TIMER.ON_BREAK, onTimerUpdate);
+  timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, onTimerUpdate);
+  timerEmitter.on(EVENTS.TIMER.STOPPED, onTimerUpdate);
 
   timerEmitter.on(EVENTS.TIMER.WARNING, () => {
     broadcastStateToRendererWindows(
@@ -99,6 +77,8 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, () => snoozeTimer("WINDOW"));
 
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_GET_DAYS, getAllDayScores);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_TAKE_UNSEEN_SUMMARY, takeUnseenSummaryDate);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,

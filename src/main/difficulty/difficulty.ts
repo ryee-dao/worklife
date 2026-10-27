@@ -40,3 +40,10 @@ export const getAllottedSnoozes = () => {
 
   return DIFFICULTY_PRESETS[level].allottedSnoozes;
 };
+
+export const getPartialThreshold = () => {
+  const { level, custom } = getAppliedDifficultyConfigs();
+  if (level === "CUSTOM") return custom.partialThreshold;
+
+  return DIFFICULTY_PRESETS[level].partialThreshold;
+};

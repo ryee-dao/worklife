@@ -6,6 +6,7 @@ vi.mock('../../shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined })),
   writeToUserDataFile: vi.fn(),
   appendToUserDataFile: vi.fn(),
+  readUserDataTextFile: vi.fn(() => ''),
 }));
 
 vi.mock('../limit/limitState', () => ({
@@ -20,6 +21,7 @@ vi.mock('../difficulty/difficulty', () => ({
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
   getAllottedSnoozes: vi.fn(() => 3),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
+  getPartialThreshold: vi.fn(() => 0.5),
 }));
 
 vi.mock('../difficulty/difficultyConfigs', () => ({
@@ -41,9 +43,9 @@ vi.mock('../timer/timerConfigs', () => ({
   })),
 }));
 
-import { initStats, parseEvents, recordAppQuit, StatsEvent } from './stats';
+import { destroyStats, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
 import { initTimer, destroyTimers, stopTimer, startTimer, skipTimer, startBreak, skipBreak, snoozeTimer, timerEmitter, StoredTimerState } from '../timer/timerState';
-import { appendToUserDataFile, getUserDataFromFile } from '../../shared/utils/files';
+import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '../../shared/utils/files';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -53,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  destroyStats();
   destroyTimers();
   timerEmitter.removeAllListeners();
   vi.useRealTimers();
@@ -98,6 +101,7 @@ describe('Event format', () => {
         allottedBreaks: 3,
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
         allottedSnoozes: 3,
+        partialThreshold: 0.5,
         difficulty: 'NORMAL',
         levelThresholdMs: 180000,
         workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false },
@@ -114,6 +118,27 @@ describe('Event format', () => {
 
     const [first, second] = getRecordedEvents();
     expect(first.id).not.toBe(second.id);
+  });
+});
+
+describe('Heartbeat', () => {
+  test('a heartbeat is recorded every minute', () => {
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(2 * 60 * 1000);
+
+    expect(getRecordedEvents().filter((e) => e.type === 'HEARTBEAT')).toHaveLength(2);
+  });
+});
+
+describe('Events in memory', () => {
+  test('starts with the events already in the file and adds new ones', () => {
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce('{"type":"APP_QUIT"}\n');
+
+    initStats();
+    initTimer();
+
+    expect(getEvents().map((e) => e.type)).toEqual(['APP_QUIT', 'APP_STARTED']);
   });
 });
 
@@ -271,5 +296,29 @@ describe('Reading events', () => {
 
   test('an empty or missing file has no events', () => {
     expect(parseEvents('')).toEqual([]);
+  });
+});
+
+describe('End-of-day card', () => {
+  // A finished clean Monday, as lines in the events file
+  const cleanMondayLog = [
+    { type: 'APP_STARTED', at: Date.parse('2026-10-26T08:30:00-04:00') },
+    { type: 'APP_QUIT', at: Date.parse('2026-10-26T17:30:00-04:00') },
+  ].map((event) => JSON.stringify({
+    ...event,
+    tzOffsetMin: -240,
+    config: { timerDurationMs: 45 * 60 * 1000, partialThreshold: 0.5, workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' } },
+  })).join('\n');
+
+  test('returns the latest finished workday once, then nothing', () => {
+    vi.setSystemTime(new Date('2026-10-27T08:00:00-04:00'));
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce(cleanMondayLog);
+    initStats();
+
+    expect(takeUnseenSummaryDate()).toBe('2026-10-26');
+    expect(writeToUserDataFile).toHaveBeenLastCalledWith(FILENAMES.STATS.STATE, { lastSummaryDate: '2026-10-26' });
+
+    vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastSummaryDate: '2026-10-26' }, filePath: '' });
+    expect(takeUnseenSummaryDate()).toBeNull();
   });
 });

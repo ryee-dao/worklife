@@ -1,8 +1,11 @@
 import { TimerState, TimerStatus } from "../../../../main/timer/timerState";
 import { formatMsToMMSS } from "../../../../shared/utils/time";
+import { DayScore } from "../../../../main/stats/cleanDays";
+import ComplianceRing from "./ComplianceRing";
 
 interface TimerTimeDisplayProps {
   timerState: TimerState;
+  todayScore: DayScore | null;
 }
 
 const timerColorMapper: Record<TimerStatus | "WARNING", string> = {
@@ -13,7 +16,7 @@ const timerColorMapper: Record<TimerStatus | "WARNING", string> = {
   OVERDUE: "text-red-700",
 };
 
-export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) {
+export default function TimerTimeDisplay({ timerState, todayScore }: TimerTimeDisplayProps) {
   const formattedTime = formatMsToMMSS(timerState.currentCountdownMs || timerState.overdueTimeMs);
   const [minutes, seconds] = formattedTime.split(":");
   const timerColor = timerState.isWarning
@@ -21,10 +24,13 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
     : timerColorMapper[timerState.status];
 
   return (
-    <div data-testid="timer-time-display" className={`h-2/3 font-bold flex justify-center items-center ${timerColor}`}>
-      <div className="tracking-widest text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
-        <span>{minutes}</span> : <span>{seconds}</span>
-      </div>
+    // Ring sits at the bottom, leaving room for the skip box above it
+    <div data-testid="timer-time-display" className={`h-2/3 font-bold flex justify-center items-end ${timerColor}`}>
+      <ComplianceRing todayScore={todayScore}>
+        <div className="whitespace-nowrap tracking-wider text-[17cqw] leading-none">
+          <span>{minutes}</span> : <span>{seconds}</span>
+        </div>
+      </ComplianceRing>
     </div>
   );
 }

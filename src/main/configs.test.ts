@@ -25,7 +25,7 @@ describe('Saved configs only take effect once applied', () => {
   test('difficulty configs', () => {
     loadDifficultyConfigs();
     const configsBefore = getAppliedDifficultyConfigs();
-    const newConfigs: DifficultyConfigs = { level: 'HARD', custom: { breakDurationMs: 60 * 1000, allottedBreaks: 1, snoozeDurationMs: 2 * 60 * 1000, allottedSnoozes: 1 } };
+    const newConfigs: DifficultyConfigs = { level: 'HARD', custom: { breakDurationMs: 60 * 1000, allottedBreaks: 1, snoozeDurationMs: 2 * 60 * 1000, allottedSnoozes: 1, partialThreshold: 0.6 } };
 
     setDifficultyConfigs(newConfigs);
     expect(getAppliedDifficultyConfigs()).toEqual(configsBefore);

@@ -11,7 +11,7 @@ vi.mock('../timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(),
 }));
 
-import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getSnoozeDurationMs } from './difficulty';
+import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getPartialThreshold, getSnoozeDurationMs } from './difficulty';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
 import { getAppliedTimerConfigs } from '../timer/timerConfigs';
 
@@ -20,6 +20,7 @@ const customConfigs: DifficultyConfigs['custom'] = {
   allottedBreaks: 2,
   snoozeDurationMs: 8 * 60 * 1000,
   allottedSnoozes: 4,
+  partialThreshold: 0.6,
 };
 
 // Helper: run with a difficulty level and timer length
@@ -106,6 +107,18 @@ describe('Snooze', () => {
   });
 });
 
+describe('Partial threshold', () => {
+  test.each([
+    { level: 'EASY', threshold: 0.4 },
+    { level: 'NORMAL', threshold: 0.5 },
+    { level: 'HARD', threshold: 0.7 },
+  ] as const)('$level needs $threshold of the workday', ({ level, threshold }) => {
+    useDifficulty(level);
+
+    expect(getPartialThreshold()).toBe(threshold);
+  });
+});
+
 describe('Custom difficulty', () => {
   test('uses the chosen break length and skips as they are', () => {
     useDifficulty('CUSTOM');
@@ -114,6 +127,7 @@ describe('Custom difficulty', () => {
     expect(getAllottedBreaks()).toBe(customConfigs.allottedBreaks);
     expect(getSnoozeDurationMs()).toBe(customConfigs.snoozeDurationMs);
     expect(getAllottedSnoozes()).toBe(customConfigs.allottedSnoozes);
+    expect(getPartialThreshold()).toBe(customConfigs.partialThreshold);
   });
 
   test('ignores the timer length', () => {

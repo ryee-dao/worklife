@@ -4,6 +4,7 @@ import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs }
 const workdayCheckIntervalMs = 60 * 1000; // 1 minute
 let workdayCheckTimer: NodeJS.Timeout;
 let wasInWorkday: boolean;
+let onWorkdayEnd: () => void;
 
 const convertTimeToMinutes = (time: string) => {
   const [hours, minutes] = time.split(":").map(Number);
@@ -35,10 +36,14 @@ const checkWorkday = () => {
   if (workdayEnded && configs.autoStopAtEnd) {
     stopTimer("SCHEDULE");
   }
+  if (workdayEnded) {
+    onWorkdayEnd();
+  }
   wasInWorkday = inWorkday;
 };
 
-export const initWorkday = () => {
+export const initWorkday = (onEnd: () => void = () => {}) => {
+  onWorkdayEnd = onEnd;
   wasInWorkday = isInWorkday(new Date(), getAppliedWorkdayConfigs());
   // E2E tests control time themselves, so a real-time check would make them flaky
   if (!process.env.PLAYWRIGHT_TEST) {

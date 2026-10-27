@@ -2,6 +2,7 @@ import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
 import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, skipTimer, snoozeTimer } from '../timer/timerState';
 import { convertMsToMinutes } from '../../shared/utils/time';
+import { DayScore } from '../stats/cleanDays';
 import { formatMsToMMSS } from '../../shared/utils/time';
 import { settingsWindow } from '../windows/settingsWindow';
 
@@ -33,11 +34,17 @@ export function buildStatusIcons() {
   }
 }
 
+// e.g. "Today 58% · ★ on track"
+function describeTodayScore(score: DayScore) {
+  const progress = score.cleanPossible ? '★ on track' : score.partialPossible ? '½ still possible' : 'day lost';
+  return `Today ${Math.round(score.compliance * 100)}% · ${progress}`;
+}
+
 function getStatusKey(state: TimerState): StatusKey {
   return state.isWarning ? 'WARNING' : state.status;
 }
 
-export function updateTray(tray: Electron.Tray, state: TimerState) {
+export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: DayScore | null = null) {
   if (!tray || tray.isDestroyed()) return;
 
   const statusKey = getStatusKey(state);
@@ -57,12 +64,16 @@ export function updateTray(tray: Electron.Tray, state: TimerState) {
     tray.setTitle(` ${displayTime}`);
   }
 
-  tray.setToolTip(`WorkLife — ${displayTime}`);
+  const todayText = todayScore ? describeTodayScore(todayScore) : null;
+  tray.setToolTip(todayText ? `WorkLife — ${displayTime} · ${todayText}` : `WorkLife — ${displayTime}`);
 
-  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
-    { label: 'Show Settings', click: () => settingsWindow?.show() },
-    { type: 'separator' },
-  ];
+  const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
+  if (todayText) {
+    menuTemplate.push({ label: todayText, enabled: false });
+    menuTemplate.push({ type: 'separator' });
+  }
+  menuTemplate.push({ label: 'Show Settings', click: () => settingsWindow?.show() });
+  menuTemplate.push({ type: 'separator' });
 
   switch (state.status) {
     case 'RUNNING':

@@ -12,8 +12,8 @@ import { destroyWorkday, initWorkday } from "./workday/workday";
 import { loadTimerConfigs } from "./timer/timerConfigs";
 import { buildStatusIcons, createTray, tray } from "./tray/tray";
 import { registerDisplayListenersForBreakWindow, setOverdueLevelsArray } from "./windows/breakWindow";
-import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow } from "./windows/settingsWindow";
-import { initStats, recordAppQuit } from "./stats/stats";
+import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow, showDaySummary } from "./windows/settingsWindow";
+import { destroyStats, initStats, recordAppQuit, takeUnseenSummaryDate } from "./stats/stats";
 
 export let forceQuit = false; // Allows app.quit() to bypass logic to minimize on close
 
@@ -31,6 +31,12 @@ function initConfigs() {
   loadWorkdayConfigs();
 }
 
+// Pops up the end-of-day card once the workday is over
+function showFinishedDaySummary() {
+  const localDate = takeUnseenSummaryDate();
+  if (localDate) showDaySummary(localDate);
+}
+
 function initApp() {
   setWorkArea();
   registerDisplayListenersForBreakWindow()
@@ -38,7 +44,7 @@ function initApp() {
   initLimits();
   initStats();
   initTimer();
-  initWorkday();
+  initWorkday(showFinishedDaySummary);
   initEventListeners();
   buildStatusIcons();
   createSettingsWindow();
@@ -60,6 +66,7 @@ app.on('before-quit', () => {
   // Close all windows and timers manually before close in case any can't be closed (ex: closable = false)
   destroyTimers();
   destroyWorkday();
+  destroyStats();
   BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 

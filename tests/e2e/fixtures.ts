@@ -34,8 +34,11 @@ const test = base.extend<{
         allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
         allottedSnoozes: DEFAULTS.DEFAULT_ALLOTTED_SNOOZES,
+        partialThreshold: DEFAULTS.DEFAULT_PARTIAL_THRESHOLD,
       },
     });
+    // Every day is a workday all day, so today's score shows the same whatever day and time the tests run
+    seed(FILENAMES.WORKDAY.CONFIGS, { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59", autoStopAtEnd: false });
     await use({ path: dir, seed });
   },
 

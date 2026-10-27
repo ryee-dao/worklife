@@ -96,7 +96,7 @@ export async function getTrayMenuLabels(electronApp: ElectronApplication) {
   return electronApp.evaluate(() => {
     const menu = global.__test_getTrayMenu!()!;
     return menu.items
-      .filter((item) => item.type !== "separator")
+      .filter((item) => item.type !== "separator" && item.enabled) // The score header isn't an action
       .map((item) => item.label);
   });
 }

@@ -6,6 +6,7 @@ import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "./workday/workdayConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "../shared/types/electron";
+import { DayScore } from "./stats/cleanDays";
 
 const electronAPI: ElectronAPI = {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -17,6 +18,22 @@ const electronAPI: ElectronAPI = {
     const listener = () => callback();
     ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_WARNING, listener);
     return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.TIMER_WARNING, listener);
+  },
+  onTodayScore: (callback: (score: DayScore | null) => void) => {
+    const listener = (_event: unknown, score: DayScore | null) => callback(score);
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.STATS_TODAY, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.STATS_TODAY, listener);
+  },
+  onShowDay: (callback: (localDate: string) => void) => {
+    const listener = (_event: unknown, localDate: string) => callback(localDate);
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.STATS_SHOW_DAY, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.STATS_SHOW_DAY, listener);
+  },
+  getDayScores: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.STATS_GET_DAYS);
+  },
+  takeUnseenDaySummary: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.STATS_TAKE_UNSEEN_SUMMARY);
   },
   getTimerState: async (): Promise<TimerState> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TIMER_GETSTATE);
