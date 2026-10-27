@@ -63,37 +63,75 @@ test("App stops properly", async ({ launchElectron }) => {
   });
 });
 
-test("Snooze adds time and uses one snooze", async ({ launchElectron }) => {
+test("Snooze adds time and uses one power-up", async ({ launchElectron }) => {
   const { settingsWindow, testClock } = await launchElectron();
   const snoozeButton = settingsWindow.getByTestId("snooze-button");
+  const powerupCount = settingsWindow.getByTestId("powerup-count");
 
-  await test.step("Snooze shows its length and how many are left", async () => {
+  await test.step("Snooze shows its length, and the bar shows the power-ups left", async () => {
     await testClock.fastForward(1);
     await expect(snoozeButton).toContainText("+5m");
-    await expect(snoozeButton).toContainText(`${DEFAULTS.DEFAULT_ALLOTTED_SNOOZES} left`);
+    await expect(powerupCount).toHaveText(`${DEFAULTS.DEFAULT_ALLOTTED_POWERUPS}`);
   });
 
   await test.step("Snoozing adds 5 minutes to the countdown", async () => {
     await snoozeButton.click();
     await expect(settingsWindow.getByTestId('timer-time-display').getByText("49 : 59")).toBeVisible();
-    await expect(snoozeButton).toContainText(`${DEFAULTS.DEFAULT_ALLOTTED_SNOOZES - 1} left`);
+    await expect(powerupCount).toHaveText(`${DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 1}`);
   });
 });
 
-test("Break window is unable to skip after all skips are exhausted", async ({ launchElectron }) => {
-  const { settingsWindow, electronApp, testClock } = await launchElectron();
+test("Lunch counts down, can end early, and is used up for the day", async ({ launchElectron }) => {
+  const { settingsWindow, testClock } = await launchElectron();
+  const lunchButton = settingsWindow.getByTestId("lunch-button");
 
-  await test.step("Verify initial skip state", async () => {
-    // All skip icons should be visible and none should be used
-    await settingsWindow.getByTestId("timer-skipbox").waitFor();
-    const totalNumberOfSkips = await settingsWindow.getByTestId("timer-skip-icon").count();
-    const currentNumberOfUsedSkips = await settingsWindow.locator('.used-skip').count();
-    expect(totalNumberOfSkips).toBeGreaterThan(0);
-    expect(currentNumberOfUsedSkips).toBe(0);
+  await test.step("Take lunch from the power-up bar", async () => {
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId("lunch-count")).toHaveText("1");
+    await lunchButton.click();
+    await expect(settingsWindow.getByTestId("timer-lunch-label")).toBeVisible();
+    await testClock.fastForward(5);
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 55")).toBeVisible(); // The 45 minute lunch
   });
 
-  const totalNumberOfSkips = await settingsWindow.getByTestId("timer-skip-icon").count();
-  let expectedNumberOfSkips = 0;
+  await test.step("Coming back early starts a full work session", async () => {
+    await settingsWindow.getByTestId("timer-buttons-container").getByTestId("toggle-timer-button").click();
+    await testClock.fastForward(1);
+    await expect(settingsWindow.getByTestId("timer-lunch-label")).toBeHidden();
+    await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 59")).toBeVisible();
+  });
+
+  await test.step("Lunch is gone for the rest of the day", async () => {
+    await expect(settingsWindow.getByTestId("lunch-count")).toHaveText("0");
+    await expect(lunchButton).toBeDisabled();
+  });
+});
+
+test("Stop is an escape hatch from the overdue window", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+
+  const [breakWindow] = await Promise.all([
+    electronApp.waitForEvent('window'),
+    settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
+  ]);
+  await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("overdue-window-stop-button"));
+
+  // Stopped with a full timer, so resuming starts a fresh work session
+  await testClock.fastForward(1);
+  await expect(settingsWindow.getByTestId('timer-time-display').getByText("45 : 00")).toBeVisible();
+  await settingsWindow.getByTestId("timer-buttons-container").getByTestId("toggle-timer-button").click();
+  await testClock.fastForward(1);
+  await expect(settingsWindow.getByTestId('timer-time-display').getByText("44 : 59")).toBeVisible();
+});
+
+test("Break window is unable to skip after all power-ups are used", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+  const powerupCount = settingsWindow.getByTestId("powerup-count");
+  const totalNumberOfSkips = DEFAULTS.DEFAULT_ALLOTTED_POWERUPS;
+
+  await test.step("Verify every power-up is left", async () => {
+    await expect(powerupCount).toHaveText(`${totalNumberOfSkips}`);
+  });
 
   // First iteration skips directly from overdue,
   // remaining iterations go through break window
@@ -105,7 +143,7 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
       // Skip to overdue to open the break window
       const [breakWindow] = await Promise.all([
         electronApp.waitForEvent('window'),
-        settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+        settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click()
       ]);
 
       if (skipFromOverdue) {
@@ -118,13 +156,9 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
         await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("break-window-skip-break-button"));
       }
 
-      // Verify the skip was registered: window closed and used-skip count increased
-      await settingsWindow.getByTestId("timer-skipbox").waitFor();
+      // Verify the skip was registered: window closed and one fewer power-up left
       expect(breakWindow.isClosed()).toBeTruthy();
-      expect(await settingsWindow.getByTestId("timer-skip-icon").count()).toBe(totalNumberOfSkips);
-
-      expectedNumberOfSkips += 1;
-      expect(await settingsWindow.locator('.used-skip').count()).toBe(expectedNumberOfSkips);
+      await expect(powerupCount).toHaveText(`${totalNumberOfSkips - loopIdx - 1}`);
     });
   }
 
@@ -132,7 +166,7 @@ test("Break window is unable to skip after all skips are exhausted", async ({ la
     // Open a new overdue window with all skips exhausted
     const [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click()
     ]);
 
     // The skip button on the overdue screen should be disabled
@@ -162,7 +196,7 @@ test("Break can be skipped directly from overdue without starting break first", 
     // Skip the work timer to trigger the overdue window
     [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
   });
@@ -189,9 +223,8 @@ test("Break can be skipped directly from overdue without starting break first", 
   });
 
   await test.step("Verify skip was counted", async () => {
-    // Skipping from overdue should still consume a skip, same as skipping from break
-    await settingsWindow.getByTestId("timer-skipbox").waitFor();
-    expect(await settingsWindow.locator('.used-skip').count()).toBe(1);
+    // Skipping from overdue should still use a power-up, same as skipping from break
+    await expect(settingsWindow.getByTestId("powerup-count")).toHaveText(`${DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 1}`);
   });
 });
 
@@ -203,7 +236,7 @@ test("Overdue window grows in size across levels", async ({ launchElectron }) =>
   await test.step("Skip to overdue and capture initial window size", async () => {
     [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
     await testClock.fastForward(1);

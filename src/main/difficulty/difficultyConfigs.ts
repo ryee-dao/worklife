@@ -6,17 +6,16 @@ export type DifficultyLevel = keyof typeof DIFFICULTY_PRESETS | "CUSTOM";
 export interface DifficultyConfigs {
   level: DifficultyLevel;
   // Only used when level is CUSTOM
-  custom: { breakDurationMs: number; allottedBreaks: number; snoozeDurationMs: number; allottedSnoozes: number; partialThreshold: number };
+  custom: { breakDurationMs: number; snoozeDurationMs: number; allottedPowerups: number; lunchDurationMs: number };
 }
 
 const defaultDifficultyConfigs: DifficultyConfigs = {
   level: "NORMAL",
   custom: {
     breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
-    allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
     snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
-    allottedSnoozes: DEFAULTS.DEFAULT_ALLOTTED_SNOOZES,
-    partialThreshold: DEFAULTS.DEFAULT_PARTIAL_THRESHOLD,
+    allottedPowerups: DEFAULTS.DEFAULT_ALLOTTED_POWERUPS,
+    lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
   },
 };
 
@@ -26,7 +25,13 @@ let appliedDifficultyConfigs: DifficultyConfigs;
 
 export const loadDifficultyConfigs = () => {
   const difficultyConfigsData = getUserDataFromFile<DifficultyConfigs>(FILENAMES.DIFFICULTY.CONFIGS);
-  difficultyConfigs = { ...defaultDifficultyConfigs, ...difficultyConfigsData?.fileContent };
+  const savedConfigs = difficultyConfigsData?.fileContent;
+  // Custom is merged too, so a file saved before a custom field existed gets that field's default
+  difficultyConfigs = {
+    ...defaultDifficultyConfigs,
+    ...savedConfigs,
+    custom: { ...defaultDifficultyConfigs.custom, ...savedConfigs?.custom },
+  };
   writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
   applyDifficultyConfigs();
 }

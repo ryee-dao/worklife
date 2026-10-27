@@ -19,13 +19,6 @@ export const getBreakDurationMs = () => {
   return Math.max(roundToNearest(breakMs, breakRoundingMs), minimumBreakMs);
 };
 
-export const getAllottedBreaks = () => {
-  const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.allottedBreaks;
-
-  return DIFFICULTY_PRESETS[level].allottedBreaks;
-};
-
 export const getSnoozeDurationMs = () => {
   const { level, custom } = getAppliedDifficultyConfigs();
   if (level === "CUSTOM") return custom.snoozeDurationMs;
@@ -34,16 +27,16 @@ export const getSnoozeDurationMs = () => {
   return Math.max(roundToNearest(snoozeMs, snoozeRoundingMs), minimumSnoozeMs);
 };
 
-export const getAllottedSnoozes = () => {
+export const getAllottedPowerups = () => {
   const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.allottedSnoozes;
+  if (level === "CUSTOM") return custom.allottedPowerups;
 
-  return DIFFICULTY_PRESETS[level].allottedSnoozes;
+  return DIFFICULTY_PRESETS[level].allottedPowerups;
 };
 
-export const getPartialThreshold = () => {
+export const getLunchDurationMs = () => {
   const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.partialThreshold;
+  if (level === "CUSTOM") return custom.lunchDurationMs;
 
-  return DIFFICULTY_PRESETS[level].partialThreshold;
+  return DIFFICULTY_PRESETS[level].lunchDurationMs;
 };

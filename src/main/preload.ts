@@ -6,7 +6,7 @@ import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "./workday/workdayConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "../shared/types/electron";
-import { DayScore } from "./stats/cleanDays";
+import { DayScore } from "./stats/checkpoints";
 
 const electronAPI: ElectronAPI = {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -50,11 +50,14 @@ const electronAPI: ElectronAPI = {
   skipBreak: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK);
   },
-  skipTimer: () => {
-    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER);
+  forwardToBreak: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_FORWARD);
   },
   snooze: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_SNOOZE);
+  },
+  startLunch: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TIMER_LUNCH);
   },
   loadTimerConfigs: async (): Promise<TimerConfigs> => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER);
@@ -79,6 +82,9 @@ const electronAPI: ElectronAPI = {
   },
   saveWorkdayConfigs: async (configs: WorkdayConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, configs);
+  },
+  devApplyWorkday: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY);
   },
 }
 

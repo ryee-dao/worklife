@@ -9,14 +9,16 @@ import {
   startTimer,
   skipBreak,
   TimerState,
-  skipTimer,
+  forwardToBreak,
   snoozeTimer,
+  startLunch,
   startBreak,
   getTimerState,
 } from "./timer/timerState";
 
 import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
-import { getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
+import { applyWorkdayConfigs, getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
+import { IS_DEV } from "./env";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 import { getAllDayScores, getCurrentDayScore, takeUnseenSummaryDate } from "./stats/stats";
@@ -46,6 +48,7 @@ export const initEventListeners = () => {
   timerEmitter.on(EVENTS.TIMER.ON_BREAK, onTimerUpdate);
   timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, onTimerUpdate);
   timerEmitter.on(EVENTS.TIMER.STOPPED, onTimerUpdate);
+  timerEmitter.on(EVENTS.TIMER.ON_LUNCH, onTimerUpdate);
 
   timerEmitter.on(EVENTS.TIMER.WARNING, () => {
     broadcastStateToRendererWindows(
@@ -73,8 +76,9 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, () => startTimer("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, () => startBreak("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, () => skipBreak("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPTIMER, () => skipTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_FORWARD, () => forwardToBreak("WINDOW"));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, () => snoozeTimer("WINDOW"));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_LUNCH, () => startLunch("WINDOW"));
 
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_GET_DAYS, getAllDayScores);
@@ -111,4 +115,9 @@ export const initEventListeners = () => {
       setWorkdayConfigs(configs);
     }
   );
+
+  // The admin settings apply the workday right away so it can be tested without waiting a day
+  if (IS_DEV) {
+    ipcMain.handle(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY, applyWorkdayConfigs);
+  }
 };

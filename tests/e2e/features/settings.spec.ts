@@ -27,10 +27,10 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
   await test.step("Skip to break and verify setting not yet applied", async () => {
     // Navigate back to the Timer tab
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
-    // Skip to overdue, skipTimer transitions directly
+    // Forward to overdue, which transitions directly
     const [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click()
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click()
     ])
     // Assert the new duration has NOT taken effect mid-session
     const initialTimerState: TimerState = JSON.parse(
@@ -44,7 +44,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
 
   await test.step("Verify setting applied after break completes", async () => {
     // Wait for the settings window to settle after the break
-    await settingsWindow.getByTestId("timer-skipbox").waitFor();
+    await settingsWindow.getByTestId("timer-powerup-bar").waitFor();
     // Assert the new duration is now in effect
     const modifiedTimerState: TimerState = JSON.parse(
       fs.readFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "utf-8")
@@ -62,7 +62,7 @@ test("Changing timer settings only updates after a break", async ({ userDataDir,
 
 test("Changing difficulty only updates after a break", async ({ launchElectron }) => {
   const { settingsWindow, electronApp, testClock } = await launchElectron();
-  const newAllottedBreaks = DIFFICULTY_PRESETS.HARD.allottedBreaks;
+  const newAllottedPowerups = DIFFICULTY_PRESETS.HARD.allottedPowerups;
 
   await test.step("Change the difficulty to hard in settings", async () => {
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
@@ -73,15 +73,15 @@ test("Changing difficulty only updates after a break", async ({ launchElectron }
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();
   });
 
-  await test.step("Verify the skips are unchanged before the break", async () => {
+  await test.step("Verify the power-ups are unchanged before the break", async () => {
     await testClock.fastForward(1);
-    await expect(settingsWindow.getByTestId("timer-skip-icon")).toHaveCount(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
+    await expect(settingsWindow.getByTestId("powerup-count")).toHaveText(`${DEFAULTS.DEFAULT_ALLOTTED_POWERUPS}`);
   });
 
   await test.step("Take a full break", async () => {
     const [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
     ]);
     await breakWindow.getByTestId("overdue-window-start-break-button").click();
     const closePromise = breakWindow.waitForEvent('close');
@@ -89,9 +89,9 @@ test("Changing difficulty only updates after a break", async ({ launchElectron }
     await closePromise;
   });
 
-  await test.step("Verify the new skip count applies after the break", async () => {
+  await test.step("Verify the new power-up count applies after the break", async () => {
     await testClock.fastForward(1);
-    await expect(settingsWindow.getByTestId("timer-skip-icon")).toHaveCount(newAllottedBreaks);
+    await expect(settingsWindow.getByTestId("powerup-count")).toHaveText(`${newAllottedPowerups}`);
   });
 });
 

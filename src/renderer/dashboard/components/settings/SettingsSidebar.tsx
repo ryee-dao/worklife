@@ -1,6 +1,7 @@
 import SettingsTab from "./SettingsTab";
 // import { ClockIcon, HandRaisedIcon } from "@heroicons/react/24/solid";
-import { ClockAlert, Clock9, Gauge, Briefcase } from 'lucide-react';
+import { ClockAlert, Clock9, Gauge, Briefcase, Wrench } from 'lucide-react';
+import { IS_DEV } from "../../../common/constants";
 
 
 export default function SettingsSidebar() {
@@ -10,5 +11,6 @@ export default function SettingsSidebar() {
     <SettingsTab to="/settings/workday" text="Workday" icon={Briefcase} />
     <SettingsTab to="/settings/difficulty" text="Difficulty" icon={Gauge} />
     <SettingsTab to="/settings/overdue" text="Overdue" icon={ClockAlert} />
+    {IS_DEV && <SettingsTab to="/settings/admin" text="Admin" icon={Wrench} />}
   </div>
 }

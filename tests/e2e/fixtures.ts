@@ -31,10 +31,9 @@ const test = base.extend<{
       level: "CUSTOM",
       custom: {
         breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
-        allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS,
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
-        allottedSnoozes: DEFAULTS.DEFAULT_ALLOTTED_SNOOZES,
-        partialThreshold: DEFAULTS.DEFAULT_PARTIAL_THRESHOLD,
+        allottedPowerups: DEFAULTS.DEFAULT_ALLOTTED_POWERUPS,
+        lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
       },
     });
     // Every day is a workday all day, so today's score shows the same whatever day and time the tests run

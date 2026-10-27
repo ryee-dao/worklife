@@ -47,13 +47,13 @@ for (const size of windowSizes) {
     const { electronApp, settingsWindow, testClock } = await launchElectron();
     await resizeWindow(electronApp, settingsWindow, size);
     await testClock.fastForward(1);
-    const ring = settingsWindow.getByTestId("compliance-ring");
+    const digits = settingsWindow.getByTestId("timer-time-digits");
 
-    await expect(ring).toBeVisible();
-    await expect(ring).toBeInViewport({ ratio: 1 });
-    await expectSingleLine(settingsWindow.getByTestId("timer-time-digits"));
-    await expectNoOverlap(settingsWindow.getByTestId("timer-skipbox"), ring);
-    await expectNoOverlap(settingsWindow.getByTestId("timer-buttons-container"), ring);
+    await expect(digits).toBeVisible();
+    await expect(digits).toBeInViewport({ ratio: 1 });
+    await expectSingleLine(digits);
+    await expectNoOverlap(settingsWindow.getByTestId("timer-powerup-bar"), digits);
+    await expectNoOverlap(settingsWindow.getByTestId("timer-buttons-container"), digits);
     await expectNoSidewaysScroll(settingsWindow);
   });
 
@@ -61,11 +61,15 @@ for (const size of windowSizes) {
     const { electronApp, settingsWindow } = await launchElectron();
     await resizeWindow(electronApp, settingsWindow, size);
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Stats' }).click();
-    const calendar = settingsWindow.getByTestId("clean-day-calendar");
+    const todayPanel = settingsWindow.getByTestId("today-panel");
+    const calendar = settingsWindow.getByTestId("month-calendar");
     const dayCard = settingsWindow.getByTestId("day-card");
 
+    await expect(todayPanel).toBeInViewport({ ratio: 1 });
     await expect(calendar).toBeVisible();
     await expect(dayCard).toBeVisible();
+    await expectSingleLine(settingsWindow.getByTestId("calendar-month"));
+    await expectNoOverlap(todayPanel, calendar);
     await expectNoOverlap(calendar, dayCard);
     await expectNoSidewaysScroll(settingsWindow);
   });

@@ -32,18 +32,19 @@ test("App launches with a visible window and starts up with valid components & s
   });
 
   await test.step("Verify default UI state", async () => {
-    // Assert all three skip icons are present
-    expect(await settingsWindow.getByTestId("timer-skip-icon").count()).toBe(3)
-    // Assert the toggle and skip buttons are visible
+    // Assert every power-up and the lunch are left
+    await expect(settingsWindow.getByTestId("powerup-count")).toHaveText(`${DEFAULTS.DEFAULT_ALLOTTED_POWERUPS}`);
+    await expect(settingsWindow.getByTestId("lunch-count")).toHaveText("1");
+    // Assert the toggle and forward buttons are visible
     await expect(settingsWindow.getByTestId("timer-buttons-container").getByTestId('toggle-timer-button')).toBeVisible();
-    await expect(settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button')).toBeVisible();
+    await expect(settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button')).toBeVisible();
   });
 
-  await test.step("Skip to overdue and verify overdue timer", async () => {
-    // Skip the work timer and wait for the overdue window to open
+  await test.step("Forward to overdue and verify overdue timer", async () => {
+    // Forward to the break and wait for the overdue window to open
     [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
     ])
 
     // Assert the overdue timer counts up
@@ -83,10 +84,10 @@ test("Break window closes after break countdown finishes naturally", async ({ la
   const { settingsWindow, electronApp, testClock } = await launchElectron();
   let breakWindow: Page;
 
-  await test.step("Skip to overdue and start break", async () => {
+  await test.step("Forward to overdue and start break", async () => {
     [breakWindow] = await Promise.all([
       electronApp.waitForEvent('window'),
-      settingsWindow.getByTestId("timer-buttons-container").getByTestId('skip-button').click(),
+      settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
     ]);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 00")).toBeVisible();
     await breakWindow.getByTestId("overdue-window-start-break-button").click();

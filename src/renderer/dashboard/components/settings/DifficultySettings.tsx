@@ -14,34 +14,32 @@ const levelNames: Record<DifficultyLevel, string> = {
 };
 
 const describeLevel = (level: DifficultyLevel) => {
-  if (level === "CUSTOM") return "choose your own breaks, skips and snoozes";
-  const { breakRatio, allottedBreaks, snoozeRatio, allottedSnoozes, partialThreshold } = DIFFICULTY_PRESETS[level];
-  return `breaks are ${breakRatio * 100}% of your timer, ${allottedBreaks} skip(s) per day, `
-    + `${allottedSnoozes} snooze(s) of ${snoozeRatio * 100}% of your timer, `
-    + `${partialThreshold * 100}% compliant for a partial after stopping`;
+  if (level === "CUSTOM") return "choose your own breaks, power-ups, snoozes and lunch";
+  const { breakRatio, allottedPowerups, snoozeRatio, lunchDurationMs } = DIFFICULTY_PRESETS[level];
+  return `breaks are ${breakRatio * 100}% of your timer, ${allottedPowerups} power-up(s) per day `
+    + `(a snooze of ${snoozeRatio * 100}% of your timer, or a skipped break), `
+    + `a ${convertMsToMinutes(lunchDurationMs)} minute lunch`;
 };
 
 export default function DifficultySettings() {
   const [level, setLevel] = useState<DifficultyLevel>("NORMAL");
   const [breakDurationInSeconds, setBreakDurationInSeconds] = useState(0);
-  const [allottedBreaks, setAllottedBreaks] = useState(0);
+  const [allottedPowerups, setAllottedPowerups] = useState(0);
   const [snoozeDurationInMinutes, setSnoozeDurationInMinutes] = useState(0);
-  const [allottedSnoozes, setAllottedSnoozes] = useState(0);
-  const [partialThresholdPercent, setPartialThresholdPercent] = useState(0);
+  const [lunchDurationInMinutes, setLunchDurationInMinutes] = useState(0);
 
   const breakMinSeconds = IS_DEV ? 1 : 10;
-  const breaksMaxLimit = IS_DEV ? 9999999 : 5;
+  const powerupsMaxLimit = IS_DEV ? 9999999 : 5;
   const breakValid = breakDurationInSeconds >= breakMinSeconds && breakDurationInSeconds <= 600;
-  const allottedBreaksValid = allottedBreaks >= 0 && allottedBreaks <= breaksMaxLimit;
+  const allottedPowerupsValid = allottedPowerups >= 0 && allottedPowerups <= powerupsMaxLimit;
   const snoozeValid = snoozeDurationInMinutes >= 1 && snoozeDurationInMinutes <= 60;
-  const allottedSnoozesValid = allottedSnoozes >= 0 && allottedSnoozes <= breaksMaxLimit;
-  const partialThresholdValid = partialThresholdPercent >= 1 && partialThresholdPercent <= 100;
+  const lunchValid = lunchDurationInMinutes >= 1 && lunchDurationInMinutes <= 120;
   const isCustom = level === "CUSTOM";
 
   return (
     <SettingsPanel<DifficultyConfigs>
       title="Difficulty Settings"
-      isValid={!isCustom || (breakValid && allottedBreaksValid && snoozeValid && allottedSnoozesValid && partialThresholdValid)}
+      isValid={!isCustom || (breakValid && allottedPowerupsValid && snoozeValid && lunchValid)}
       successMessage="Settings saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadDifficultyConfigs()}
       save={(configs) => window.electronAPI.saveDifficultyConfigs(configs)}
@@ -49,19 +47,17 @@ export default function DifficultySettings() {
         level,
         custom: {
           breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
-          allottedBreaks,
+          allottedPowerups,
           snoozeDurationMs: convertMinutesToMs(snoozeDurationInMinutes),
-          allottedSnoozes,
-          partialThreshold: partialThresholdPercent / 100,
+          lunchDurationMs: convertMinutesToMs(lunchDurationInMinutes),
         },
       })}
       onLoaded={(configs) => {
         setLevel(configs.level);
         setBreakDurationInSeconds(convertMsToSeconds(configs.custom.breakDurationMs));
-        setAllottedBreaks(configs.custom.allottedBreaks);
+        setAllottedPowerups(configs.custom.allottedPowerups);
         setSnoozeDurationInMinutes(convertMsToMinutes(configs.custom.snoozeDurationMs));
-        setAllottedSnoozes(configs.custom.allottedSnoozes);
-        setPartialThresholdPercent(Math.round(configs.custom.partialThreshold * 100));
+        setLunchDurationInMinutes(convertMsToMinutes(configs.custom.lunchDurationMs));
       }}
     >
       <div data-testid="difficulty-level" className="tracking-wider p-2">
@@ -90,16 +86,16 @@ export default function DifficultySettings() {
             )}
           </div>
 
-          <div data-testid="allowed-break-count" className="tracking-wider p-2">
+          <div data-testid="allowed-powerup-count" className="tracking-wider p-2">
             <label>
-              I will be able to skip{" "}
-              <NumberInput min={0} max={breaksMaxLimit} value={allottedBreaks}
-                onChange={(e) => setAllottedBreaks(Number(e.target.value))} />{" "}
-              break(s) per day
+              I get{" "}
+              <NumberInput min={0} max={powerupsMaxLimit} value={allottedPowerups}
+                onChange={(e) => setAllottedPowerups(Number(e.target.value))} />{" "}
+              power-up(s) per day, each a snooze or a skipped break
             </label>
-            {!allottedBreaksValid && (
+            {!allottedPowerupsValid && (
               <p className="text-sm text-red-600 mt-1">
-                Must be between 0 and {breaksMaxLimit}
+                Must be between 0 and {powerupsMaxLimit}
               </p>
             )}
           </div>
@@ -116,29 +112,15 @@ export default function DifficultySettings() {
             )}
           </div>
 
-          <div data-testid="allowed-snooze-count" className="tracking-wider p-2">
+          <div data-testid="lunch-duration" className="tracking-wider p-2">
             <label>
-              I will be able to snooze{" "}
-              <NumberInput min={0} max={breaksMaxLimit} value={allottedSnoozes}
-                onChange={(e) => setAllottedSnoozes(Number(e.target.value))} />{" "}
-              time(s) per day
+              Lunch lasts{" "}
+              <NumberInput min={1} max={120} value={lunchDurationInMinutes}
+                onChange={(e) => setLunchDurationInMinutes(Number(e.target.value))} />{" "}
+              minutes
             </label>
-            {!allottedSnoozesValid && (
-              <p className="text-sm text-red-600 mt-1">
-                Must be between 0 and {breaksMaxLimit}
-              </p>
-            )}
-          </div>
-
-          <div data-testid="partial-threshold" className="tracking-wider p-2">
-            <label>
-              After stopping, I still get a partial clean if I'm compliant for{" "}
-              <NumberInput min={1} max={100} value={partialThresholdPercent}
-                onChange={(e) => setPartialThresholdPercent(Number(e.target.value))} />{" "}
-              % of my workday
-            </label>
-            {!partialThresholdValid && (
-              <p className="text-sm text-red-600 mt-1">Must be between 1% and 100%</p>
+            {!lunchValid && (
+              <p className="text-sm text-red-600 mt-1">Must be between 1 and 120 minutes</p>
             )}
           </div>
         </>

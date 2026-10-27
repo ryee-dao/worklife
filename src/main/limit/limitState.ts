@@ -1,21 +1,27 @@
-import { FILENAMES } from "../../shared/constants";
+import { FILENAMES, LUNCHES_PER_DAY } from "../../shared/constants";
 import { getTodayDateAsString } from "../../shared/utils/date";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { getAllottedBreaks, getAllottedSnoozes } from "../difficulty/difficulty";
+import { getAllottedPowerups } from "../difficulty/difficulty";
 
 export interface LimitState {
   lastResetDate: string;
-  skippedBreakCount: number;
-  snoozedCount: number;
+  powerupsUsed: number;
+  lunchesUsed: number;
 }
 
 let limitState: LimitState;
 
 const limitCheckIntervalMs = 5 * 60 * 1000; // 5 mins
 setInterval(resetDailyLimits, limitCheckIntervalMs); // A check to see if daily limit needs to be reset
+
+const getFreshLimitState = (): LimitState => ({
+  lastResetDate: getTodayDateAsString(),
+  powerupsUsed: 0,
+  lunchesUsed: 0,
+});
 
 export const initLimits = () => {
   loadLimitStateFromFile();
@@ -24,57 +30,31 @@ export const initLimits = () => {
 
 export function loadLimitStateFromFile() {
   const limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
-  // If no timer data is returned, set new state in file
-  const defaultLimitData = {
-    lastResetDate: getTodayDateAsString(),
-    skippedBreakCount: 0,
-    snoozedCount: 0,
-  }
-
-  if (!limitStateData.fileContent) {
-    // writeToUserDataFile(FILENAMES.LIMIT.STATE, defaultLimitData);
-    setLimitState(defaultLimitData);
-  } else {
-    setLimitState(limitStateData.fileContent);
-  }
+  // Merged over fresh counts, so a file saved before a count existed starts that count at 0
+  setLimitState({ ...getFreshLimitState(), ...limitStateData.fileContent });
 }
 
 export function resetDailyLimits() {
-  const newLimitState = getLimitState();
-  // If the last reset date is not today, reset it and set the last reset date to today
-  if (!(newLimitState.lastResetDate === getTodayDateAsString())) {
-    setLimitState({
-      lastResetDate: getTodayDateAsString(),
-      skippedBreakCount: 0,
-      snoozedCount: 0,
-    });
+  // If the last reset date is not today, start the day's counts over
+  if (getLimitState().lastResetDate !== getTodayDateAsString()) {
+    setLimitState(getFreshLimitState());
   }
 }
 
-export function increaseSkippedBreakCount() {
-  const limitStateData = getLimitState();
-  const newLimitStateData = {
-    ...limitStateData,
-    skippedBreakCount: limitStateData.skippedBreakCount + 1,
-  }
-  writeToUserDataFile(FILENAMES.LIMIT.STATE, newLimitStateData);
-  setLimitState(newLimitStateData);
+export function increasePowerupsUsed() {
+  setLimitState({ ...limitState, powerupsUsed: limitState.powerupsUsed + 1 });
 }
 
-export function calculateRemainingBreakSkips() {
-  const limitStateData = getLimitState();
-  return (
-    getAllottedBreaks() - limitStateData.skippedBreakCount
-  );
+export function calculateRemainingPowerups() {
+  return getAllottedPowerups() - limitState.powerupsUsed;
 }
 
-export function increaseSnoozedCount() {
-  const limitStateData = getLimitState();
-  setLimitState({ ...limitStateData, snoozedCount: limitStateData.snoozedCount + 1 });
+export function increaseLunchesUsed() {
+  setLimitState({ ...limitState, lunchesUsed: limitState.lunchesUsed + 1 });
 }
 
-export function calculateRemainingSnoozes() {
-  return getAllottedSnoozes() - getLimitState().snoozedCount;
+export function calculateRemainingLunches() {
+  return LUNCHES_PER_DAY - limitState.lunchesUsed;
 }
 
 function setLimitState(newLimitState: LimitState) {

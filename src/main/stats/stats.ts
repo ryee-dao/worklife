@@ -4,10 +4,10 @@ import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeT
 import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
-import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getPartialThreshold, getSnoozeDurationMs } from "../difficulty/difficulty";
+import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
 import { getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
-import { countCleanDays, getDayScores, getTodayScore } from "./cleanDays";
+import { getDayScores, getTodayScore } from "./checkpoints";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
 type Heartbeat = { type: "HEARTBEAT" }; // Shows the app was still alive, so a crash can be placed within a minute
@@ -22,10 +22,9 @@ export type StatsEvent = {
     timerDurationMs: number;
     breakDurationMs: number;
     warningThresholdMs: number;
-    allottedBreaks: number;
     snoozeDurationMs: number;
-    allottedSnoozes: number;
-    partialThreshold: number;
+    allottedPowerups: number;
+    lunchDurationMs: number;
     difficulty: DifficultyLevel;
     levelThresholdMs: number;
     workday: WorkdayConfigs;
@@ -48,10 +47,9 @@ const recordEvent = (event: TimerTransition | AppQuit | Heartbeat) => {
       timerDurationMs: getAppliedTimerConfigs().timerDurationMs,
       breakDurationMs: getBreakDurationMs(),
       warningThresholdMs: getAppliedTimerConfigs().warningThresholdMs,
-      allottedBreaks: getAllottedBreaks(),
       snoozeDurationMs: getSnoozeDurationMs(),
-      allottedSnoozes: getAllottedSnoozes(),
-      partialThreshold: getPartialThreshold(),
+      allottedPowerups: getAllottedPowerups(),
+      lunchDurationMs: getLunchDurationMs(),
       difficulty: getAppliedDifficultyConfigs().level,
       levelThresholdMs: getAppliedOverdueConfigs().levelThresholdMs,
       workday: getAppliedWorkdayConfigs(),
@@ -110,15 +108,16 @@ export const getCurrentDayScore = () => {
 };
 
 export const getAllDayScores = () => {
-  const scores = getDayScores(events);
-  return { scores, totalCleanDays: countCleanDays(scores) };
+  return getDayScores(events);
 };
 
-// Returns the latest finished workday whose end-of-day card hasn't been shown yet, and marks it shown
+// Returns the latest finished workday whose end-of-day card hasn't been shown yet, and marks it shown.
+// Days the app was never open during work hours have nothing to show
 export const takeUnseenSummaryDate = () => {
   const lastShown = getUserDataFromFile<{ lastSummaryDate: string }>(FILENAMES.STATS.STATE).fileContent?.lastSummaryDate ?? "";
   const unseenDates = Object.values(getDayScores(events))
-    .filter((score) => score.result && score.localDate > lastShown)
+    .filter((score) => !score.inProgress && score.localDate > lastShown)
+    .filter((score) => score.pieces.some((piece) => piece.activity !== "CLOSED"))
     .map((score) => score.localDate)
     .sort();
 

@@ -1,8 +1,9 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
-import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, skipTimer, snoozeTimer } from '../timer/timerState';
+import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, forwardToBreak, snoozeTimer, startLunch } from '../timer/timerState';
 import { convertMsToMinutes } from '../../shared/utils/time';
-import { DayScore } from '../stats/cleanDays';
+import { DayScore } from '../stats/checkpoints';
+import { CHECKPOINTS } from '../../shared/constants';
 import { formatMsToMMSS } from '../../shared/utils/time';
 import { settingsWindow } from '../windows/settingsWindow';
 
@@ -15,6 +16,7 @@ const STATUS_ICON_PATHS = {
   OVERDUE: path.join(ICON_DIR, 'tray-orange.png'),
   BREAK: path.join(ICON_DIR, 'tray-blue.png'),
   STOPPED: path.join(ICON_DIR, 'tray-gray.png'),
+  LUNCH: path.join(ICON_DIR, 'tray-blue.png'),
 } as const;
 
 let statusIcons: Record<StatusKey, Electron.NativeImage>;
@@ -34,10 +36,14 @@ export function buildStatusIcons() {
   }
 }
 
-// e.g. "Today 58% · ★ on track"
+const formatClockTime = (epochMs: number) => new Date(epochMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+// e.g. "Today: Glow · Shine at 3:00 PM". A clock time instead of a countdown, so the menu isn't rebuilt every second
 function describeTodayScore(score: DayScore) {
-  const progress = score.cleanPossible ? '★ on track' : score.partialPossible ? '½ still possible' : 'day lost';
-  return `Today ${Math.round(score.compliance * 100)}% · ${progress}`;
+  const today = `Today: ${CHECKPOINTS.NAMES[score.level]}`;
+  if (score.losing) return `${today} · stopped, losing checkpoints`;
+  if (score.nextCheckpointAt) return `${today} · ${CHECKPOINTS.NAMES[score.level + 1]} at ${formatClockTime(score.nextCheckpointAt)}`;
+  return today;
 }
 
 function getStatusKey(state: TimerState): StatusKey {
@@ -78,9 +84,12 @@ export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: D
   switch (state.status) {
     case 'RUNNING':
       menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
-      menuTemplate.push({ label: 'Skip to Break', click: () => skipTimer('TRAY') });
+      menuTemplate.push({ label: 'Forward to Break', click: () => forwardToBreak('TRAY') });
       if (state.availableActions.includes('snooze')) {
         menuTemplate.push({ label: `Snooze +${convertMsToMinutes(state.snoozeDurationMs)} min`, click: () => snoozeTimer('TRAY') });
+      }
+      if (state.availableActions.includes('lunch')) {
+        menuTemplate.push({ label: `Lunch (${convertMsToMinutes(state.lunchDurationMs)} min)`, click: () => startLunch('TRAY') });
       }
       break;
     case 'STOPPED':
@@ -88,14 +97,22 @@ export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: D
       break;
     case 'OVERDUE':
       menuTemplate.push({ label: 'Start Break', click: () => startBreak('TRAY') });
+      if (state.availableActions.includes('lunch')) {
+        menuTemplate.push({ label: `Lunch (${convertMsToMinutes(state.lunchDurationMs)} min)`, click: () => startLunch('TRAY') });
+      }
       if (state.availableActions.includes('skip')) {
         menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
       }
+      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
       break;
     case 'BREAK':
       if (state.availableActions.includes('skip')) {
         menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
       }
+      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
+      break;
+    case 'LUNCH':
+      menuTemplate.push({ label: 'Back from Lunch', click: () => startTimer('TRAY') });
       break;
   }
 

@@ -5,34 +5,37 @@ import {
   getUserDataFromFile,
   writeToUserDataFile,
 } from "../../shared/utils/files";
-import { calculateRemainingBreakSkips, calculateRemainingSnoozes, increaseSkippedBreakCount, increaseSnoozedCount } from "../limit/limitState";
-import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
+import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from "../limit/limitState";
+import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 
-export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK";
+export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK" | "LUNCH";
 export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday
 
 // What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
 export type TimerTransition =
   | { type: "APP_STARTED"; previousStatus: TimerStatus | null } // null = first run ever
-  | { type: "STOPPED"; source: Source; countdownMs: number }
+  | { type: "STOPPED"; source: Source; from: "RUNNING" | "OVERDUE" | "BREAK"; countdownMs: number }
   | { type: "RESUMED"; source: Source; countdownMs: number }
   | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
-  | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number }
+  | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number } // Forward to break, named before the rename
   | { type: "BREAK_STARTED"; source: Source; overdueMs: number }
-  | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; skipsLeft: number }
+  | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; powerupsLeft: number }
   | { type: "BREAK_COMPLETED" }
-  | { type: "SNOOZED"; source: Source; snoozeMs: number; countdownMs: number; snoozesLeft: number };
-export type AvailableActions = "start" | "stop" | "skip" | "breaktime" | "snooze";
+  | { type: "SNOOZED"; source: Source; snoozeMs: number; countdownMs: number; powerupsLeft: number }
+  | { type: "LUNCH_STARTED"; source: Source; from: "RUNNING" | "OVERDUE"; lunchMs: number }
+  | { type: "LUNCH_ENDED"; cause: "TIME_UP" }
+  | { type: "LUNCH_ENDED"; cause: "ENDED_EARLY"; source: Source; lunchLeftMs: number };
+export type AvailableActions = "start" | "stop" | "forward" | "skip" | "breaktime" | "snooze" | "lunch";
 export interface TimerState {
   overdueTimeMs: number;
   currentCountdownMs: number;
   status: TimerStatus;
   availableActions: AvailableActions[];
-  remainingSkips: number,
-  allottedBreaks: number,
-  remainingSnoozes: number,
-  allottedSnoozes: number,
+  remainingPowerups: number,
+  allottedPowerups: number,
+  remainingLunches: number,
   snoozeDurationMs: number,
+  lunchDurationMs: number,
   isWarning: boolean;
   _bypassThreshold?: boolean
 }
@@ -65,6 +68,10 @@ const emitTransition = (transition: TimerTransition) => {
 export const initTimer = () => {
   const previousStatus = loadTimerStateFromFile();
   emitTransition({ type: "APP_STARTED", previousStatus });
+  // A restart ends lunch, back to work with a full timer
+  if (timerState.status === "LUNCH") {
+    timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
+  }
   if (!timerState._bypassThreshold) {
     fallbackTimer();
   }
@@ -88,29 +95,41 @@ const fallbackTimer = () => {
   }
 }
 
+// Stop is offered on the break screens too, as an escape hatch. It costs a checkpoint like any stop
 const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   const availableActions: AvailableActions[] = [];
+  const hasPowerups = calculateRemainingPowerups() > 0;
+  const hasLunch = calculateRemainingLunches() > 0;
   switch (status) {
     case "RUNNING":
       availableActions.push("stop");
-      availableActions.push("skip");
-      if (calculateRemainingSnoozes() > 0) {
+      availableActions.push("forward");
+      if (hasPowerups) {
         availableActions.push("snooze");
+      }
+      if (hasLunch) {
+        availableActions.push("lunch");
       }
       return availableActions;
     case "STOPPED":
+    case "LUNCH": // Starting during lunch ends it early
       availableActions.push("start");
       return availableActions;
     case "OVERDUE":
       availableActions.push("breaktime");
-      if (calculateRemainingBreakSkips() > 0) {
+      if (hasPowerups) {
         availableActions.push("skip");
       }
+      if (hasLunch) {
+        availableActions.push("lunch");
+      }
+      availableActions.push("stop");
       return availableActions;
     case "BREAK":
-      if (calculateRemainingBreakSkips() > 0) {
+      if (hasPowerups) {
         availableActions.push("skip");
       }
+      availableActions.push("stop");
       return availableActions;
   }
 };
@@ -129,6 +148,7 @@ export const emitTimerStatus = () => {
     BREAK: EVENTS.TIMER.ON_BREAK,
     STOPPED: EVENTS.TIMER.STOPPED,
     OVERDUE: EVENTS.TIMER.ON_OVERDUE,
+    LUNCH: EVENTS.TIMER.ON_LUNCH,
   };
 
   // Emit along additional data along with the timer state
@@ -177,6 +197,13 @@ const checkTimer = () => {
     case "OVERDUE":
       timerState.overdueTimeMs += tickIntervalMs;
       break;
+    case "LUNCH":
+      timerState.currentCountdownMs -= tickIntervalMs;
+      if (timerState.currentCountdownMs <= 0) {
+        emitTransition({ type: "LUNCH_ENDED", cause: "TIME_UP" });
+        transitionToNextState();
+      }
+      break;
   }
 };
 
@@ -200,6 +227,11 @@ const transitionToNextState = () => {
       timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
       timerState.overdueTimeMs = 0;
       break;
+    case "LUNCH": // Back to work with a full timer
+      timerState.status = "RUNNING";
+      timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
+      timerState.overdueTimeMs = 0;
+      break;
     default:
       console.warn(`Unexpected transition from: ${timerState.status}`);
   }
@@ -207,15 +239,27 @@ const transitionToNextState = () => {
 };
 
 export const stopTimer = (source: Source) => {
-  if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
-  emitTransition({ type: "STOPPED", source, countdownMs: timerState.currentCountdownMs });
-  // clearInterval(tickTimer);
+  const from = timerState.status;
+  if (from !== "RUNNING" && from !== "OVERDUE" && from !== "BREAK") return; // A stale menu or window can send this after the status changed
+  emitTransition({ type: "STOPPED", source, from, countdownMs: timerState.currentCountdownMs });
+  // Stopping from a break screen closes it, and resuming later starts a fresh work session
+  if (from !== "RUNNING") {
+    timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Before the countdown resets, so it uses the configs applied after the break
+    timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
+    timerState.overdueTimeMs = 0;
+  }
   timerState.status = "STOPPED";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
 
 export const startTimer = (source: Source) => {
+  if (timerState.status === "LUNCH") {
+    emitTransition({ type: "LUNCH_ENDED", cause: "ENDED_EARLY", source, lunchLeftMs: timerState.currentCountdownMs });
+    transitionToNextState();
+    emitTimerStatus();
+    return;
+  }
   if (timerState.status !== "STOPPED") return; // A stale menu or window can send this after the status changed
   emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
   runTimer();
@@ -251,9 +295,9 @@ export const startBreak = (source: Source) => {
 };
 
 export const skipBreak = (source: Source) => {
-  if (calculateRemainingBreakSkips() <= 0) return;
+  if (calculateRemainingPowerups() <= 0) return;
   if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
-  increaseSkippedBreakCount();
+  increasePowerupsUsed();
   const isBreak = timerState.status === "BREAK";
   emitTransition({
     type: "BREAK_SKIPPED",
@@ -261,14 +305,14 @@ export const skipBreak = (source: Source) => {
     from: timerState.status,
     overdueMs: timerState.overdueTimeMs,
     breakElapsedMs: isBreak ? getBreakDurationMs() - timerState.currentCountdownMs : 0,
-    skipsLeft: calculateRemainingBreakSkips(),
+    powerupsLeft: calculateRemainingPowerups(),
   });
   timerState.status = "BREAK";
   transitionToNextState();
   emitTimerStatus();
 };
 
-export const skipTimer = (source: Source) => {
+export const forwardToBreak = (source: Source) => {
   if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
   emitTransition({ type: "OVERDUE_STARTED", cause: "TIMER_SKIPPED", source, countdownMs: timerState.currentCountdownMs });
   timerState.currentCountdownMs = 0;
@@ -278,17 +322,35 @@ export const skipTimer = (source: Source) => {
 
 export const snoozeTimer = (source: Source) => {
   if (timerState.status !== "RUNNING") return; // Once overdue, a skip is the way out
-  if (calculateRemainingSnoozes() <= 0) return;
-  increaseSnoozedCount();
+  if (calculateRemainingPowerups() <= 0) return;
+  increasePowerupsUsed();
   const snoozeMs = getSnoozeDurationMs();
   emitTransition({
     type: "SNOOZED",
     source,
     snoozeMs,
     countdownMs: timerState.currentCountdownMs,
-    snoozesLeft: calculateRemainingSnoozes(),
+    powerupsLeft: calculateRemainingPowerups(),
   });
   timerState.currentCountdownMs += snoozeMs;
+  emitTimerStatus();
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
+// Lunch pauses the day without breaking the checkpoint climb. Taking it while overdue counts as taking the break
+export const startLunch = (source: Source) => {
+  const from = timerState.status;
+  if (from !== "RUNNING" && from !== "OVERDUE") return;
+  if (calculateRemainingLunches() <= 0) return;
+  increaseLunchesUsed();
+  const lunchMs = getLunchDurationMs();
+  emitTransition({ type: "LUNCH_STARTED", source, from, lunchMs });
+  if (from === "OVERDUE") {
+    timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Closes the overdue window
+  }
+  timerState.status = "LUNCH";
+  timerState.currentCountdownMs = lunchMs;
+  timerState.overdueTimeMs = 0;
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
 };
@@ -318,11 +380,11 @@ const loadTimerStateFromFile = (): TimerStatus | null => {
 export const getTimerState = (): TimerState => ({
   ...timerState,
   availableActions: getAvailableActions(timerState.status),
-  remainingSkips: Math.max(0, calculateRemainingBreakSkips()),
-  allottedBreaks: getAllottedBreaks(),
-  remainingSnoozes: Math.max(0, calculateRemainingSnoozes()),
-  allottedSnoozes: getAllottedSnoozes(),
+  remainingPowerups: Math.max(0, calculateRemainingPowerups()),
+  allottedPowerups: getAllottedPowerups(),
+  remainingLunches: Math.max(0, calculateRemainingLunches()),
   snoozeDurationMs: getSnoozeDurationMs(),
+  lunchDurationMs: getLunchDurationMs(),
   isWarning: isInWarning(),
 });
 

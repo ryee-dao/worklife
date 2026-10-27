@@ -9,8 +9,10 @@ import WorkdaySettings from "./settings/WorkdaySettings";
 import DifficultySettings from "./settings/DifficultySettings";
 import OverdueConfigsForm from "./settings/OverdueConfigsForm";
 import { playWarningSound } from "../../common/utils/sound";
-import { DayScore } from "../../../main/stats/cleanDays";
+import { DayScore } from "../../../main/stats/checkpoints";
 import Stats from "./stats/Stats";
+import AdminSettings from "./settings/AdminSettings";
+import { IS_DEV } from "../../common/constants";
 
 // Opens a day's end-of-day card in the Stats tab
 const showDay = (localDate: string) => {
@@ -39,14 +41,15 @@ export default function Dashboard() {
       <HashRouter>
         <TopTabs />
         <Routes>
-          <Route path="/timer" element={<Timer timerState={timerStateObject} todayScore={todayScore} />}></Route>
-          <Route path="/stats/:localDate?" element={<Stats />} />
+          <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
+          <Route path="/stats/:localDate?" element={<Stats todayScore={todayScore} />} />
           <Route path="/settings" element={<Settings />}>
             <Route index element={<Navigate replace to="/settings/timer" />} />
             <Route path="timer" element={<TimeSettings />} />
             <Route path="workday" element={<WorkdaySettings />} />
             <Route path="difficulty" element={<DifficultySettings />} />
             <Route path="overdue" element={<OverdueConfigsForm />} />
+            {IS_DEV && <Route path="admin" element={<AdminSettings />} />}
           </Route>
 
           {/* Default route */}

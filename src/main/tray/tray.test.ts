@@ -2,7 +2,7 @@ import { describe, test, expect, vi, beforeEach, it } from 'vitest';
 import { DEFAULTS } from '../../shared/constants';
 import { updateTray, buildStatusIcons, ICON_DIR } from './tray';
 import { TimerState } from '../timer/timerState';
-import { DayScore } from '../stats/cleanDays';
+import { DayScore } from '../stats/checkpoints';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -31,12 +31,12 @@ function createTimerState(overrides: Partial<TimerState> = {}): TimerState {
     currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     status: 'RUNNING',
     overdueTimeMs: 0,
-    availableActions: ['stop', 'skip'],
-    remainingSkips: 3,
-    allottedBreaks: 3,
-    remainingSnoozes: 3,
-    allottedSnoozes: 3,
+    availableActions: ['stop', 'forward'],
+    remainingPowerups: 3,
+    allottedPowerups: 3,
+    remainingLunches: 1,
     snoozeDurationMs: 7 * 60 * 1000,
+    lunchDurationMs: 45 * 60 * 1000,
     isWarning: false,
     ...overrides,
   };
@@ -128,7 +128,7 @@ describe('Tray status detection', () => {
 });
 
 describe('Tray context/dropdown menu actions', () => {
-  test('RUNNING state offers Stop and Skip to Break', () => {
+  test('RUNNING state offers Stop and Forward to Break', () => {
     const mockTray = createMockTray();
     const state = createTimerState({ status: 'RUNNING' });
 
@@ -137,13 +137,14 @@ describe('Tray context/dropdown menu actions', () => {
     const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
     const labels = menuTemplate.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('Stop');
-    expect(labels).toContain('Skip to Break');
+    expect(labels).toContain('Forward to Break');
+    expect(labels).not.toContain('Skip Break'); // Skipping is only for breaks
     expect(labels).not.toContain('Resume');
   });
 
-  test('RUNNING state offers Snooze with its length when snoozes remain', () => {
+  test('RUNNING state offers Snooze with its length when power-ups remain', () => {
     const mockTray = createMockTray();
-    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'skip', 'snooze'] });
+    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'forward', 'snooze'] });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
 
@@ -152,9 +153,9 @@ describe('Tray context/dropdown menu actions', () => {
     expect(labels).toContain('Snooze +7 min');
   });
 
-  test('RUNNING state hides Snooze when no snoozes remain', () => {
+  test('RUNNING state hides Snooze when no power-ups remain', () => {
     const mockTray = createMockTray();
-    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'skip'] });
+    const state = createTimerState({ status: 'RUNNING', availableActions: ['stop', 'forward'] });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
 
@@ -175,11 +176,11 @@ describe('Tray context/dropdown menu actions', () => {
     expect(labels).not.toContain('Stop');
   });
 
-  test('OVERDUE state offers Start Break and Skip Break when skips remain', () => {
+  test('OVERDUE state offers Start Break, Lunch, Skip Break and Stop', () => {
     const mockTray = createMockTray();
     const state = createTimerState({
       status: 'OVERDUE',
-      availableActions: ['breaktime', 'skip'],
+      availableActions: ['breaktime', 'skip', 'lunch', 'stop'],
     });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
@@ -187,15 +188,17 @@ describe('Tray context/dropdown menu actions', () => {
     const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
     const labels = menuTemplate.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('Start Break');
+    expect(labels).toContain('Lunch (45 min)');
     expect(labels).toContain('Skip Break');
+    expect(labels).toContain('Stop');
   });
 
-  test('BREAK state hides Skip Break when no skips remain', () => {
+  test('BREAK state hides Skip Break when no power-ups remain, but Stop is always there', () => {
     const mockTray = createMockTray();
     const state = createTimerState({
       status: 'BREAK',
       currentCountdownMs: 30000,
-      availableActions: [],
+      availableActions: ['stop'],
     });
 
     updateTray(mockTray as unknown as Electron.Tray, state);
@@ -203,6 +206,31 @@ describe('Tray context/dropdown menu actions', () => {
     const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
     const labels = menuTemplate.map((item) => item.label).filter(Boolean);
     expect(labels).not.toContain('Skip Break');
+    expect(labels).toContain('Stop');
+  });
+
+  test('RUNNING state offers Lunch with its length until it is used', () => {
+    const mockTray = createMockTray();
+
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ availableActions: ['stop', 'forward', 'lunch'] }));
+    const withLunch = (mockTray.setContextMenu.mock.calls.at(-1)![0] as Electron.MenuItemConstructorOptions[]).map((item) => item.label);
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState({ availableActions: ['stop', 'forward'] }));
+    const withoutLunch = (mockTray.setContextMenu.mock.calls.at(-1)![0] as Electron.MenuItemConstructorOptions[]).map((item) => item.label);
+
+    expect(withLunch).toContain('Lunch (45 min)');
+    expect(withoutLunch).not.toContain('Lunch (45 min)');
+  });
+
+  test('LUNCH state offers coming back early', () => {
+    const mockTray = createMockTray();
+    const state = createTimerState({ status: 'LUNCH', availableActions: ['start'] });
+
+    updateTray(mockTray as unknown as Electron.Tray, state);
+
+    const menuTemplate = mockTray.setContextMenu.mock.calls[0][0] as Electron.MenuItemConstructorOptions[];
+    const labels = menuTemplate.map((item) => item.label).filter(Boolean);
+    expect(labels).toContain('Back from Lunch');
+    expect(labels).not.toContain('Stop');
   });
 
   test('all states include Show Settings and Quit', () => {
@@ -326,31 +354,31 @@ describe('Tray shows today\'s score', () => {
     const menuTemplate = mockTray.setContextMenu.mock.calls.at(-1)![0] as Electron.MenuItemConstructorOptions[];
     return menuTemplate.map((item) => item.label).filter(Boolean);
   };
-  const createScore = (overrides: Partial<DayScore>) => ({ compliance: 0.58, cleanPossible: true, partialPossible: true, ...overrides }) as DayScore;
+  const createScore = (overrides: Partial<DayScore>) => ({ level: 2, nextCheckpointAt: null, losing: false, ...overrides }) as DayScore;
 
-  test('the menu starts with today\'s score while on track for a clean day', () => {
+  test('the menu starts with today\'s checkpoint and when the next one comes', () => {
     const mockTray = createMockTray();
 
-    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({}));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ nextCheckpointAt: Date.now() + 60 * 60 * 1000 }));
 
-    expect(getLabels(mockTray)[0]).toBe('Today 58% · ★ on track');
-    expect(mockTray.setToolTip).toHaveBeenLastCalledWith(expect.stringContaining('Today 58% · ★ on track'));
+    expect(getLabels(mockTray)[0]).toMatch(/^Today: Glow · Shine at \d/);
+    expect(mockTray.setToolTip).toHaveBeenLastCalledWith(expect.stringContaining('Today: Glow · Shine at'));
   });
 
-  test('says when only a partial is still possible', () => {
+  test('says when checkpoints are draining', () => {
     const mockTray = createMockTray();
 
-    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ cleanPossible: false }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ losing: true }));
 
-    expect(getLabels(mockTray)[0]).toBe('Today 58% · ½ still possible');
+    expect(getLabels(mockTray)[0]).toBe('Today: Glow · stopped, losing checkpoints');
   });
 
-  test('says when the day is lost', () => {
+  test('shows just the checkpoint when there is no next one today', () => {
     const mockTray = createMockTray();
 
-    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ cleanPossible: false, partialPossible: false }));
+    updateTray(mockTray as unknown as Electron.Tray, createTimerState(), createScore({ level: 4 }));
 
-    expect(getLabels(mockTray)[0]).toBe('Today 58% · day lost');
+    expect(getLabels(mockTray)[0]).toBe('Today: Radiant');
   });
 
   test('has no score on a day off', () => {

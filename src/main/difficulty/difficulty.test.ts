@@ -11,16 +11,16 @@ vi.mock('../timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(),
 }));
 
-import { getAllottedBreaks, getAllottedSnoozes, getBreakDurationMs, getPartialThreshold, getSnoozeDurationMs } from './difficulty';
+import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from './difficulty';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
 import { getAppliedTimerConfigs } from '../timer/timerConfigs';
+import { getUserDataFromFile } from '../../shared/utils/files';
 
 const customConfigs: DifficultyConfigs['custom'] = {
   breakDurationMs: 40 * 1000,
-  allottedBreaks: 2,
   snoozeDurationMs: 8 * 60 * 1000,
-  allottedSnoozes: 4,
-  partialThreshold: 0.6,
+  allottedPowerups: 4,
+  lunchDurationMs: 20 * 60 * 1000,
 };
 
 // Helper: run with a difficulty level and timer length
@@ -45,18 +45,25 @@ describe('Preset difficulties', () => {
     });
 
     expect(getBreakDurationMs()).toBe(135 * 1000); // 5% of 45 minutes
-    expect(getAllottedBreaks()).toBe(3);
+    expect(getAllottedPowerups()).toBe(3);
   });
 
   test.each([
-    { level: 'EASY', breakSeconds: 60, allottedBreaks: 5 },   // 2% of 45 min = 54s, rounded to 60s
-    { level: 'NORMAL', breakSeconds: 135, allottedBreaks: 3 }, // 5% of 45 min = 135s
-    { level: 'HARD', breakSeconds: 270, allottedBreaks: 1 },   // 10% of 45 min = 270s
-  ] as const)('$level with a 45 minute timer', ({ level, breakSeconds, allottedBreaks }) => {
+    { level: 'EASY', breakSeconds: 60, allottedPowerups: 5, lunchMinutes: 60 },   // 2% of 45 min = 54s, rounded to 60s
+    { level: 'NORMAL', breakSeconds: 135, allottedPowerups: 3, lunchMinutes: 45 }, // 5% of 45 min = 135s
+    { level: 'HARD', breakSeconds: 270, allottedPowerups: 1, lunchMinutes: 30 },   // 10% of 45 min = 270s
+  ] as const)('$level with a 45 minute timer', ({ level, breakSeconds, allottedPowerups, lunchMinutes }) => {
     useDifficulty(level);
 
     expect(getBreakDurationMs()).toBe(breakSeconds * 1000);
-    expect(getAllottedBreaks()).toBe(allottedBreaks);
+    expect(getAllottedPowerups()).toBe(allottedPowerups);
+    expect(getLunchDurationMs()).toBe(lunchMinutes * 60 * 1000);
+  });
+
+  test('lunch length ignores the timer', () => {
+    useDifficulty('NORMAL', 90);
+
+    expect(getLunchDurationMs()).toBe(45 * 60 * 1000);
   });
 
   test('break length scales with the timer', () => {
@@ -82,14 +89,13 @@ describe('Preset difficulties', () => {
 
 describe('Snooze', () => {
   test.each([
-    { level: 'EASY', snoozeMinutes: 9, allottedSnoozes: 5 },   // 20% of 45 min = 9 min
-    { level: 'NORMAL', snoozeMinutes: 7, allottedSnoozes: 3 }, // 15% of 45 min = 6.75 min, rounded to 7
-    { level: 'HARD', snoozeMinutes: 5, allottedSnoozes: 1 },   // 10% of 45 min = 4.5 min, rounded to 5
-  ] as const)('$level with a 45 minute timer', ({ level, snoozeMinutes, allottedSnoozes }) => {
+    { level: 'EASY', snoozeMinutes: 9 },   // 20% of 45 min = 9 min
+    { level: 'NORMAL', snoozeMinutes: 7 }, // 15% of 45 min = 6.75 min, rounded to 7
+    { level: 'HARD', snoozeMinutes: 5 },   // 10% of 45 min = 4.5 min, rounded to 5
+  ] as const)('$level with a 45 minute timer', ({ level, snoozeMinutes }) => {
     useDifficulty(level);
 
     expect(getSnoozeDurationMs()).toBe(snoozeMinutes * 60 * 1000);
-    expect(getAllottedSnoozes()).toBe(allottedSnoozes);
   });
 
   test('snooze length rounds to the nearest minute', () => {
@@ -107,27 +113,26 @@ describe('Snooze', () => {
   });
 });
 
-describe('Partial threshold', () => {
-  test.each([
-    { level: 'EASY', threshold: 0.4 },
-    { level: 'NORMAL', threshold: 0.5 },
-    { level: 'HARD', threshold: 0.7 },
-  ] as const)('$level needs $threshold of the workday', ({ level, threshold }) => {
-    useDifficulty(level);
-
-    expect(getPartialThreshold()).toBe(threshold);
-  });
-});
-
 describe('Custom difficulty', () => {
-  test('uses the chosen break length and skips as they are', () => {
+  test('uses the chosen lengths and power-ups as they are', () => {
     useDifficulty('CUSTOM');
 
     expect(getBreakDurationMs()).toBe(customConfigs.breakDurationMs);
-    expect(getAllottedBreaks()).toBe(customConfigs.allottedBreaks);
     expect(getSnoozeDurationMs()).toBe(customConfigs.snoozeDurationMs);
-    expect(getAllottedSnoozes()).toBe(customConfigs.allottedSnoozes);
-    expect(getPartialThreshold()).toBe(customConfigs.partialThreshold);
+    expect(getAllottedPowerups()).toBe(customConfigs.allottedPowerups);
+    expect(getLunchDurationMs()).toBe(customConfigs.lunchDurationMs);
+  });
+
+  test('a custom difficulty saved before lunch existed gets the default lunch', () => {
+    vi.mocked(getUserDataFromFile).mockReturnValueOnce({
+      fileContent: { level: 'CUSTOM', custom: { breakDurationMs: 40 * 1000, allottedBreaks: 2 } },
+      filePath: '',
+    });
+    loadDifficultyConfigs();
+
+    expect(getBreakDurationMs()).toBe(40 * 1000);
+    expect(getLunchDurationMs()).toBe(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
+    expect(getAllottedPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
   });
 
   test('ignores the timer length', () => {

@@ -4,14 +4,17 @@ interface CircularButtonProps {
   onClick: () => void;
   disabled?: boolean;
   testId?: string;
+  title?: string; // Shown on hover and read by screen readers, since the buttons are icons only
   children: ReactNode;
   className?: string; // size, colors — the stuff that varies
 }
 
-export default function CircularButton({ onClick, disabled = false, testId, children, className = "" }: CircularButtonProps) {
+export default function CircularButton({ onClick, disabled = false, testId, title, children, className = "" }: CircularButtonProps) {
   return (
     <button
       data-testid={testId}
+      title={title}
+      aria-label={title}
       onClick={onClick}
       disabled={disabled}
       className={

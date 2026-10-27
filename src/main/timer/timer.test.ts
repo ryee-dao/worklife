@@ -8,17 +8,17 @@ vi.mock('../../shared/utils/files', () => ({
 }));
 
 vi.mock('../limit/limitState', () => ({
-  calculateRemainingBreakSkips: vi.fn(() => 3),
-  increaseSkippedBreakCount: vi.fn(),
-  calculateRemainingSnoozes: vi.fn(() => 3),
-  increaseSnoozedCount: vi.fn(),
+  calculateRemainingPowerups: vi.fn(() => 3),
+  increasePowerupsUsed: vi.fn(),
+  calculateRemainingLunches: vi.fn(() => 1),
+  increaseLunchesUsed: vi.fn(),
 }));
 
 vi.mock('../difficulty/difficulty', () => ({
-  getAllottedBreaks: vi.fn(() => 3),
+  getAllottedPowerups: vi.fn(() => 3),
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
-  getAllottedSnoozes: vi.fn(() => 3),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
+  getLunchDurationMs: vi.fn(() => DEFAULTS.DEFAULT_LUNCH_DURATION_MS),
 }));
 
 vi.mock('./timerConfigs', () => ({
@@ -28,19 +28,20 @@ vi.mock('./timerConfigs', () => ({
   })),
 }));
 
-import { initTimer, destroyTimers, stopTimer, startTimer, skipTimer, skipBreak, snoozeTimer, timerEmitter, TimerState, StoredTimerState, startBreak } from './timerState';
+import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, TimerState, TimerTransition, StoredTimerState, startBreak } from './timerState';
 import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
-import { calculateRemainingBreakSkips, calculateRemainingSnoozes, increaseSnoozedCount } from '../limit/limitState';
+import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from '../limit/limitState';
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
-  vi.mocked(calculateRemainingBreakSkips).mockReset();
-  vi.mocked(calculateRemainingBreakSkips).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
-  vi.mocked(calculateRemainingSnoozes).mockReset();
-  vi.mocked(calculateRemainingSnoozes).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_SNOOZES);
-  vi.mocked(increaseSnoozedCount).mockReset();
+  vi.mocked(calculateRemainingPowerups).mockReset();
+  vi.mocked(calculateRemainingPowerups).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+  vi.mocked(increasePowerupsUsed).mockReset();
+  vi.mocked(calculateRemainingLunches).mockReset();
+  vi.mocked(calculateRemainingLunches).mockReturnValue(1);
+  vi.mocked(increaseLunchesUsed).mockReset();
 });
 
 afterEach(() => {
@@ -418,7 +419,7 @@ describe('Stop and resume', () => {
 });
 
 describe('Skip functionality', () => {
-  test('skipTimer forces immediate transition to overdue', () => {
+  test('forwardToBreak forces immediate transition to overdue', () => {
     seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
 
     const overdueHandler = vi.fn();
@@ -427,7 +428,7 @@ describe('Skip functionality', () => {
     timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
 
     initTimer();
-    skipTimer("WINDOW");
+    forwardToBreak("WINDOW");
 
     // Next tick should trigger transition since countdown was set to 0
     vi.advanceTimersByTime(1000);
@@ -474,7 +475,7 @@ describe('Snooze', () => {
     snoozeTimer("WINDOW");
 
     expect(runningHandler.mock.lastCall![0].currentCountdownMs).toBe(100000 + DEFAULTS.DEFAULT_SNOOZE_DURATION_MS);
-    expect(increaseSnoozedCount).toHaveBeenCalledOnce();
+    expect(increasePowerupsUsed).toHaveBeenCalledOnce();
   });
 
   test('snoozing during the warning pushes the overdue window back', () => {
@@ -502,12 +503,12 @@ describe('Snooze', () => {
     snoozeTimer("WINDOW");
 
     expect(runningHandler).not.toHaveBeenCalled();
-    expect(increaseSnoozedCount).not.toHaveBeenCalled();
+    expect(increasePowerupsUsed).not.toHaveBeenCalled();
   });
 
   test('snooze is a no-op when no snoozes remain', () => {
     seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
-    vi.mocked(calculateRemainingSnoozes).mockReturnValue(0);
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(0);
 
     const runningHandler = vi.fn();
     timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
@@ -517,12 +518,12 @@ describe('Snooze', () => {
     snoozeTimer("WINDOW");
 
     expect(runningHandler).not.toHaveBeenCalled();
-    expect(increaseSnoozedCount).not.toHaveBeenCalled();
+    expect(increasePowerupsUsed).not.toHaveBeenCalled();
   });
 });
 
 describe('Available actions', () => {
-  test('RUNNING state offers stop and skip actions', () => {
+  test('RUNNING state offers stop, forward, snooze and lunch', () => {
     seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
 
     const runningHandler = vi.fn();
@@ -533,7 +534,10 @@ describe('Available actions', () => {
 
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
     expect(emittedState.availableActions).toContain('stop');
-    expect(emittedState.availableActions).toContain('skip');
+    expect(emittedState.availableActions).toContain('forward');
+    expect(emittedState.availableActions).toContain('snooze');
+    expect(emittedState.availableActions).toContain('lunch');
+    expect(emittedState.availableActions).not.toContain('skip'); // Skipping is only for breaks
     expect(emittedState.availableActions).not.toContain('start');
   });
 
@@ -554,7 +558,7 @@ describe('Available actions', () => {
   });
 
   test('BREAK state offers skip when skips remain', () => {
-    vi.mocked(calculateRemainingBreakSkips).mockReturnValue(2);
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(2);
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
     const breakHandler = vi.fn();
@@ -570,7 +574,7 @@ describe('Available actions', () => {
   });
 
   test('BREAK state has no skip when skips exhausted', () => {
-    vi.mocked(calculateRemainingBreakSkips).mockReturnValue(0);
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(0);
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
     const breakHandler = vi.fn();
@@ -596,13 +600,14 @@ describe('Available actions', () => {
     const state = overdueHandler.mock.lastCall![0];
     expect(state.availableActions).toContain('breaktime');
     expect(state.availableActions).toContain('skip');
-    expect(state.availableActions).not.toContain('stop');
+    expect(state.availableActions).toContain('lunch');
+    expect(state.availableActions).toContain('stop'); // The escape hatch
   });
 });
 
 describe('State emission', () => {
-  test('emits remaining skips and allotted breaks with state', () => {
-    vi.mocked(calculateRemainingBreakSkips).mockReturnValue(2);
+  test('emits remaining and allotted power-ups with state', () => {
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(2);
     seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
 
     const runningHandler = vi.fn();
@@ -612,12 +617,12 @@ describe('State emission', () => {
     vi.advanceTimersByTime(1000);
 
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
-    expect(emittedState.remainingSkips).toBe(2);
-    expect(emittedState.allottedBreaks).toBe(3);
+    expect(emittedState.remainingPowerups).toBe(2);
+    expect(emittedState.allottedPowerups).toBe(3);
   });
 
-  test('remainingSkips never goes below 0', () => {
-    vi.mocked(calculateRemainingBreakSkips).mockReturnValue(-1);
+  test('remainingPowerups never goes below 0', () => {
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(-1);
     seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
 
     const runningHandler = vi.fn();
@@ -627,7 +632,7 @@ describe('State emission', () => {
     vi.advanceTimersByTime(1000);
 
     const emittedState = runningHandler.mock.calls[runningHandler.mock.calls.length - 1][0];
-    expect(emittedState.remainingSkips).toBe(0);
+    expect(emittedState.remainingPowerups).toBe(0);
   });
 });
 
@@ -702,44 +707,19 @@ describe('Action enforcement', () => {
     expect(startBreakHandler).not.toHaveBeenCalled();
   });
 
-  test('stopTimer is a no-op during OVERDUE', () => {
-    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+  test('stopTimer is a no-op during STOPPED', () => {
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
 
-    const stoppedHandler = vi.fn();
-    const overdueHandler = vi.fn();
-    timerEmitter.on(EVENTS.TIMER.STOPPED, stoppedHandler);
-    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
-
+    const transitionHandler = vi.fn();
     initTimer();
-    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    stopTimer("WINDOW");
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
     stopTimer("TRAY"); // Stale tray menu still showing Stop
-    vi.advanceTimersByTime(1000);
 
-    expect(stoppedHandler).not.toHaveBeenCalled();
-    expect(overdueHandler.mock.lastCall![0].status).toBe('OVERDUE');
-    expect(overdueHandler.mock.lastCall![0].overdueTimeMs).toBe(1000); // Still counting
+    expect(transitionHandler).not.toHaveBeenCalled();
   });
 
-  test('stopTimer is a no-op during BREAK', () => {
-    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
-
-    const stoppedHandler = vi.fn();
-    const breakHandler = vi.fn();
-    timerEmitter.on(EVENTS.TIMER.STOPPED, stoppedHandler);
-    timerEmitter.on(EVENTS.TIMER.ON_BREAK, breakHandler);
-
-    initTimer();
-    vi.advanceTimersByTime(1000); // Transition to OVERDUE
-    startBreak("WINDOW");
-    stopTimer("TRAY");
-    vi.advanceTimersByTime(1000);
-
-    expect(stoppedHandler).not.toHaveBeenCalled();
-    expect(breakHandler.mock.lastCall![0].status).toBe('BREAK');
-    expect(breakHandler.mock.lastCall![0].currentCountdownMs).toBe(DEFAULTS.DEFAULT_BREAK_DURATION_MS - 1000); // Still counting
-  });
-
-  test('skipTimer is a no-op during OVERDUE', () => {
+  test('forwardToBreak is a no-op during OVERDUE', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
     const startBreakHandler = vi.fn();
@@ -747,7 +727,7 @@ describe('Action enforcement', () => {
 
     initTimer();
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
-    skipTimer("TRAY");
+    forwardToBreak("TRAY");
 
     expect(startBreakHandler).not.toHaveBeenCalled();
   });
@@ -789,7 +769,7 @@ describe('Action enforcement', () => {
     expect(breakHandler.mock.lastCall![0].status).toBe('BREAK');
   });
 
-  test('skipTimer is a no-op during BREAK', () => {
+  test('forwardToBreak is a no-op during BREAK', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
     const stopBreakHandler = vi.fn();
@@ -798,9 +778,201 @@ describe('Action enforcement', () => {
     initTimer();
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
     startBreak("WINDOW");
-    skipTimer("TRAY"); // Would end the break without using a skip
+    forwardToBreak("TRAY"); // Would end the break without using a skip
 
     expect(stopBreakHandler).not.toHaveBeenCalled();
+  });
+});
+
+describe('Stop from the break screens', () => {
+  // The escape hatch: it closes the break window and the next resume starts a full work session
+  test.each([
+    { from: 'OVERDUE', reachIt: () => vi.advanceTimersByTime(1000) },
+    { from: 'BREAK', reachIt: () => { vi.advanceTimersByTime(1000); startBreak("WINDOW"); } },
+  ])('stopping from $from closes the window and resets the timer', ({ from, reachIt }) => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const stopBreakHandler = vi.fn();
+    const stoppedHandler = vi.fn();
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.STOPPED, stoppedHandler);
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+
+    initTimer();
+    reachIt();
+    stopTimer("WINDOW");
+
+    expect(stopBreakHandler).toHaveBeenCalledOnce();
+    const state = stoppedHandler.mock.lastCall![0];
+    expect(state.status).toBe('STOPPED');
+    expect(state.currentCountdownMs).toBe(DEFAULTS.DEFAULT_TIMER_DURATION_MS);
+    expect(state.overdueTimeMs).toBe(0);
+    expect(transitionHandler).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'STOPPED', from }));
+  });
+
+  test('resuming after a stop from overdue runs a full session instead of going straight back to overdue', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.START_OVERDUE, overdueHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    stopTimer("WINDOW");
+    startTimer("WINDOW");
+    vi.advanceTimersByTime(5000);
+
+    expect(overdueHandler).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Lunch', () => {
+  const getLastState = (handler: ReturnType<typeof vi.fn>): TimerState => handler.mock.lastCall![0];
+
+  test('lunch counts down its own length, then goes back to work with a full timer', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const lunchHandler = vi.fn();
+    const runningHandler = vi.fn();
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_LUNCH, lunchHandler);
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+
+    initTimer();
+    startLunch("WINDOW");
+
+    expect(increaseLunchesUsed).toHaveBeenCalledOnce();
+    expect(getLastState(lunchHandler).status).toBe('LUNCH');
+    expect(getLastState(lunchHandler).currentCountdownMs).toBe(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
+    expect(transitionHandler).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'LUNCH_STARTED', from: 'RUNNING' }));
+
+    vi.advanceTimersByTime(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
+
+    expect(getLastState(runningHandler).status).toBe('RUNNING');
+    expect(getLastState(runningHandler).currentCountdownMs).toBe(DEFAULTS.DEFAULT_TIMER_DURATION_MS);
+    expect(transitionHandler).toHaveBeenLastCalledWith({ type: 'LUNCH_ENDED', cause: 'TIME_UP' });
+  });
+
+  test('resuming during lunch ends it early with a full timer', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+
+    initTimer();
+    startLunch("WINDOW");
+    vi.advanceTimersByTime(10000);
+    startTimer("TRAY");
+
+    expect(getLastState(runningHandler).currentCountdownMs).toBe(DEFAULTS.DEFAULT_TIMER_DURATION_MS);
+    expect(transitionHandler).toHaveBeenLastCalledWith({
+      type: 'LUNCH_ENDED', cause: 'ENDED_EARLY', source: 'TRAY', lunchLeftMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS - 10000,
+    });
+  });
+
+  test('lunch from overdue closes the overdue window', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const stopBreakHandler = vi.fn();
+    const lunchHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.STOP_BREAK, stopBreakHandler);
+    timerEmitter.on(EVENTS.TIMER.ON_LUNCH, lunchHandler);
+
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    startLunch("WINDOW");
+
+    expect(stopBreakHandler).toHaveBeenCalledOnce();
+    expect(getLastState(lunchHandler).overdueTimeMs).toBe(0);
+  });
+
+  test('lunch offers only ending it early', () => {
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const lunchHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_LUNCH, lunchHandler);
+
+    initTimer();
+    startLunch("WINDOW");
+
+    expect(getLastState(lunchHandler).availableActions).toEqual(['start']);
+  });
+
+  test.each([
+    { name: 'no lunch is left', setUp: () => vi.mocked(calculateRemainingLunches).mockReturnValue(0) },
+    { name: 'stopped', setUp: () => stopTimer("WINDOW") },
+    { name: 'on a break', setUp: () => { vi.advanceTimersByTime(1000); startBreak("WINDOW"); } },
+  ])('lunch is a no-op when $name', ({ setUp }) => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const transitionHandler = vi.fn();
+    initTimer();
+    setUp();
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+    startLunch("WINDOW");
+
+    expect(transitionHandler).not.toHaveBeenCalled();
+    expect(increaseLunchesUsed).not.toHaveBeenCalled();
+  });
+
+  test('no lunch in the available actions once it is used', () => {
+    vi.mocked(calculateRemainingLunches).mockReturnValue(0);
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    initTimer();
+
+    expect(getLastState(runningHandler).availableActions).not.toContain('lunch');
+  });
+
+  test('relaunching during lunch goes back to work with a full timer', () => {
+    seedTimerState({ currentCountdownMs: 600000, status: 'LUNCH' });
+
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+    initTimer();
+
+    expect(getLastState(runningHandler).status).toBe('RUNNING');
+    expect(getLastState(runningHandler).currentCountdownMs).toBe(DEFAULTS.DEFAULT_TIMER_DURATION_MS);
+  });
+});
+
+describe('Power-ups', () => {
+  test('snoozes and break skips draw from the same pool', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+
+    initTimer();
+    snoozeTimer("WINDOW");
+    forwardToBreak("WINDOW");
+    skipBreak("WINDOW");
+
+    expect(increasePowerupsUsed).toHaveBeenCalledTimes(2);
+    const types = transitionHandler.mock.calls.map((call) => (call[0] as TimerTransition).type);
+    expect(types).toEqual(['APP_STARTED', 'SNOOZED', 'OVERDUE_STARTED', 'BREAK_SKIPPED']);
+  });
+
+  test('with no power-ups left, neither a snooze nor a break skip works', () => {
+    vi.mocked(calculateRemainingPowerups).mockReturnValue(0);
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    const overdueHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, overdueHandler);
+
+    initTimer();
+    snoozeTimer("WINDOW");
+    forwardToBreak("WINDOW");
+    skipBreak("WINDOW");
+
+    expect(increasePowerupsUsed).not.toHaveBeenCalled();
+    expect(overdueHandler.mock.lastCall![0].status).toBe('OVERDUE'); // The skip didn't end it
   });
 });
 

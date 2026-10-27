@@ -10,18 +10,17 @@ vi.mock('../../shared/utils/files', () => ({
 }));
 
 vi.mock('../limit/limitState', () => ({
-  calculateRemainingBreakSkips: vi.fn(() => 2),
-  increaseSkippedBreakCount: vi.fn(),
-  calculateRemainingSnoozes: vi.fn(() => 2),
-  increaseSnoozedCount: vi.fn(),
+  calculateRemainingPowerups: vi.fn(() => 2),
+  increasePowerupsUsed: vi.fn(),
+  calculateRemainingLunches: vi.fn(() => 1),
+  increaseLunchesUsed: vi.fn(),
 }));
 
 vi.mock('../difficulty/difficulty', () => ({
-  getAllottedBreaks: vi.fn(() => 3),
+  getAllottedPowerups: vi.fn(() => 3),
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
-  getAllottedSnoozes: vi.fn(() => 3),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
-  getPartialThreshold: vi.fn(() => 0.5),
+  getLunchDurationMs: vi.fn(() => DEFAULTS.DEFAULT_LUNCH_DURATION_MS),
 }));
 
 vi.mock('../difficulty/difficultyConfigs', () => ({
@@ -44,7 +43,7 @@ vi.mock('../timer/timerConfigs', () => ({
 }));
 
 import { destroyStats, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
-import { initTimer, destroyTimers, stopTimer, startTimer, skipTimer, startBreak, skipBreak, snoozeTimer, timerEmitter, StoredTimerState } from '../timer/timerState';
+import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '../timer/timerState';
 import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '../../shared/utils/files';
 
 beforeEach(() => {
@@ -98,10 +97,9 @@ describe('Event format', () => {
         timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
         breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
         warningThresholdMs: 5000,
-        allottedBreaks: 3,
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
-        allottedSnoozes: 3,
-        partialThreshold: 0.5,
+        allottedPowerups: 3,
+        lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
         difficulty: 'NORMAL',
         levelThresholdMs: 180000,
         workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false },
@@ -185,7 +183,7 @@ describe('Timer transitions', () => {
     startTimer("WINDOW");
 
     const [, stopped, resumed] = getRecordedEvents();
-    expect(stopped).toMatchObject({ type: 'STOPPED', source: 'TRAY', countdownMs: 95000 });
+    expect(stopped).toMatchObject({ type: 'STOPPED', source: 'TRAY', from: 'RUNNING', countdownMs: 95000 });
     expect(resumed).toMatchObject({ type: 'RESUMED', source: 'WINDOW', countdownMs: 95000 });
   });
 
@@ -204,12 +202,12 @@ describe('Timer transitions', () => {
     expect(completed).toMatchObject({ type: 'BREAK_COMPLETED' });
   });
 
-  test('skipping the timer records how much countdown was left', () => {
+  test('forwarding to the break records how much countdown was left', () => {
     seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
 
     initStats();
     initTimer();
-    skipTimer("WINDOW");
+    forwardToBreak("WINDOW");
 
     expect(getRecordedEvents()[1]).toMatchObject({ type: 'OVERDUE_STARTED', cause: 'TIMER_SKIPPED', source: 'WINDOW', countdownMs: 100000 });
   });
@@ -237,7 +235,7 @@ describe('Timer transitions', () => {
     skipBreak("WINDOW");
 
     expect(getRecordedEvents().at(-1)).toMatchObject({
-      type: 'BREAK_SKIPPED', source: 'WINDOW', from: 'BREAK', overdueMs: 0, breakElapsedMs: 5000, skipsLeft: 2,
+      type: 'BREAK_SKIPPED', source: 'WINDOW', from: 'BREAK', overdueMs: 0, breakElapsedMs: 5000, powerupsLeft: 2,
     });
   });
 
@@ -251,7 +249,7 @@ describe('Timer transitions', () => {
     skipBreak("TRAY");
 
     expect(getRecordedEvents().at(-1)).toMatchObject({
-      type: 'BREAK_SKIPPED', source: 'TRAY', from: 'OVERDUE', overdueMs: 3000, breakElapsedMs: 0, skipsLeft: 2,
+      type: 'BREAK_SKIPPED', source: 'TRAY', from: 'OVERDUE', overdueMs: 3000, breakElapsedMs: 0, powerupsLeft: 2,
     });
   });
 
@@ -263,7 +261,7 @@ describe('Timer transitions', () => {
     snoozeTimer("TRAY");
 
     expect(getRecordedEvents().at(-1)).toMatchObject({
-      type: 'SNOOZED', source: 'TRAY', snoozeMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS, countdownMs: 100000, snoozesLeft: 2,
+      type: 'SNOOZED', source: 'TRAY', snoozeMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS, countdownMs: 100000, powerupsLeft: 2,
     });
   });
 
@@ -274,10 +272,25 @@ describe('Timer transitions', () => {
     initTimer();
     startBreak("WINDOW"); // Not overdue yet
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
-    stopTimer("TRAY");
-    skipTimer("TRAY");
+    forwardToBreak("TRAY");
+    snoozeTimer("TRAY");
+    startTimer("TRAY");
 
     expect(getRecordedEvents().map((e) => e.type)).toEqual(['APP_STARTED', 'OVERDUE_STARTED']);
+  });
+
+  test('lunch records where it was taken from and how long, then how it ended', () => {
+    seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
+
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(1000); // Transition to OVERDUE
+    startLunch("TRAY");
+    vi.advanceTimersByTime(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
+
+    const [, , lunchStarted, lunchEnded] = getRecordedEvents().filter((event) => event.type !== 'HEARTBEAT'); // Lunch is long enough for heartbeats
+    expect(lunchStarted).toMatchObject({ type: 'LUNCH_STARTED', source: 'TRAY', from: 'OVERDUE', lunchMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS });
+    expect(lunchEnded).toMatchObject({ type: 'LUNCH_ENDED', cause: 'TIME_UP' });
   });
 });
 
@@ -307,8 +320,22 @@ describe('End-of-day card', () => {
   ].map((event) => JSON.stringify({
     ...event,
     tzOffsetMin: -240,
-    config: { timerDurationMs: 45 * 60 * 1000, partialThreshold: 0.5, workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' } },
+    config: { workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' } },
   })).join('\n');
+
+  test('a workday the app was never open for has no card', () => {
+    const eveningOnlyLog = JSON.stringify({
+      type: 'APP_STARTED',
+      at: Date.parse('2026-10-26T19:00:00-04:00'),
+      tzOffsetMin: -240,
+      config: { workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' } },
+    });
+    vi.setSystemTime(new Date('2026-10-27T08:00:00-04:00'));
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce(eveningOnlyLog);
+    initStats();
+
+    expect(takeUnseenSummaryDate()).toBeNull();
+  });
 
   test('returns the latest finished workday once, then nothing', () => {
     vi.setSystemTime(new Date('2026-10-27T08:00:00-04:00'));

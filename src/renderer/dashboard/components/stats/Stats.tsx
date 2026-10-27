@@ -1,36 +1,34 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { DayScore } from "../../../../main/stats/cleanDays";
-import CleanDayCalendar from "./CleanDayCalendar";
+import { DayScore } from "../../../../main/stats/checkpoints";
+import MonthCalendar from "./MonthCalendar";
 import DayCard from "./DayCard";
+import TodayPanel from "./TodayPanel";
 
-export default function Stats() {
+interface StatsProps {
+  todayScore: DayScore | null;
+}
+
+export default function Stats({ todayScore }: StatsProps) {
   const { localDate } = useParams();
   const [scores, setScores] = useState<Record<string, DayScore>>({});
-  const [totalCleanDays, setTotalCleanDays] = useState(0);
 
   // Reload when a day is picked, so a day that just ended shows its result
   useEffect(() => {
-    window.electronAPI.getDayScores().then((dayScores) => {
-      setScores(dayScores.scores);
-      setTotalCleanDays(dayScores.totalCleanDays);
-    });
+    window.electronAPI.getDayScores().then(setScores);
   }, [localDate]);
 
-  // Without a picked day, show the latest one
-  const selectedDate = localDate ?? Object.keys(scores).sort().at(-1);
+  // Today comes from the live score, which updates every second
+  const allScores = todayScore ? { ...scores, [todayScore.localDate]: todayScore } : scores;
+  // Without a picked day, show today, or the latest day there is
+  const selectedDate = localDate ?? todayScore?.localDate ?? Object.keys(allScores).sort().at(-1);
 
   return (
-    <div data-testid="stats" className="grow flex flex-col sm:flex-row gap-4 p-4 overflow-auto">
-      <div className="flex flex-col gap-2">
-        <div>
-          <span data-testid="total-clean-days" className="text-3xl font-bold">{totalCleanDays}</span>{" "}
-          <span className="text-slate-500">clean days</span>
-        </div>
-        <CleanDayCalendar scores={scores} selectedDate={selectedDate} />
-      </div>
-      <div className="grow">
-        <DayCard score={selectedDate ? scores[selectedDate] : undefined} localDate={selectedDate} />
+    <div data-testid="stats" className="grow flex flex-col gap-3 p-3 sm:p-4 overflow-auto">
+      <TodayPanel score={todayScore} />
+      <div className="flex flex-col sm:flex-row gap-3 items-start">
+        <MonthCalendar scores={allScores} selectedDate={selectedDate} />
+        <DayCard score={selectedDate ? allScores[selectedDate] : undefined} localDate={selectedDate} />
       </div>
     </div>
   );

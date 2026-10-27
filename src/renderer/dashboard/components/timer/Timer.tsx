@@ -1,22 +1,20 @@
 import { TimerState } from "../../../../main/timer/timerState";
 import TimerTimeDisplay from "./TimerTimeDisplay";
 import TimerButtons from "./TimerButtons";
-import TimerSkipbox from "./TimerSkipbox";
-import { DayScore } from "../../../../main/stats/cleanDays";
+import PowerupBar from "./PowerupBar";
 
 interface TimerProps {
   timerState?: TimerState;
-  todayScore: DayScore | null;
 }
 
-export default function Timer({ timerState, todayScore }: TimerProps) {
+export default function Timer({ timerState }: TimerProps) {
   return (
     <>
       {timerState && (
         <div data-testid="timer-container" className="flex flex-col grow relative">
-          <TimerTimeDisplay timerState={timerState} todayScore={todayScore} />
+          <TimerTimeDisplay timerState={timerState} />
           <TimerButtons timerState={timerState}/>
-          <TimerSkipbox timerState={timerState} />
+          <PowerupBar timerState={timerState} />
         </div>
       )}
     </>
