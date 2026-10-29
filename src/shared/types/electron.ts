@@ -6,7 +6,7 @@ import { DayScore } from "../../main/stats/checkpoints";
 import { OverdueConfigs } from "../../main/overdue/overdueConfigs";
 
 export interface ElectronAPI {
-  onTimerUpdate: (callback: (data: TimerState) => void) => void;
+  onTimerUpdate: (callback: (data: TimerState) => void) => () => void;
   onWarning: (callback: () => void) => void;
   getTimerState: () => Promise<TimerState>;
   onTodayScore: (callback: (score: DayScore | null) => void) => () => void;
@@ -25,6 +25,8 @@ export interface ElectronAPI {
   saveOverdueConfigs: (arg0: OverdueConfigs) => Promise<void>;
   saveWorkdayConfigs: (arg0: WorkdayConfigs) => Promise<void>;
   devApplyWorkday: () => Promise<void>; // Only answered in dev
+  devResetDay: () => Promise<void>;     // Only answered in dev
+  devAdjustCheckpoint: (by: number) => Promise<void>; // Only answered in dev
   loadTimerConfigs: () => Promise<TimerConfigs>;
   loadDifficultyConfigs: () => Promise<DifficultyConfigs>
   loadOverdueConfigs: () => Promise<OverdueConfigs>

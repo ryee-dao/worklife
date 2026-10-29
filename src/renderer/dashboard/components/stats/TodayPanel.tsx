@@ -22,12 +22,11 @@ const describeToday = (score: DayScore, now: number): { countdown: ReactNode; li
     return { countdown: null, line: "Where the workday ended" };
   }
   if (score.losing) {
-    const decayMs = (score.workEnd - score.workStart) * CHECKPOINTS.DECAY_RATIO;
+    // No next loss once at Dim, or when it would land after the workday
+    const nextLoss = score.nextLossAt ? ` · drop to ${NAMES[score.level - 1]} in ${formatCountdown(score.nextLossAt - now)}` : "";
     return {
-      countdown: score.nextLossAt
-        ? <>{formatCountdown(score.nextLossAt - now)} {unit(`until you drop to ${NAMES[score.level - 1]}`)}</>
-        : unit("Resume to climb again"),
-      line: <span className="text-red-600 font-semibold">Stopped · losing a checkpoint every {formatCountdown(decayMs)}</span>,
+      countdown: unit("Resume to climb again"),
+      line: <span className="text-red-600 font-semibold">Stopped{nextLoss}</span>,
     };
   }
   if (score.runStart === null) {

@@ -1,15 +1,11 @@
 import { stopTimer, startTimer } from "../timer/timerState";
+import { convertTimeToMinutes } from "../../shared/utils/time";
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "./workdayConfigs";
 
 const workdayCheckIntervalMs = 60 * 1000; // 1 minute
 let workdayCheckTimer: NodeJS.Timeout;
 let wasInWorkday: boolean;
 let onWorkdayEnd: () => void;
-
-const convertTimeToMinutes = (time: string) => {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-};
 
 // shortcut: assumes start is before end (no overnight workdays), handle end < start here to support them
 export const isInWorkday = (now: Date, configs: WorkdayConfigs) => {

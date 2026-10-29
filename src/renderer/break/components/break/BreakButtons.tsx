@@ -2,6 +2,7 @@ import { FastForward, Square } from "lucide-react";
 import { TimerState } from "../../../../main/timer/timerState";
 import SlashedIcon from "../../../common/components/SlashedIcon";
 import CircularButton from "../../../common/components/CircularButton";
+import PowerupCost from "../../../common/components/PowerupCost";
 
 interface BreakButtonProps {
   timerState: TimerState;
@@ -26,6 +27,7 @@ export default function BreakButtons({ timerState }: BreakButtonProps) {
         ) : (
           <SlashedIcon icon={FastForward} slashSize={4} className="h-1/2 w-1/2" />
         )}
+        <PowerupCost />
       </CircularButton>
 
       {/* The escape hatch, which costs a checkpoint like any stop */}
@@ -33,7 +35,7 @@ export default function BreakButtons({ timerState }: BreakButtonProps) {
         testId="break-window-stop-button"
         title="Stop (costs a checkpoint)"
         onClick={() => window.electronAPI.stop()}
-        className="h-2/5 bg-slate-100 border-slate-400 text-slate-700 hover:bg-slate-200"
+        className="h-full bg-red-100 border-red-400 text-red-700 hover:bg-red-200"
       >
         <Square className="h-2/5 w-2/5" />
       </CircularButton>

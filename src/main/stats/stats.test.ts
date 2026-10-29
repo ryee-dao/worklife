@@ -21,6 +21,7 @@ vi.mock('../difficulty/difficulty', () => ({
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
   getLunchDurationMs: vi.fn(() => DEFAULTS.DEFAULT_LUNCH_DURATION_MS),
+  getCheckpointDecayMs: vi.fn(() => DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS),
 }));
 
 vi.mock('../difficulty/difficultyConfigs', () => ({
@@ -100,6 +101,7 @@ describe('Event format', () => {
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
         allottedPowerups: 3,
         lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
+        checkpointDecayMs: DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS,
         difficulty: 'NORMAL',
         levelThresholdMs: 180000,
         workday: { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false },

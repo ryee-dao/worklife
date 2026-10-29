@@ -297,3 +297,59 @@ describe('Day details', () => {
     expect(getDayScores(saturday, at('2026-10-31 18:00'))).toEqual({});
   });
 });
+
+describe('Drain speed', () => {
+  test("comes from the day's difficulty when it was logged", () => {
+    const hardConfig = { workday: defaultWorkday, checkpointDecayMs: 8 * 60 * 1000 };
+    const events = [
+      createEvent('APP_STARTED', '08:30', {}, hardConfig),
+      createEvent('STOPPED', '15:00', { source: 'WINDOW', from: 'RUNNING' }, hardConfig), // Shine, dropped to Glow
+    ];
+
+    expect(scoreMonday(events, onMonday('15:07')).level).toBe(GLOW);
+    expect(scoreMonday(events, onMonday('15:08')).level).toBe(GLIMMER);
+  });
+
+  test('events logged before it existed drain like Normal', () => {
+    const events = [createEvent('APP_STARTED', '08:30'), createEvent('STOPPED', '15:00', { source: 'WINDOW', from: 'RUNNING' })];
+
+    expect(scoreMonday(events, onMonday('15:14')).level).toBe(GLOW);
+    expect(scoreMonday(events, onMonday('15:15')).level).toBe(GLIMMER);
+  });
+});
+
+describe('Admin checkpoint adjustments', () => {
+  test('bumping up while climbing moves up one and restarts the climb from there', () => {
+    const events = workdayWith(createEvent('CHECKPOINT_ADJUSTED', '10:00', { by: 1 }));
+
+    expect(scoreMonday(events, onMonday('10:01')).level).toBe(GLIMMER);
+    expect(scoreMonday(events, onMonday('11:59')).level).toBe(GLIMMER);
+    expect(scoreMonday(events, onMonday('12:00')).level).toBe(GLOW);
+    expect(scoreMonday(events, onMonday('12:00')).nextCheckpointAt).toBe(onMonday('14:00'));
+  });
+
+  test('lowering while stopped moves down one and restarts the drain from there', () => {
+    const events = workdayWith(
+      createEvent('STOPPED', '15:00', { source: 'WINDOW', from: 'RUNNING' }), // Shine, dropped to Glow
+      createEvent('CHECKPOINT_ADJUSTED', '15:10', { by: -1 }),
+    );
+
+    expect(scoreMonday(events, onMonday('15:11')).level).toBe(GLIMMER);
+    expect(scoreMonday(events, onMonday('15:24')).level).toBe(GLIMMER);
+    expect(scoreMonday(events, onMonday('15:25')).level).toBe(DIM);
+  });
+
+  test('never goes below Dim or above Radiant', () => {
+    const lowered = workdayWith(createEvent('CHECKPOINT_ADJUSTED', '09:30', { by: -1 }));
+    expect(scoreMonday(lowered, onMonday('09:31')).level).toBe(DIM);
+
+    const raised = workdayWith(createEvent('CHECKPOINT_ADJUSTED', '16:00', { by: 1 }), createEvent('CHECKPOINT_ADJUSTED', '16:01', { by: 1 }));
+    expect(scoreMonday(raised, onMonday('16:02')).level).toBe(RADIANT);
+  });
+
+  test('an adjustment before the workday is ignored', () => {
+    const events = workdayWith(createEvent('CHECKPOINT_ADJUSTED', '08:45', { by: 2 }));
+
+    expect(scoreMonday(events, onMonday('09:30')).level).toBe(DIM);
+  });
+});

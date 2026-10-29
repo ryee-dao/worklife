@@ -11,7 +11,12 @@ vi.mock('../timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(),
 }));
 
-import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from './difficulty';
+vi.mock('../workday/workdayConfigs', () => ({
+  getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false })),
+}));
+
+import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from './difficulty';
+import { getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
 import { getAppliedTimerConfigs } from '../timer/timerConfigs';
 import { getUserDataFromFile } from '../../shared/utils/files';
@@ -21,6 +26,7 @@ const customConfigs: DifficultyConfigs['custom'] = {
   snoozeDurationMs: 8 * 60 * 1000,
   allottedPowerups: 4,
   lunchDurationMs: 20 * 60 * 1000,
+  checkpointDecayMs: 12 * 60 * 1000,
 };
 
 // Helper: run with a difficulty level and timer length
@@ -113,6 +119,25 @@ describe('Snooze', () => {
   });
 });
 
+describe('Checkpoint drain', () => {
+  test.each([
+    { level: 'EASY', decayMinutes: 30 },   // 1/16 of an 8 hour workday
+    { level: 'NORMAL', decayMinutes: 15 }, // 1/32
+    { level: 'HARD', decayMinutes: 8 },    // 1/64 = 7.5 min, rounded to 8
+  ] as const)('$level on a 9 to 5 workday', ({ level, decayMinutes }) => {
+    useDifficulty(level);
+
+    expect(getCheckpointDecayMs()).toBe(decayMinutes * 60 * 1000);
+  });
+
+  test('scales with the workday, not the timer', () => {
+    vi.mocked(getAppliedWorkdayConfigs).mockReturnValueOnce({ days: [1], start: '09:00', end: '13:00', autoStopAtEnd: false });
+    useDifficulty('NORMAL', 90);
+
+    expect(getCheckpointDecayMs()).toBe(8 * 60 * 1000); // 1/32 of 4 hours = 7.5 min, rounded to 8
+  });
+});
+
 describe('Custom difficulty', () => {
   test('uses the chosen lengths and power-ups as they are', () => {
     useDifficulty('CUSTOM');
@@ -121,6 +146,7 @@ describe('Custom difficulty', () => {
     expect(getSnoozeDurationMs()).toBe(customConfigs.snoozeDurationMs);
     expect(getAllottedPowerups()).toBe(customConfigs.allottedPowerups);
     expect(getLunchDurationMs()).toBe(customConfigs.lunchDurationMs);
+    expect(getCheckpointDecayMs()).toBe(customConfigs.checkpointDecayMs);
   });
 
   test('a custom difficulty saved before lunch existed gets the default lunch', () => {
@@ -133,6 +159,7 @@ describe('Custom difficulty', () => {
     expect(getBreakDurationMs()).toBe(40 * 1000);
     expect(getLunchDurationMs()).toBe(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
     expect(getAllottedPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+    expect(getCheckpointDecayMs()).toBe(DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS);
   });
 
   test('ignores the timer length', () => {

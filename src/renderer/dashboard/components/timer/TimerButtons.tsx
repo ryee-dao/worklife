@@ -1,8 +1,9 @@
 import { PlayIcon, StopIcon } from "@heroicons/react/24/outline";
-import { SkipForward, Zap } from "lucide-react";
+import { AlarmClockPlus, SkipForward } from "lucide-react";
 import { TimerState } from "../../../../main/timer/timerState";
 import { convertMsToMinutes } from "../../../../shared/utils/time";
 import CircularButton from "../../../common/components/CircularButton";
+import PowerupCost from "../../../common/components/PowerupCost";
 
 interface TimerButtonProps {
   timerState: TimerState;
@@ -31,9 +32,10 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
                 testId="toggle-timer-button"
                 title={canStop ? "Stop (costs a checkpoint)" : timerStatus === "LUNCH" ? "Back from lunch" : "Resume"}
                 onClick={toggleTimer}
-                className="h-2/3 bg-slate-200 hover:bg-slate-300"
+                // Stopping costs a checkpoint, so it's the one red button
+                className={`h-2/3 ${canStop ? "bg-red-100 border-red-400 hover:bg-red-200" : "bg-slate-200 hover:bg-slate-300"}`}
               >
-                {canStop && <StopIcon className="h-2/3 text-slate-700" />}
+                {canStop && <StopIcon className="h-2/3 text-red-700" />}
                 {canStart && <PlayIcon className="h-2/3 text-slate-700 ml-1 lg:ml-4" />}
               </CircularButton>
             )}
@@ -55,9 +57,10 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
                 className="h-2/3 bg-slate-200 hover:bg-slate-300"
               >
                 <div className="flex flex-col items-center leading-none text-slate-700">
-                  <Zap className="size-4 sm:size-6 lg:size-10 text-amber-500" />
+                  <AlarmClockPlus className="size-5 sm:size-7 lg:size-12" />
                   <span className="font-semibold text-base sm:text-lg lg:text-4xl">+{convertMsToMinutes(timerState.snoozeDurationMs)}m</span>
                 </div>
+                <PowerupCost />
               </CircularButton>
             )}
           </div>

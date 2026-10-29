@@ -18,7 +18,7 @@ export default function CircularButton({ onClick, disabled = false, testId, titl
       onClick={onClick}
       disabled={disabled}
       className={
-        `aspect-square rounded-full flex items-center justify-center
+        `relative aspect-square rounded-full flex items-center justify-center
         transition-all duration-250 ease-out border shadow-md lg:shadow-2xl
         ${disabled ? 
           "cursor-not-allowed opacity-60" : 

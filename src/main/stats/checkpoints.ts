@@ -9,6 +9,7 @@ export interface Segment {
   start: number;
   end: number;
   activity: Activity;
+  adjustBy?: number; // Dev only: the level moves by this much where the segment starts
 }
 
 export interface DayScore {
@@ -57,10 +58,10 @@ const toEpochMs = (localDate: string, time: string, tzOffsetMin: number) => {
 
 const buildSegments = (sortedEvents: StatsEvent[], now: number): Segment[] => {
   const segments: Segment[] = [];
-  const switchTo = (at: number, activity: Activity) => {
+  const switchTo = (at: number, activity: Activity, adjustBy?: number) => {
     const last = segments.at(-1);
     if (last) last.end = at;
-    segments.push({ start: at, end: at, activity });
+    segments.push({ start: at, end: at, activity, ...(adjustBy !== undefined && { adjustBy }) });
   };
 
   let lastEventAt = 0;
@@ -72,7 +73,10 @@ const buildSegments = (sortedEvents: StatsEvent[], now: number): Segment[] => {
     }
 
     const activity = activityAfter[event.type];
-    if (activity && activity !== segments.at(-1)?.activity) {
+    if (event.type === "CHECKPOINT_ADJUSTED") {
+      // Split here, so scoring meets the adjustment at the right moment
+      switchTo(event.at, segments.at(-1)?.activity ?? "WORKING", event.by);
+    } else if (activity && activity !== segments.at(-1)?.activity) {
       switchTo(event.at, activity);
     }
     lastEventAt = event.at;
@@ -93,7 +97,7 @@ const scoreDay = (dayEvents: StatsEvent[], segments: Segment[], now: number): Da
   const workStart = toEpochMs(localDate, config.workday.start, tzOffsetMin);
   const workEnd = toEpochMs(localDate, config.workday.end, tzOffsetMin);
   const climbMs = (workEnd - workStart) / MAX_LEVEL;
-  const decayMs = (workEnd - workStart) * CHECKPOINTS.DECAY_RATIO;
+  const decayMs = config.checkpointDecayMs ?? (workEnd - workStart) * CHECKPOINTS.DECAY_RATIO;
   const scoredUntil = Math.min(Math.max(now, workStart), workEnd); // Only score time that has happened
 
   // The climb so far. While climbing, base is the level the run started from. While stopped, the level right after the drop
@@ -123,10 +127,19 @@ const scoreDay = (dayEvents: StatsEvent[], segments: Segment[], now: number): Da
     stoppedToday = true;
   };
 
+  // Moves the level, and like a stop, restarts the climb or the drain from here
+  const adjustLevel = (time: number, by: number) => {
+    base = Math.min(MAX_LEVEL, Math.max(0, levelAt(time) + by));
+    if (runStart !== null) runStart = time;
+    if (stoppedAt !== null) stoppedAt = time;
+  };
+
+  // shortcut: an adjustment outside work hours is ignored, move it to the workday's edge if testing then matters
   for (const segment of segments) {
     if (segment.end <= workStart) continue;
     const start = Math.max(segment.start, workStart);
     if (start >= scoredUntil) break;
+    if (segment.adjustBy && segment.start >= workStart) adjustLevel(start, segment.adjustBy);
 
     switch (segment.activity) {
       case "WORKING":

@@ -17,7 +17,7 @@ export default function PowerupBar({ timerState }: PowerupBarProps) {
       gap-6 px-5 xsm:h-10 sm:h-12 md:h-14 sm:gap-10 sm:px-8 font-semibold text-lg sm:text-xl lg:text-3xl text-slate-700
     ">
       <span data-testid="powerup-count" title="Power-ups: snooze while working, or skip a break" className="flex items-center gap-1">
-        <Zap className="size-5 sm:size-6 lg:size-8 text-amber-500" />
+        <Zap className="size-5 sm:size-6 lg:size-8 text-amber-500 fill-amber-400" />
         {timerState.remainingPowerups}
       </span>
       <button
@@ -28,7 +28,7 @@ export default function PowerupBar({ timerState }: PowerupBarProps) {
         onClick={() => window.electronAPI.startLunch()}
         className="flex items-center gap-1 rounded-md px-1 enabled:cursor-pointer enabled:hover:bg-slate-200 disabled:opacity-40"
       >
-        <Sandwich className="size-5 sm:size-6 lg:size-8 text-orange-600" />
+        <Sandwich className="size-5 sm:size-6 lg:size-8 text-orange-500" />
         <span data-testid="lunch-count">{timerState.remainingLunches}</span>
       </button>
     </div>

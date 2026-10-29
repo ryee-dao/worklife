@@ -4,13 +4,14 @@ import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeT
 import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
-import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
+import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
 import { getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
 import { getDayScores, getTodayScore } from "./checkpoints";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
 type Heartbeat = { type: "HEARTBEAT" }; // Shows the app was still alive, so a crash can be placed within a minute
+type CheckpointAdjusted = { type: "CHECKPOINT_ADJUSTED"; by: number }; // Dev only: the admin panel moving today's level
 
 // One line in events.jsonl. Every event carries its own context so it can be read on its own
 export type StatsEvent = {
@@ -25,11 +26,12 @@ export type StatsEvent = {
     snoozeDurationMs: number;
     allottedPowerups: number;
     lunchDurationMs: number;
+    checkpointDecayMs?: number; // Missing from events logged before the drain was part of difficulty
     difficulty: DifficultyLevel;
     levelThresholdMs: number;
     workday: WorkdayConfigs;
   };
-} & (TimerTransition | AppQuit | Heartbeat);
+} & (TimerTransition | AppQuit | Heartbeat | CheckpointAdjusted);
 
 const heartbeatIntervalMs = 60 * 1000; // 1 minute
 const todayScoringWindowMs = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -37,7 +39,7 @@ let heartbeatTimer: NodeJS.Timeout;
 // shortcut: keeps the whole log in memory so today's score doesn't re-read the file every tick, trim to recent days if it grows large
 let events: StatsEvent[] = [];
 
-const recordEvent = (event: TimerTransition | AppQuit | Heartbeat) => {
+const recordEvent = (event: TimerTransition | AppQuit | Heartbeat | CheckpointAdjusted) => {
   const statsEvent: StatsEvent = {
     v: 1,
     id: randomUUID(),
@@ -50,6 +52,7 @@ const recordEvent = (event: TimerTransition | AppQuit | Heartbeat) => {
       snoozeDurationMs: getSnoozeDurationMs(),
       allottedPowerups: getAllottedPowerups(),
       lunchDurationMs: getLunchDurationMs(),
+      checkpointDecayMs: getCheckpointDecayMs(),
       difficulty: getAppliedDifficultyConfigs().level,
       levelThresholdMs: getAppliedOverdueConfigs().levelThresholdMs,
       workday: getAppliedWorkdayConfigs(),
@@ -81,6 +84,10 @@ export const getEvents = () => {
 export const recordAppQuit = () => {
   const { status, currentCountdownMs, overdueTimeMs } = getTimerState();
   recordEvent({ type: "APP_QUIT", status, countdownMs: currentCountdownMs, overdueMs: overdueTimeMs });
+};
+
+export const recordCheckpointAdjusted = (by: number) => {
+  recordEvent({ type: "CHECKPOINT_ADJUSTED", by });
 };
 
 // A damaged line (like one cut off by a crash mid-write) is skipped so the rest of the log stays usable

@@ -22,11 +22,7 @@ const showDay = (localDate: string) => {
 export default function Dashboard() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   const [todayScore, setTodayScore] = useState<DayScore | null>(null);
-  useEffect(() => {
-    window.electronAPI.onTimerUpdate((timerState) => {
-      setTimerStateObject(timerState);
-    });
-  }, []);
+  useEffect(() => window.electronAPI.onTimerUpdate(setTimerStateObject), []);
 
   useEffect(() => window.electronAPI.onWarning(playWarningSound), []);
   useEffect(() => window.electronAPI.onTodayScore(setTodayScore), []);

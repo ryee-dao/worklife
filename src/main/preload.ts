@@ -10,9 +10,9 @@ import { DayScore } from "./stats/checkpoints";
 
 const electronAPI: ElectronAPI = {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
-    ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_UPDATE, (event, data) => {
-      callback(data);
-    });
+    const listener = (_event: unknown, state: TimerState) => callback(state);
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.TIMER_UPDATE, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.TIMER_UPDATE, listener);
   },
   onWarning: (callback: () => void) => {
     const listener = () => callback();
@@ -85,6 +85,12 @@ const electronAPI: ElectronAPI = {
   },
   devApplyWorkday: async () => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY);
+  },
+  devResetDay: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_RESET_DAY);
+  },
+  devAdjustCheckpoint: async (by: number) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_ADJUST_CHECKPOINT, by);
   },
 }
 

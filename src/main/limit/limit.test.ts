@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
 import { destroyTimers, timerEmitter } from '../timer/timerState';
-import { calculateRemainingLunches, calculateRemainingPowerups, getLimitState, increaseLunchesUsed, increasePowerupsUsed, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
+import { calculateRemainingLunches, calculateRemainingPowerups, getLimitState, resetTodayLimits, increaseLunchesUsed, increasePowerupsUsed, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
 import { DEFAULTS, LUNCHES_PER_DAY } from "../../shared/constants"
 import { getAllottedPowerups } from '../difficulty/difficulty';
 
@@ -220,6 +220,19 @@ describe('Lunch count', () => {
     increaseLunchesUsed();
 
     expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+  });
+});
+
+describe('Resetting today from the admin panel', () => {
+  test('gives back the power-ups and lunch used today', () => {
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: 3, lunchesUsed: 1 });
+    initLimits();
+
+    resetTodayLimits();
+
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
+    expect(writeToUserDataFile).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ powerupsUsed: 0, lunchesUsed: 0 }));
   });
 });
 

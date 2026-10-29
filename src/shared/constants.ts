@@ -27,6 +27,8 @@ export const EVENTS = {
     STATS_SHOW_DAY: "stats:show_day",
     STATS_TAKE_UNSEEN_SUMMARY: "stats:take_unseen_summary",
     DEV_APPLY_WORKDAY: "dev:apply_workday",
+    DEV_RESET_DAY: "dev:reset_day",
+    DEV_ADJUST_CHECKPOINT: "dev:adjust_checkpoint",
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",
@@ -51,6 +53,7 @@ export const DEFAULTS = {
   DEFAULT_ALLOTTED_POWERUPS: 3, // The starting value for the custom difficulty
   DEFAULT_SNOOZE_DURATION_MS: 5 * 60 * 1000, // 5 minutes, the starting value for the custom difficulty
   DEFAULT_LUNCH_DURATION_MS: 45 * 60 * 1000, // 45 minutes, the starting value for the custom difficulty
+  DEFAULT_CHECKPOINT_DECAY_MS: 15 * 60 * 1000, // 15 minutes, the starting value for the custom difficulty
   DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
 } as const;
 
@@ -66,9 +69,10 @@ export const FILENAMES = {
 // Break and snooze lengths are a share of the timer, so they scale with longer work sessions.
 // Power-ups are one daily pool, spent on either a snooze or a break skip
 export const DIFFICULTY_PRESETS = {
-  EASY: { breakRatio: 0.02, snoozeRatio: 0.20, allottedPowerups: 5, lunchDurationMs: 60 * 60 * 1000 },
-  NORMAL: { breakRatio: 0.05, snoozeRatio: 0.15, allottedPowerups: 3, lunchDurationMs: 45 * 60 * 1000 },
-  HARD: { breakRatio: 0.10, snoozeRatio: 0.10, allottedPowerups: 1, lunchDurationMs: 30 * 60 * 1000 },
+  // decayRatio is of the workday: staying stopped this long loses a checkpoint (30, 15 and 8 min on 9 to 5)
+  EASY: { breakRatio: 0.02, snoozeRatio: 0.20, allottedPowerups: 5, lunchDurationMs: 60 * 60 * 1000, decayRatio: 1 / 16 },
+  NORMAL: { breakRatio: 0.05, snoozeRatio: 0.15, allottedPowerups: 3, lunchDurationMs: 45 * 60 * 1000, decayRatio: 1 / 32 },
+  HARD: { breakRatio: 0.10, snoozeRatio: 0.10, allottedPowerups: 1, lunchDurationMs: 30 * 60 * 1000, decayRatio: 1 / 64 },
 } as const;
 
 export const LUNCHES_PER_DAY = 1;
@@ -76,7 +80,7 @@ export const LUNCHES_PER_DAY = 1;
 // Each unbroken share of the workday climbs one checkpoint, so a 9 to 5 day climbs every 2 hours
 export const CHECKPOINTS = {
   NAMES: ["Dim", "Glimmer", "Glow", "Shine", "Radiant"],
-  DECAY_RATIO: 1 / 32,                 // Of the workday: staying stopped this long loses another checkpoint (15 min on 9 to 5)
+  DECAY_RATIO: 1 / 32,                 // For events logged before the drain was part of difficulty: Normal's drain
   LATE_START_GRACE_MS: 30 * 60 * 1000, // Starting this late still counts as on time
   RESTART_GRACE_MS: 5 * 60 * 1000,     // Closed this long is a restart, not a stop
 } as const;

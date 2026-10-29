@@ -14,14 +14,16 @@ import {
   startLunch,
   startBreak,
   getTimerState,
+  emitTimerStatus,
 } from "./timer/timerState";
 
 import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
 import { applyWorkdayConfigs, getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
 import { IS_DEV } from "./env";
+import { resetTodayLimits } from "./limit/limitState";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
-import { getAllDayScores, getCurrentDayScore, takeUnseenSummaryDate } from "./stats/stats";
+import { getAllDayScores, getCurrentDayScore, recordCheckpointAdjusted, takeUnseenSummaryDate } from "./stats/stats";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -119,5 +121,13 @@ export const initEventListeners = () => {
   // The admin settings apply the workday right away so it can be tested without waiting a day
   if (IS_DEV) {
     ipcMain.handle(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY, applyWorkdayConfigs);
+    ipcMain.handle(EVENTS.IPC_CHANNELS.DEV_RESET_DAY, () => {
+      resetTodayLimits();
+      emitTimerStatus(); // So the windows and tray show the counts back
+    });
+    ipcMain.handle(EVENTS.IPC_CHANNELS.DEV_ADJUST_CHECKPOINT, (_event, by: number) => {
+      recordCheckpointAdjusted(by);
+      emitTimerStatus(); // Sends today's new score along with the timer
+    });
   }
 };

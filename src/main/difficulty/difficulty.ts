@@ -1,42 +1,20 @@
-import { DIFFICULTY_PRESETS } from "../../shared/constants";
+import { getPresetConfigs } from "../../shared/utils/difficulty";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
+import { getAppliedWorkdayConfigs } from "../workday/workdayConfigs";
 import { getAppliedDifficultyConfigs } from "./difficultyConfigs";
 
-const breakRoundingMs = 15 * 1000;
-const minimumBreakMs = 30 * 1000;
-const snoozeRoundingMs = 60 * 1000;
-const minimumSnoozeMs = 60 * 1000;
-
-const roundToNearest = (ms: number, stepMs: number) => {
-  return Math.round(ms / stepMs) * stepMs;
-};
-
-export const getBreakDurationMs = () => {
+const getAppliedValues = () => {
   const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.breakDurationMs;
-
-  const breakMs = getAppliedTimerConfigs().timerDurationMs * DIFFICULTY_PRESETS[level].breakRatio;
-  return Math.max(roundToNearest(breakMs, breakRoundingMs), minimumBreakMs);
+  if (level === "CUSTOM") return custom;
+  return getPresetConfigs(level, getAppliedTimerConfigs().timerDurationMs, getAppliedWorkdayConfigs());
 };
 
-export const getSnoozeDurationMs = () => {
-  const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.snoozeDurationMs;
+export const getBreakDurationMs = () => getAppliedValues().breakDurationMs;
 
-  const snoozeMs = getAppliedTimerConfigs().timerDurationMs * DIFFICULTY_PRESETS[level].snoozeRatio;
-  return Math.max(roundToNearest(snoozeMs, snoozeRoundingMs), minimumSnoozeMs);
-};
+export const getSnoozeDurationMs = () => getAppliedValues().snoozeDurationMs;
 
-export const getAllottedPowerups = () => {
-  const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.allottedPowerups;
+export const getAllottedPowerups = () => getAppliedValues().allottedPowerups;
 
-  return DIFFICULTY_PRESETS[level].allottedPowerups;
-};
+export const getLunchDurationMs = () => getAppliedValues().lunchDurationMs;
 
-export const getLunchDurationMs = () => {
-  const { level, custom } = getAppliedDifficultyConfigs();
-  if (level === "CUSTOM") return custom.lunchDurationMs;
-
-  return DIFFICULTY_PRESETS[level].lunchDurationMs;
-};
+export const getCheckpointDecayMs = () => getAppliedValues().checkpointDecayMs;

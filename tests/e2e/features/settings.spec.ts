@@ -67,7 +67,7 @@ test("Changing difficulty only updates after a break", async ({ launchElectron }
   await test.step("Change the difficulty to hard in settings", async () => {
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
     await settingsWindow.getByRole('link', { name: 'Difficulty' }).click();
-    await settingsWindow.getByTestId("difficulty-level").getByRole('radio', { name: /Hard/ }).check();
+    await settingsWindow.getByTestId("difficulty-card-HARD").click();
     await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
     await settingsWindow.getByText('Settings saved successfully').waitFor();
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Timer' }).click();

@@ -34,6 +34,7 @@ const test = base.extend<{
         snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
         allottedPowerups: DEFAULTS.DEFAULT_ALLOTTED_POWERUPS,
         lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
+        checkpointDecayMs: DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS,
       },
     });
     // Every day is a workday all day, so today's score shows the same whatever day and time the tests run

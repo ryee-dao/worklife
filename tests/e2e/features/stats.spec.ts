@@ -27,7 +27,9 @@ test("Stats tab shows today's checkpoint live, and the month calendar", async ({
     await settingsWindow.getByTestId("timer-buttons-container").getByTestId("toggle-timer-button").click();
     await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Stats' }).click();
     await testClock.fastForward(1);
-    await expect(settingsWindow.getByTestId("today-panel")).toContainText("Stopped · losing a checkpoint every");
+    // Already at Dim, so there's nothing left to lose
+    await expect(settingsWindow.getByTestId("today-panel")).toContainText("Stopped");
+    await expect(settingsWindow.getByTestId("today-countdown")).toHaveText("Resume to climb again");
     await expect(settingsWindow.getByTestId("today-panel").getByTestId("day-bar")).toHaveClass(/animate-flash/);
   });
 

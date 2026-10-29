@@ -6,7 +6,7 @@ export type DifficultyLevel = keyof typeof DIFFICULTY_PRESETS | "CUSTOM";
 export interface DifficultyConfigs {
   level: DifficultyLevel;
   // Only used when level is CUSTOM
-  custom: { breakDurationMs: number; snoozeDurationMs: number; allottedPowerups: number; lunchDurationMs: number };
+  custom: { breakDurationMs: number; snoozeDurationMs: number; allottedPowerups: number; lunchDurationMs: number; checkpointDecayMs: number };
 }
 
 const defaultDifficultyConfigs: DifficultyConfigs = {
@@ -16,6 +16,7 @@ const defaultDifficultyConfigs: DifficultyConfigs = {
     snoozeDurationMs: DEFAULTS.DEFAULT_SNOOZE_DURATION_MS,
     allottedPowerups: DEFAULTS.DEFAULT_ALLOTTED_POWERUPS,
     lunchDurationMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS,
+    checkpointDecayMs: DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS,
   },
 };
 

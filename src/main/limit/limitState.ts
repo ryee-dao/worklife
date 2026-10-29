@@ -37,8 +37,13 @@ export function loadLimitStateFromFile() {
 export function resetDailyLimits() {
   // If the last reset date is not today, start the day's counts over
   if (getLimitState().lastResetDate !== getTodayDateAsString()) {
-    setLimitState(getFreshLimitState());
+    resetTodayLimits();
   }
+}
+
+// Gives back today's power-ups and lunch. Used by the daily reset and the dev admin panel
+export function resetTodayLimits() {
+  setLimitState(getFreshLimitState());
 }
 
 export function increasePowerupsUsed() {
