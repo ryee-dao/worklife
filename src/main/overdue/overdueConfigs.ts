@@ -17,11 +17,22 @@ export interface OverdueConfigs {
 }
 
 let overdueConfigs: OverdueConfigs;
+// The configs the app runs on. Saved changes are only applied after a break
+let appliedOverdueConfigs: OverdueConfigs;
 
 export const loadOverdueConfigs = () => {
   const overdueConfigsData = getUserDataFromFile<OverdueConfigs>(FILENAMES.OVERDUE.CONFIGS);
   overdueConfigs = { ...defaultOverdueConfigs, ...overdueConfigsData?.fileContent };
   writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, overdueConfigs);
+  applyOverdueConfigs();
+}
+
+export const applyOverdueConfigs = () => {
+  appliedOverdueConfigs = { ...overdueConfigs };
+}
+
+export const getAppliedOverdueConfigs = () => {
+  return appliedOverdueConfigs;
 }
 
 export const getOverdueConfigs = () => {

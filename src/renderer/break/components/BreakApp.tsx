@@ -8,9 +8,7 @@ export default function BreakWindow() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
     window.electronAPI.getTimerState().then(setTimerStateObject);
-    window.electronAPI.onTimerUpdate((timerState) => {
-      setTimerStateObject(timerState);
-    });
+    return window.electronAPI.onTimerUpdate(setTimerStateObject);
   }, []);
 
   return (

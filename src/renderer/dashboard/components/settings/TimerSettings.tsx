@@ -1,40 +1,30 @@
 import { useState } from "react";
-import {
-  convertMinutesToMs,
-  convertMsToMinutes,
-  convertMsToSeconds,
-  convertSecondsToMs,
-} from "../../../../shared/utils/time";
+import { convertMinutesToMs, convertMsToMinutes } from "../../../../shared/utils/time";
 import { TimerConfigs } from "../../../../main/timer/timerConfigs";
-import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 
 export default function TimerSettings() {
   const [timerDurationInMinutes, setTimerDurationInMinutes] = useState(0);
-  const [breakDurationInSeconds, setBreakDurationInSeconds] = useState(0);
   const [warningThresholdInMinutes, setWarningThresholdInMinutes] = useState(0);
 
   const timerValid = timerDurationInMinutes >= 1 && timerDurationInMinutes <= 600;
-  const breakValid = breakDurationInSeconds >= (IS_DEV ? 1 : 10) && breakDurationInSeconds <= 600;
   const warningMax = Math.max(1, timerDurationInMinutes - 1);
   const warningValid = warningThresholdInMinutes >= 1 && warningThresholdInMinutes <= warningMax;
 
   return (
     <SettingsPanel<TimerConfigs>
       title="Timer Settings"
-      isValid={timerValid && breakValid && warningValid}
+      isValid={timerValid && warningValid}
       successMessage="Settings saved successfully. Changes will reflect after next break"
       load={() => window.electronAPI.loadTimerConfigs()}
       save={(configs) => window.electronAPI.saveTimerConfigs(configs)}
       buildConfig={() => ({
         timerDurationMs: convertMinutesToMs(timerDurationInMinutes),
-        breakDurationMs: convertSecondsToMs(breakDurationInSeconds),
         warningThresholdMs: convertMinutesToMs(warningThresholdInMinutes),
       })}
       onLoaded={(configs) => {
         setTimerDurationInMinutes(convertMsToMinutes(configs.timerDurationMs));
-        setBreakDurationInSeconds(convertMsToSeconds(configs.breakDurationMs));
         setWarningThresholdInMinutes(convertMsToMinutes(configs.warningThresholdMs));
       }}
     >
@@ -47,20 +37,6 @@ export default function TimerSettings() {
         </label>
         {!timerValid && (
           <p className="text-sm text-red-600 mt-1">Must be between 1 and 600 minutes</p>
-        )}
-      </div>
-
-      <div data-testid="break-duration" className="tracking-wider p-2">
-        <label>
-          This break will last{" "}
-          <NumberInput min={IS_DEV ? 1 : 10} max={600} value={breakDurationInSeconds}
-            onChange={(e) => setBreakDurationInSeconds(Number(e.target.value))} />{" "}
-          seconds
-        </label>
-        {!breakValid && (
-          <p className="text-sm text-red-600 mt-1">
-            Must be between {IS_DEV ? 1 : 10} and 600 seconds
-          </p>
         )}
       </div>
 

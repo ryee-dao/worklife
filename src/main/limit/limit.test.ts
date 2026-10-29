@@ -1,9 +1,9 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
 import { destroyTimers, timerEmitter } from '../timer/timerState';
-import { calculateRemainingBreakSkips, getLimitState, increaseSkippedBreakCount, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
-import { DEFAULTS } from "../../shared/constants"
-import { getLimitConfigs } from './limitConfigs';
+import { calculateRemainingLunches, calculateRemainingPowerups, getLimitState, resetTodayLimits, increaseLunchesUsed, increasePowerupsUsed, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
+import { DEFAULTS, LUNCHES_PER_DAY } from "../../shared/constants"
+import { getAllottedPowerups } from '../difficulty/difficulty';
 
 // Add mocks
 vi.mock('../../shared/utils/files', () => ({
@@ -15,8 +15,8 @@ vi.mock('../../shared/utils/date', () => ({
   getTodayDateAsString: vi.fn(() => "2026-01-23"),
 }));
 
-vi.mock('./limitConfigs', () => ({
-  getLimitConfigs: vi.fn(() => ({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS }))
+vi.mock('../difficulty/difficulty', () => ({
+  getAllottedPowerups: vi.fn(() => DEFAULTS.DEFAULT_ALLOTTED_POWERUPS),
 }))
 
 
@@ -25,8 +25,8 @@ beforeEach(() => {
   vi.mocked(writeToUserDataFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReset();
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
-  vi.mocked(getLimitConfigs).mockReset();
-  vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: DEFAULTS.DEFAULT_ALLOTTED_BREAKS });
+  vi.mocked(getAllottedPowerups).mockReset();
+  vi.mocked(getAllottedPowerups).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
 });
 
 afterEach(() => {
@@ -49,14 +49,14 @@ describe('Limits initialization and teardown', () => {
       expect.any(String),
       expect.objectContaining({
         lastResetDate: "2026-01-23",
-        skippedBreakCount: 0,
+        powerupsUsed: 0,
       })
     );
   })
 
   test('loadLimitStateFromFile() does not overwrite with defaults if file data is already present', () => {
     // Set initial data for file
-    const initialLimitData = { lastResetDate: "2000-01-01", skippedBreakCount: 5 }
+    const initialLimitData = { lastResetDate: "2000-01-01", powerupsUsed: 5, lunchesUsed: 0 }
     seedLimitState(initialLimitData)
 
     loadLimitStateFromFile();
@@ -71,127 +71,181 @@ describe('Limits initialization and teardown', () => {
 })
 
 describe('Limit configs effects', () => {
-  test('Calculated remaining break count is affected by limit configs', () => {
+  test('Calculated remaining power-up count is affected by limit configs', () => {
     initLimits();
-    let breaksRemaining = calculateRemainingBreakSkips();
-    expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
+    let powerupsRemaining = calculateRemainingPowerups();
+    expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
 
     // Modify the limit file to reflect a new state
-    seedLimitState({ lastResetDate: "2020-02-20", skippedBreakCount: 3 })
+    seedLimitState({ lastResetDate: "2020-02-20", powerupsUsed: 3, lunchesUsed: 0 })
     loadLimitStateFromFile();
 
-    // Expect that the remaining break count reflects based on limit file data
-    breaksRemaining = calculateRemainingBreakSkips();
-    expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS - 3);
+    // Expect that the remaining power-up count reflects based on limit file data
+    powerupsRemaining = calculateRemainingPowerups();
+    expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 3);
   })
 
-  test('Remaining count decreases when increaseSkippedBreakCount() is called', () => {
+  test('Remaining count decreases when increasePowerupsUsed() is called', () => {
     initLimits();
 
-    let breaksRemaining = calculateRemainingBreakSkips();
-    expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
+    let powerupsRemaining = calculateRemainingPowerups();
+    expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
 
-    // Expect that the remaining break count decreased
-    increaseSkippedBreakCount()
-    breaksRemaining = calculateRemainingBreakSkips();
-    expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS - 1);
+    // Expect that the remaining power-up count decreased
+    increasePowerupsUsed()
+    powerupsRemaining = calculateRemainingPowerups();
+    expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 1);
 
-    // Expect that the remaining break count decreased
-    increaseSkippedBreakCount()
-    breaksRemaining = calculateRemainingBreakSkips();
-    expect(breaksRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS - 2);
+    // Expect that the remaining power-up count decreased
+    increasePowerupsUsed()
+    powerupsRemaining = calculateRemainingPowerups();
+    expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 2);
   })
 
-  test('remaining skips reflects custom allotted breaks config', () => {
-    // Override the config mock for this test
-    vi.mocked(getLimitConfigs).mockReturnValue({ allottedBreaks: 5 });
+  test('remaining power-ups reflects the allotted power-ups from the difficulty', () => {
+    // Override the difficulty mock for this test
+    vi.mocked(getAllottedPowerups).mockReturnValue(5);
 
     initLimits();
 
-    expect(calculateRemainingBreakSkips()).toBe(5);
+    expect(calculateRemainingPowerups()).toBe(5);
 
-    increaseSkippedBreakCount();
-    expect(calculateRemainingBreakSkips()).toBe(4);
+    increasePowerupsUsed();
+    expect(calculateRemainingPowerups()).toBe(4);
   });
 })
 
 describe('Daily reset logic', () => {
-  test('resets skip count when date has changed', () => {
-    // Seed state from "yesterday" with used skips
-    seedLimitState({ lastResetDate: "2026-01-22", skippedBreakCount: 3 });
+  test('resets power-up count when date has changed', () => {
+    // Seed state from "yesterday" with used power-ups
+    seedLimitState({ lastResetDate: "2026-01-22", powerupsUsed: 3, lunchesUsed: 0 });
 
     // initLimits calls resetDailyLimits which sees date mismatch
     initLimits();
 
     const state = getLimitState();
-    expect(state.skippedBreakCount).toBe(0);
+    expect(state.powerupsUsed).toBe(0);
     expect(state.lastResetDate).toBe("2026-01-23");
   });
 
-  test('does NOT reset skip count when date is the same', () => {
-    // Seed state from "today" with used skips
-    seedLimitState({ lastResetDate: "2026-01-23", skippedBreakCount: 2 });
+  test('does NOT reset power-up count when date is the same', () => {
+    // Seed state from "today" with used power-ups
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: 2, lunchesUsed: 0 });
 
     initLimits();
 
     const state = getLimitState();
-    expect(state.skippedBreakCount).toBe(2);
+    expect(state.powerupsUsed).toBe(2);
   });
 
   test('resetDailyLimits works when called independently (simulating the 5-min interval)', () => {
     // Start with yesterday's state
-    seedLimitState({ lastResetDate: "2026-01-22", skippedBreakCount: 1 });
+    seedLimitState({ lastResetDate: "2026-01-22", powerupsUsed: 1, lunchesUsed: 0 });
     loadLimitStateFromFile();
 
     // Simulate the periodic check firing
     resetDailyLimits();
 
     const state = getLimitState();
-    expect(state.skippedBreakCount).toBe(0);
+    expect(state.powerupsUsed).toBe(0);
     expect(state.lastResetDate).toBe("2026-01-23");
   });
 
-  test('remaining skips returns full count after daily reset', () => {
-    // Yesterday's state with used skips
-    seedLimitState({ lastResetDate: "2026-01-22", skippedBreakCount: 3 });
+  test('remaining power-ups returns full count after daily reset', () => {
+    // Yesterday's state with used power-ups
+    seedLimitState({ lastResetDate: "2026-01-22", powerupsUsed: 3, lunchesUsed: 0 });
 
     initLimits(); // triggers reset since date changed
 
-    const remaining = calculateRemainingBreakSkips();
-    expect(remaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_BREAKS);
+    const remaining = calculateRemainingPowerups();
+    expect(remaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
   });
 });
 
-describe('Skip count edge cases', () => {
-  test('remaining skips can go negative (no clamping in calculation)', () => {
+describe('Power-up count edge cases', () => {
+  test('remaining power-ups can go negative (no clamping in calculation)', () => {
     // Seed with more skips used than allotted
-    seedLimitState({ lastResetDate: "2026-01-23", skippedBreakCount: DEFAULTS.DEFAULT_ALLOTTED_BREAKS + 2 });
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: DEFAULTS.DEFAULT_ALLOTTED_POWERUPS + 2, lunchesUsed: 0 });
     loadLimitStateFromFile();
 
-    const remaining = calculateRemainingBreakSkips();
+    const remaining = calculateRemainingPowerups();
     expect(remaining).toBe(-2);
   });
 
-  test('increaseSkippedBreakCount persists to file each time', () => {
+  test('increasePowerupsUsed persists to file each time', () => {
     initLimits();
 
-    increaseSkippedBreakCount();
+    increasePowerupsUsed();
 
     expect(writeToUserDataFile).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ skippedBreakCount: 1 })
+      expect.objectContaining({ powerupsUsed: 1, lunchesUsed: 0 })
     );
   });
 
-  test('increaseSkippedBreakCount preserves lastResetDate', () => {
-    seedLimitState({ lastResetDate: "2026-01-23", skippedBreakCount: 0 });
+  test('increasePowerupsUsed preserves lastResetDate', () => {
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: 0, lunchesUsed: 0 });
     loadLimitStateFromFile();
 
-    increaseSkippedBreakCount();
-    increaseSkippedBreakCount();
+    increasePowerupsUsed();
+    increasePowerupsUsed();
 
     const state = getLimitState();
     expect(state.lastResetDate).toBe("2026-01-23");
-    expect(state.skippedBreakCount).toBe(2);
+    expect(state.powerupsUsed).toBe(2);
+  });
+});
+
+describe('Lunch count', () => {
+  test('one lunch a day', () => {
+    initLimits();
+
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
+    increaseLunchesUsed();
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY - 1);
+    expect(writeToUserDataFile).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ lunchesUsed: 1 }));
+  });
+
+  test('lunch comes back when the date has changed', () => {
+    seedLimitState({ lastResetDate: "2026-01-22", powerupsUsed: 0, lunchesUsed: 1 });
+
+    initLimits();
+
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
+  });
+
+  test('lunch and power-ups are counted separately', () => {
+    initLimits();
+
+    increaseLunchesUsed();
+
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+  });
+});
+
+describe('Resetting today from the admin panel', () => {
+  test('gives back the power-ups and lunch used today', () => {
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: 3, lunchesUsed: 1 });
+    initLimits();
+
+    resetTodayLimits();
+
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
+    expect(writeToUserDataFile).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ powerupsUsed: 0, lunchesUsed: 0 }));
+  });
+});
+
+describe('Files saved before power-ups', () => {
+  test('a file with the old skip and snooze counts starts power-ups and lunch at 0', () => {
+    vi.mocked(getUserDataFromFile).mockReturnValue({
+      fileContent: { lastResetDate: "2026-01-23", skippedBreakCount: 2, snoozedCount: 1 },
+      filePath: '',
+    });
+
+    initLimits();
+
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
   });
 });

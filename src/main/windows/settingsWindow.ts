@@ -2,6 +2,7 @@ import { BrowserWindow } from "electron";
 import path from "path";
 import { PRELOAD_PATH, IS_DEV, RENDERER_PATH } from "../env";
 import { emitTimerStatus } from "../timer/timerState";
+import { EVENTS } from "../../shared/constants";
 
 export let settingsWindow: BrowserWindow | null = null;
 
@@ -43,6 +44,12 @@ export function showTimerOnTop() {
       settingsWindow.setAlwaysOnTop(false);
     }
   }, 1000);
+}
+
+export function showDaySummary(localDate: string) {
+  settingsWindow!.show();
+  settingsWindow!.focus();
+  settingsWindow!.webContents.send(EVENTS.IPC_CHANNELS.STATS_SHOW_DAY, localDate);
 }
 
 export function registerSettingsWindowListeners(isForceQuitting: () => boolean) {

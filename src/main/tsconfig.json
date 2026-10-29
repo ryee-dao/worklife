@@ -3,18 +3,18 @@
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "outDir": "../../dist",
+    "rootDir": "..",
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
     "composite": true,
     "skipLibCheck": true,
-    "tsBuildInfoFile": "./dist/tsconfig.main.tsbuildinfo",
+    "tsBuildInfoFile": "../../dist/tsconfig.main.tsbuildinfo",
   },
   "include": [
-    "src/main/**/*",
-    "src/shared/**/*",
+    "./**/*",
+    "../shared/**/*",
   ],
   "exclude": [
     "**/*.test.ts"

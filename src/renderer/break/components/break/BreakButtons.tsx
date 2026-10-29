@@ -1,7 +1,8 @@
-import { ForwardIcon } from "@heroicons/react/24/outline";
+import { FastForward, Square } from "lucide-react";
 import { TimerState } from "../../../../main/timer/timerState";
 import SlashedIcon from "../../../common/components/SlashedIcon";
 import CircularButton from "../../../common/components/CircularButton";
+import PowerupCost from "../../../common/components/PowerupCost";
 
 interface BreakButtonProps {
   timerState: TimerState;
@@ -11,19 +12,33 @@ export default function BreakButtons({ timerState }: BreakButtonProps) {
   const canSkip = timerState.availableActions.includes("skip");
 
   return (
-    <CircularButton
-      testId="break-window-skip-break-button"
-      onClick={() => canSkip && window.electronAPI.skipBreak()}
-      disabled={!canSkip}
-      className={`h-full ${canSkip
-        ? "bg-blue-200 text-slate-600 hover:bg-slate-300"
-        : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
-    >
-      {canSkip ? (
-        <ForwardIcon className="h-2/3" />
-      ) : (
-        <SlashedIcon icon={ForwardIcon} slashSize={4} className="h-2/3" />
-      )}
-    </CircularButton>
+    <div className="h-full flex items-center gap-[4vw]">
+      <CircularButton
+        testId="break-window-skip-break-button"
+        title="Skip break (uses a power-up)"
+        onClick={() => canSkip && window.electronAPI.skipBreak()}
+        disabled={!canSkip}
+        className={`h-full ${canSkip
+          ? "bg-blue-200 text-slate-600 hover:bg-slate-300"
+          : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+      >
+        {canSkip ? (
+          <FastForward className="h-1/2 w-1/2" />
+        ) : (
+          <SlashedIcon icon={FastForward} slashSize={4} className="h-1/2 w-1/2" />
+        )}
+        <PowerupCost />
+      </CircularButton>
+
+      {/* The escape hatch, which costs a checkpoint like any stop */}
+      <CircularButton
+        testId="break-window-stop-button"
+        title="Stop (costs a checkpoint)"
+        onClick={() => window.electronAPI.stop()}
+        className="h-full bg-red-100 border-red-400 text-red-700 hover:bg-red-200"
+      >
+        <Square className="h-2/5 w-2/5" />
+      </CircularButton>
+    </div>
   );
 }

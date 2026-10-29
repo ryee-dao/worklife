@@ -28,3 +28,9 @@ export function convertMsToSeconds(ms: number): number {
 export function convertMinutesToMs(minutes: number): number {
   return minutes * 60 * 1000
 }
+
+// "HH:MM" to minutes since midnight
+export function convertTimeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}

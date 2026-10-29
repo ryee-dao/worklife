@@ -1,28 +1,40 @@
 import { app, BrowserWindow } from "electron";
+import path from "path";
 import { destroyTimers, initTimer } from "./timer/timerState";
 import { initLimits } from "./limit/limitState";
 import { initEventListeners } from "./events";
 import { IS_DEV } from "./env";
 import { setWorkArea } from "./display";
 import { loadOverdueConfigs } from "./overdue/overdueConfigs";
-import { loadLimitConfigs } from "./limit/limitConfigs";
+import { loadDifficultyConfigs } from "./difficulty/difficultyConfigs";
+import { loadWorkdayConfigs } from "./workday/workdayConfigs";
+import { destroyWorkday, initWorkday } from "./workday/workday";
 import { loadTimerConfigs } from "./timer/timerConfigs";
 import { buildStatusIcons, createTray, tray } from "./tray/tray";
 import { registerDisplayListenersForBreakWindow, setOverdueLevelsArray } from "./windows/breakWindow";
-import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow } from "./windows/settingsWindow";
+import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow, showDaySummary } from "./windows/settingsWindow";
+import { destroyStats, initStats, recordAppQuit, takeUnseenSummaryDate } from "./stats/stats";
 
 export let forceQuit = false; // Allows app.quit() to bypass logic to minimize on close
 
 // If in dev, set a different app name so if there's a prod version running, it doesn't clash
 if (IS_DEV) {
   app.setName('WorkLife-Dev');
-  app.setPath('userData', app.getPath('userData').replace('WorkLife', 'WorkLife-Dev'));
+  // Set the folder directly, since whether setName also renames it differs by platform
+  app.setPath('userData', path.join(app.getPath('appData'), 'WorkLife-Dev'));
 }
 
 function initConfigs() {
   loadTimerConfigs();
-  loadLimitConfigs();
+  loadDifficultyConfigs();
   loadOverdueConfigs();
+  loadWorkdayConfigs();
+}
+
+// Pops up the end-of-day card once the workday is over
+function showFinishedDaySummary() {
+  const localDate = takeUnseenSummaryDate();
+  if (localDate) showDaySummary(localDate);
 }
 
 function initApp() {
@@ -30,7 +42,9 @@ function initApp() {
   registerDisplayListenersForBreakWindow()
   initConfigs();
   initLimits();
+  initStats();
   initTimer();
+  initWorkday(showFinishedDaySummary);
   initEventListeners();
   buildStatusIcons();
   createSettingsWindow();
@@ -42,12 +56,17 @@ function initApp() {
 // When the app.close() signal is emitted, set a flag {forceQuit}, that tells the app: 
 // bypass the hide-to-tray logic 
 app.on('before-quit', () => {
+  if (!forceQuit) {
+    recordAppQuit(); // app.quit() can be called more than once, so only record the first
+  }
   forceQuit = true;
   if (tray && !tray.isDestroyed()) {
     tray.destroy();
   }
   // Close all windows and timers manually before close in case any can't be closed (ex: closable = false)
   destroyTimers();
+  destroyWorkday();
+  destroyStats();
   BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 
