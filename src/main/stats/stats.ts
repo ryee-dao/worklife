@@ -44,7 +44,7 @@ const recordEvent = (event: TimerTransition | AppQuit | Heartbeat | CheckpointAd
     v: 1,
     id: randomUUID(),
     at: Date.now(),
-    tzOffsetMin: -new Date().getTimezoneOffset(), // getTimezoneOffset is positive west of UTC
+    tzOffsetMin: 0 - new Date().getTimezoneOffset(), // Flipped, since getTimezoneOffset is positive west of UTC. 0 - keeps UTC at 0, not -0
     config: {
       timerDurationMs: getAppliedTimerConfigs().timerDurationMs,
       breakDurationMs: getBreakDurationMs(),

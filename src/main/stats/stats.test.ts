@@ -82,6 +82,19 @@ describe('Event format', () => {
     expect(line.trim()).not.toContain('\n');
   });
 
+  test('in UTC the offset is 0, not -0, so the event in memory matches the one read back from the file', () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      initStats();
+      initTimer();
+
+      expect(Object.is(getEvents()[0].tzOffsetMin, 0)).toBe(true);
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
+
   test('each event carries its own time, timezone and applied configs', () => {
     vi.setSystemTime(new Date('2026-10-24T13:00:00Z'));
 
@@ -93,7 +106,7 @@ describe('Event format', () => {
       v: 1,
       id: expect.any(String),
       at: Date.parse('2026-10-24T13:00:00Z'),
-      tzOffsetMin: -new Date().getTimezoneOffset(),
+      tzOffsetMin: 0 - new Date().getTimezoneOffset(),
       config: {
         timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
         breakDurationMs: DEFAULTS.DEFAULT_BREAK_DURATION_MS,
