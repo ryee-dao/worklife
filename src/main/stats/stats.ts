@@ -6,7 +6,7 @@ import { getAppliedTimerConfigs } from "../timer/timerConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
 import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
-import { getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
+import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
 import { getDayScores, getTodayScore } from "./checkpoints";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
@@ -40,6 +40,7 @@ let heartbeatTimer: NodeJS.Timeout;
 let events: StatsEvent[] = [];
 
 const recordEvent = (event: TimerTransition | AppQuit | Heartbeat | CheckpointAdjusted) => {
+  applyWorkdayConfigsOnNewDay(); // A day is scored by its first event, which can land before the workday check does
   const statsEvent: StatsEvent = {
     v: 1,
     id: randomUUID(),
@@ -65,7 +66,10 @@ const recordEvent = (event: TimerTransition | AppQuit | Heartbeat | CheckpointAd
 
 // Must run before initTimer so APP_STARTED is captured
 export const initStats = () => {
-  events = readEvents();
+  const text = readUserDataTextFile(FILENAMES.STATS.EVENTS);
+  // A line cut off by a crash has no newline, and the next event would be appended onto it and lost with it
+  if (text && !text.endsWith("\n")) appendToUserDataFile(FILENAMES.STATS.EVENTS, "\n");
+  events = parseEvents(text);
   timerEmitter.on(EVENTS.TIMER.TRANSITION, recordEvent);
   // E2E tests control time themselves, so a real-time heartbeat would make their logs unpredictable
   if (!process.env.PLAYWRIGHT_TEST) {

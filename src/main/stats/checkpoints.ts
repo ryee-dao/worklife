@@ -51,6 +51,11 @@ const getLocalDate = (at: number, tzOffsetMin: number) => {
   return new Date(at + tzOffsetMin * minuteMs).toISOString().slice(0, 10);
 };
 
+// "HH:MM" in the given timezone
+const getLocalTime = (at: number, tzOffsetMin: number) => {
+  return new Date(at + tzOffsetMin * minuteMs).toISOString().slice(11, 16);
+};
+
 // Converts a local date and "HH:MM" time back to UTC epoch ms
 const toEpochMs = (localDate: string, time: string, tzOffsetMin: number) => {
   return Date.parse(`${localDate}T${time}:00Z`) - tzOffsetMin * minuteMs;
@@ -94,8 +99,13 @@ const scoreDay = (dayEvents: StatsEvent[], segments: Segment[], now: number): Da
   const weekday = new Date(`${localDate}T00:00:00Z`).getUTCDay();
   if (!config.workday.days.includes(weekday)) return null;
 
-  const workStart = toEpochMs(localDate, config.workday.start, tzOffsetMin);
-  const workEnd = toEpochMs(localDate, config.workday.end, tzOffsetMin);
+  // The clocks can change during the day, so each edge of the workday uses the last offset seen before it
+  const offsetBefore = (time: string) => {
+    const eventsBefore = dayEvents.filter((event) => getLocalTime(event.at, event.tzOffsetMin) <= time);
+    return eventsBefore.at(-1)?.tzOffsetMin ?? tzOffsetMin;
+  };
+  const workStart = toEpochMs(localDate, config.workday.start, offsetBefore(config.workday.start));
+  const workEnd = toEpochMs(localDate, config.workday.end, offsetBefore(config.workday.end));
   const climbMs = (workEnd - workStart) / MAX_LEVEL;
   const decayMs = config.checkpointDecayMs ?? (workEnd - workStart) * CHECKPOINTS.DECAY_RATIO;
   const scoredUntil = Math.min(Math.max(now, workStart), workEnd); // Only score time that has happened

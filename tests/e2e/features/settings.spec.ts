@@ -120,4 +120,11 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     await expect(settingsWindow.getByText("The workday must end after it starts")).toBeVisible();
     await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeDisabled();
   });
+
+  await test.step("Verify an empty start can't be saved", async () => {
+    await settingsWindow.getByTestId("workday-hours").locator('input').last().fill("17:00");
+    await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeEnabled();
+    await settingsWindow.getByTestId("workday-hours").locator('input').first().fill("");
+    await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeDisabled();
+  });
 });

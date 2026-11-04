@@ -80,8 +80,8 @@ app.on('will-quit', () => {
 const firstAppInstance = app.requestSingleInstanceLock();
 
 if (!firstAppInstance) {
-  // Another instance exists, quit this one
-  app.quit();
+  // Another instance exists, exit this one. Not app.quit(), since before-quit expects an app that has started
+  app.exit();
 } else {
   // This is the first instance, continue normally
 

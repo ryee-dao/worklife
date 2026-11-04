@@ -919,6 +919,52 @@ describe('Lunch', () => {
     expect(increaseLunchesUsed).not.toHaveBeenCalled();
   });
 
+  test('the workday starting does not cut lunch short', () => {
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
+
+    const lunchHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_LUNCH, lunchHandler);
+    initTimer();
+    startLunch("WINDOW");
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+    startTimer("SCHEDULE");
+    vi.advanceTimersByTime(1000);
+
+    expect(transitionHandler).not.toHaveBeenCalled();
+    expect(getLastState(lunchHandler).status).toBe('LUNCH');
+  });
+
+  test('the workday ending stops lunch, and the timer stays stopped with a full timer', () => {
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
+
+    const stoppedHandler = vi.fn();
+    const transitionHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.STOPPED, stoppedHandler);
+    timerEmitter.on(EVENTS.TIMER.TRANSITION, transitionHandler);
+    initTimer();
+    startLunch("WINDOW");
+    stopTimer("SCHEDULE");
+    vi.advanceTimersByTime(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
+
+    expect(transitionHandler).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'STOPPED', source: 'SCHEDULE', from: 'LUNCH' }));
+    expect(getLastState(stoppedHandler).status).toBe('STOPPED');
+    expect(getLastState(stoppedHandler).currentCountdownMs).toBe(DEFAULTS.DEFAULT_TIMER_DURATION_MS);
+  });
+
+  test('a stale stop from a window does not end lunch', () => {
+    seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });
+
+    const lunchHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.ON_LUNCH, lunchHandler);
+    initTimer();
+    startLunch("WINDOW");
+    stopTimer("WINDOW");
+    vi.advanceTimersByTime(1000);
+
+    expect(getLastState(lunchHandler).status).toBe('LUNCH');
+  });
+
   test('no lunch in the available actions once it is used', () => {
     vi.mocked(calculateRemainingLunches).mockReturnValue(0);
     seedTimerState({ currentCountdownMs: 10000, status: 'RUNNING', _bypassThreshold: true });

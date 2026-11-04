@@ -30,6 +30,7 @@ vi.mock('../difficulty/difficultyConfigs', () => ({
 
 vi.mock('../workday/workdayConfigs', () => ({
   getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false })),
+  applyWorkdayConfigsOnNewDay: vi.fn(),
 }));
 
 vi.mock('../overdue/overdueConfigs', () => ({
@@ -46,6 +47,7 @@ vi.mock('../timer/timerConfigs', () => ({
 import { destroyStats, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
 import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '../timer/timerState';
 import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '../../shared/utils/files';
+import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -144,7 +146,39 @@ describe('Heartbeat', () => {
   });
 });
 
+describe('A new day', () => {
+  test('applies the saved workday before the event snapshots it', () => {
+    const newHours = { days: [1], start: '10:00', end: '18:00', autoStopAtEnd: false };
+    initStats();
+    initTimer();
+
+    vi.mocked(applyWorkdayConfigsOnNewDay).mockImplementationOnce(() => {
+      vi.mocked(getAppliedWorkdayConfigs).mockReturnValueOnce(newHours);
+    });
+    vi.advanceTimersByTime(60 * 1000);
+
+    expect(getRecordedEvents().find((e) => e.type === 'HEARTBEAT')?.config.workday).toEqual(newHours);
+  });
+});
+
 describe('Events in memory', () => {
+  test('ends a line cut off by a crash, so the next event starts on its own line', () => {
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce('{"type":"APP_QUIT"}\n{"type":"HEART');
+
+    initStats();
+
+    expect(appendToUserDataFile).toHaveBeenCalledExactlyOnceWith(FILENAMES.STATS.EVENTS, '\n');
+    expect(getEvents().map((e) => e.type)).toEqual(['APP_QUIT']);
+  });
+
+  test('leaves a complete log as it is', () => {
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce('{"type":"APP_QUIT"}\n');
+
+    initStats();
+
+    expect(appendToUserDataFile).not.toHaveBeenCalled();
+  });
+
   test('starts with the events already in the file and adds new ones', () => {
     vi.mocked(readUserDataTextFile).mockReturnValueOnce('{"type":"APP_QUIT"}\n');
 

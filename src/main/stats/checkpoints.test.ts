@@ -353,3 +353,25 @@ describe('Admin checkpoint adjustments', () => {
     expect(scoreMonday(events, onMonday('09:30')).level).toBe(DIM);
   });
 });
+
+describe('Clock changes', () => {
+  const everyDay = { workday: { ...defaultWorkday, days: [0, 1, 2, 3, 4, 5, 6] } };
+  const newYorkEvent = (type: string, localTime: string, offset: '-04:00' | '-05:00') => createEvent(type, '00:00', {
+    at: Date.parse(`2026-11-01T${localTime}:00${offset}`),
+    tzOffsetMin: offset === '-04:00' ? -240 : -300,
+  }, everyDay);
+
+  test('a workday after the clocks go back uses the new offset, even if the day began before them', () => {
+    const events = [
+      newYorkEvent('APP_STARTED', '00:30', '-04:00'),
+      newYorkEvent('HEARTBEAT', '08:59', '-05:00'),
+      newYorkEvent('APP_QUIT', '17:00', '-05:00'),
+    ];
+
+    const score = getDayScores(events, Date.parse('2026-11-02T08:00:00-05:00'))['2026-11-01'];
+
+    expect(score.workStart).toBe(Date.parse('2026-11-01T09:00:00-05:00'));
+    expect(score.workEnd).toBe(Date.parse('2026-11-01T17:00:00-05:00'));
+    expect(score.level).toBe(RADIANT);
+  });
+});

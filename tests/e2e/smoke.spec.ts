@@ -1,6 +1,8 @@
 import { expect, Page } from "@playwright/test";
 import { test } from "./fixtures";
 import { FILENAMES, DEFAULTS } from "./../../src/shared/constants"
+import { spawn } from "child_process";
+import electronPath from "electron";
 import fs from "fs";
 import path from "path";
 import { TimerState } from "../../src/main/timer/timerState"
@@ -8,6 +10,25 @@ import { StatsEvent } from "../../src/main/stats/stats"
 import { convertMinutesToMs } from "../../src/shared/utils/time"
 
 test.describe.configure({ mode: 'parallel' });
+
+test("A second launch exits cleanly and leaves the first one running", async ({ userDataDir, launchElectron }) => {
+  const { electronApp } = await launchElectron();
+
+  const secondLaunch = spawn(String(electronPath), [path.join(__dirname, "../../dist/main/main.js"), `--user-data-dir=${userDataDir.path}`, "--no-sandbox"], {
+    env: { ...process.env, PLAYWRIGHT_TEST: "1" },
+  });
+  let stderr = "";
+  secondLaunch.stderr.on("data", (data) => stderr += data);
+  const exitCode = await Promise.race([
+    new Promise((resolve) => secondLaunch.on("exit", resolve)),
+    new Promise((resolve) => setTimeout(() => resolve("still running"), 15000)), // So a stuck process fails the test instead of hanging it
+  ]);
+  secondLaunch.kill();
+
+  expect(stderr).not.toContain("TypeError");
+  expect(exitCode).toBe(0);
+  expect(electronApp.process().exitCode).toBeNull();
+});
 
 test("App launches with a visible window and starts up with valid components & states", async ({ userDataDir, launchElectron }) => {
   const { settingsWindow, electronApp, testClock } = await launchElectron();

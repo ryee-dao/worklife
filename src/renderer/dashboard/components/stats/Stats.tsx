@@ -13,10 +13,10 @@ export default function Stats({ todayScore }: StatsProps) {
   const { localDate } = useParams();
   const [scores, setScores] = useState<Record<string, DayScore>>({});
 
-  // Reload when a day is picked, so a day that just ended shows its result
+  // Reload when a day is picked or today rolls over, so a day that just ended shows its result
   useEffect(() => {
     window.electronAPI.getDayScores().then(setScores);
-  }, [localDate]);
+  }, [localDate, todayScore?.localDate]);
 
   // Today comes from the live score, which updates every second
   const allScores = todayScore ? { ...scores, [todayScore.localDate]: todayScore } : scores;

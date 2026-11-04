@@ -11,7 +11,7 @@ export default function WorkdaySettings() {
   const [autoStopAtEnd, setAutoStopAtEnd] = useState(false);
 
   // shortcut: overnight workdays aren't supported yet, so the end must come after the start
-  const hoursValid = start < end; // "HH:MM" strings compare correctly as text
+  const hoursValid = start !== "" && start < end; // "HH:MM" strings compare correctly as text
 
   const toggleDay = (day: number) => {
     const newDays = days.includes(day) ? days.filter((d) => d !== day) : [...days, day];

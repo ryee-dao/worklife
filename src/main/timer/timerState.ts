@@ -14,7 +14,7 @@ export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came fro
 // What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
 export type TimerTransition =
   | { type: "APP_STARTED"; previousStatus: TimerStatus | null } // null = first run ever
-  | { type: "STOPPED"; source: Source; from: "RUNNING" | "OVERDUE" | "BREAK"; countdownMs: number }
+  | { type: "STOPPED"; source: Source; from: "RUNNING" | "OVERDUE" | "BREAK" | "LUNCH"; countdownMs: number }
   | { type: "RESUMED"; source: Source; countdownMs: number }
   | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
   | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number } // Forward to break, named before the rename
@@ -240,9 +240,10 @@ const transitionToNextState = () => {
 
 export const stopTimer = (source: Source) => {
   const from = timerState.status;
-  if (from !== "RUNNING" && from !== "OVERDUE" && from !== "BREAK") return; // A stale menu or window can send this after the status changed
+  // A stale menu or window can send this after the status changed. Only the end of the workday can stop lunch
+  if (from === "STOPPED" || (from === "LUNCH" && source !== "SCHEDULE")) return;
   emitTransition({ type: "STOPPED", source, from, countdownMs: timerState.currentCountdownMs });
-  // Stopping from a break screen closes it, and resuming later starts a fresh work session
+  // Stopping from a break screen closes it, and resuming later starts a fresh work session, as it does after lunch
   if (from !== "RUNNING") {
     timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Before the countdown resets, so it uses the configs applied after the break
     timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
@@ -254,7 +255,7 @@ export const stopTimer = (source: Source) => {
 };
 
 export const startTimer = (source: Source) => {
-  if (timerState.status === "LUNCH") {
+  if (timerState.status === "LUNCH" && source !== "SCHEDULE") { // The workday starting doesn't cut lunch short
     emitTransition({ type: "LUNCH_ENDED", cause: "ENDED_EARLY", source, lunchLeftMs: timerState.currentCountdownMs });
     transitionToNextState();
     emitTimerStatus();
