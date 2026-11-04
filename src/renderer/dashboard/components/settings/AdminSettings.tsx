@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TimerConfigs } from "../../../../main/timer/timerConfigs";
 import { DifficultyConfigs } from "../../../../main/difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "../../../../main/workday/workdayConfigs";
-import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs } from "../../../../shared/utils/time";
+import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs, isValidWorkdayHours } from "../../../../shared/utils/time";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 
@@ -26,7 +26,7 @@ export default function AdminSettings() {
   const [workEnd, setWorkEnd] = useState("");
 
   const isValid = timerSeconds >= 5 && breakSeconds >= 1 && allottedPowerups >= 0
-    && snoozeMinutes >= 1 && lunchMinutes >= 1 && decayMinutes >= 1 && workStart < workEnd;
+    && snoozeMinutes >= 1 && lunchMinutes >= 1 && decayMinutes >= 1 && isValidWorkdayHours(workStart, workEnd);
 
   const save = async ({ timer, difficulty, workday }: AdminConfigs) => {
     await Promise.all([

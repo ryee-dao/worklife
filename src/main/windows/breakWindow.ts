@@ -132,7 +132,6 @@ export const resizeBreakWindow = (timerState: TimerState) => {
     timerState.overdueTimeMs,
     overdueLevelsArray
   )
-  console.log(overdueLevelObject)
 
   // Only resize when crossing into a new level — not every tick
   if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {

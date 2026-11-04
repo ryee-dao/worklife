@@ -14,9 +14,6 @@ export interface LimitState {
 
 let limitState: LimitState;
 
-const limitCheckIntervalMs = 5 * 60 * 1000; // 5 mins
-setInterval(resetDailyLimits, limitCheckIntervalMs); // A check to see if daily limit needs to be reset
-
 const getFreshLimitState = (): LimitState => ({
   lastResetDate: getTodayDateAsString(),
   powerupsUsed: 0,
@@ -30,7 +27,7 @@ export const initLimits = () => {
 
 export function loadLimitStateFromFile() {
   const limitStateData = getUserDataFromFile<LimitState>(FILENAMES.LIMIT.STATE);
-  // Merged over fresh counts, so a file saved before a count existed starts that count at 0
+  // Fresh counts when there is no file yet
   setLimitState({ ...getFreshLimitState(), ...limitStateData.fileContent });
 }
 
@@ -50,7 +47,9 @@ export function increasePowerupsUsed() {
   setLimitState({ ...limitState, powerupsUsed: limitState.powerupsUsed + 1 });
 }
 
+// Checks the date first, so the counts come back right at midnight
 export function calculateRemainingPowerups() {
+  resetDailyLimits();
   return getAllottedPowerups() - limitState.powerupsUsed;
 }
 
@@ -59,6 +58,7 @@ export function increaseLunchesUsed() {
 }
 
 export function calculateRemainingLunches() {
+  resetDailyLimits();
   return LUNCHES_PER_DAY - limitState.lunchesUsed;
 }
 

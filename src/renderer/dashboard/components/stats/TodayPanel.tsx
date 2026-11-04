@@ -3,7 +3,8 @@ import { DayScore } from "../../../../main/stats/checkpoints";
 import { CHECKPOINTS } from "../../../../shared/constants";
 import CheckpointOrb from "./CheckpointOrb";
 import DayBar from "./DayBar";
-import { formatClockTime, formatCountdown } from "./checkpointStyles";
+import { formatCountdown } from "./checkpointStyles";
+import { formatClockTime } from "../../../../shared/utils/time";
 
 const { NAMES } = CHECKPOINTS;
 const maxLevel = NAMES.length - 1;

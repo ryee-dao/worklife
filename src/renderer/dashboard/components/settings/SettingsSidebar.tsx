@@ -1,5 +1,4 @@
 import SettingsTab from "./SettingsTab";
-// import { ClockIcon, HandRaisedIcon } from "@heroicons/react/24/solid";
 import { ClockAlert, Clock9, Gauge, Briefcase, Wrench } from 'lucide-react';
 import { IS_DEV } from "../../../common/constants";
 

@@ -70,12 +70,6 @@ app.on('before-quit', () => {
   BrowserWindow.getAllWindows().forEach(win => win.destroy());
 });
 
-// Right before quitting, destroy timers so that they won't persist
-app.on('will-quit', () => {
-  destroyTimers();
-});
-
-
 // Only allow one instance of the app in the same environment at the same time
 const firstAppInstance = app.requestSingleInstanceLock();
 

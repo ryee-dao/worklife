@@ -1,5 +1,4 @@
 import { useState } from "react";
-// import { IS_DEV } from "../../../common/constants";
 import SettingsPanel from "./SettingsPanel";
 import NumberInput from "../../../common/components/NumberInput";
 import { OverdueConfigs } from "../../../../main/overdue/overdueConfigs";
@@ -78,7 +77,7 @@ export default function OverdueConfigsForm() {
         )}
       </div>
 
-      <div data-testid="maximum-window-levels" className="tracking-wider p-2">
+      <div data-testid="level-threshold" className="tracking-wider p-2">
         <label>
           I want the overdue window to increase in size every{" "}
           <NumberInput

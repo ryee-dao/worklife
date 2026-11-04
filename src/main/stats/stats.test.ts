@@ -44,7 +44,7 @@ vi.mock('../timer/timerConfigs', () => ({
   })),
 }));
 
-import { destroyStats, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
+import { destroyStats, getCurrentDayScore, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
 import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '../timer/timerState';
 import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '../../shared/utils/files';
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
@@ -136,19 +136,68 @@ describe('Event format', () => {
   });
 });
 
-describe('Heartbeat', () => {
-  test('a heartbeat is recorded every minute', () => {
+describe('Crashes', () => {
+  // Helper: a line in the events file from an earlier run
+  const logLine = (type: string, at: number) => JSON.stringify({ type, at, tzOffsetMin: 0 }) + '\n';
+
+  test('a log that does not end with a quit gets a crash at the last moment the app was alive, before the new start', () => {
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce(logLine('APP_STARTED', 1000));
+    vi.mocked(getUserDataFromFile).mockImplementation((fileName) => ({
+      fileContent: fileName === FILENAMES.STATS.STATE ? { lastAliveAt: 61000 } : undefined,
+      filePath: '',
+    }));
+
     initStats();
     initTimer();
+
+    expect(getRecordedEvents().map((e) => [e.type, e.at])).toEqual([['APP_CRASHED', 61000], ['APP_STARTED', Date.now()]]);
+  });
+
+  test('a clean quit is not a crash', () => {
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce(logLine('APP_STARTED', 1000) + logLine('APP_QUIT', 2000));
+    vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastAliveAt: 1500 }, filePath: '' });
+
+    initStats();
+
+    expect(getRecordedEvents()).toEqual([]);
+  });
+
+  test('an empty log is not a crash', () => {
+    initStats();
+
+    expect(getRecordedEvents()).toEqual([]);
+  });
+});
+
+describe('Staying alive', () => {
+  test('saves when the app was last alive every minute, keeping the end-of-day card date', () => {
+    vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastSummaryDate: '2026-10-26' }, filePath: '' });
+    vi.mocked(writeToUserDataFile).mockClear();
+    const start = Date.now();
+
+    initStats();
     vi.advanceTimersByTime(2 * 60 * 1000);
 
-    expect(getRecordedEvents().filter((e) => e.type === 'HEARTBEAT')).toHaveLength(2);
+    expect(vi.mocked(writeToUserDataFile).mock.calls).toEqual([
+      [FILENAMES.STATS.STATE, { lastSummaryDate: '2026-10-26', lastAliveAt: start + 60 * 1000 }],
+      [FILENAMES.STATS.STATE, { lastSummaryDate: '2026-10-26', lastAliveAt: start + 2 * 60 * 1000 }],
+    ]);
   });
 });
 
 describe('A new day', () => {
+  test('starts with one event when the date changes', () => {
+    vi.setSystemTime(new Date(2026, 9, 26, 23, 58, 30)); // Local time
+
+    initStats();
+    vi.advanceTimersByTime(3 * 60 * 1000);
+
+    expect(getRecordedEvents().map((e) => [e.type, e.at])).toEqual([['DAY_STARTED', new Date(2026, 9, 27, 0, 0, 30).getTime()]]);
+  });
+
   test('applies the saved workday before the event snapshots it', () => {
     const newHours = { days: [1], start: '10:00', end: '18:00', autoStopAtEnd: false };
+    vi.setSystemTime(new Date(2026, 9, 26, 23, 59, 30)); // Local time
     initStats();
     initTimer();
 
@@ -157,7 +206,71 @@ describe('A new day', () => {
     });
     vi.advanceTimersByTime(60 * 1000);
 
-    expect(getRecordedEvents().find((e) => e.type === 'HEARTBEAT')?.config.workday).toEqual(newHours);
+    expect(getRecordedEvents().find((e) => e.type === 'DAY_STARTED')?.config.workday).toEqual(newHours);
+  });
+});
+
+describe("Today's score", () => {
+  // Monday, October 26, 2026 is a workday, local time
+  const monday = (hours: number, minutes: number, seconds = 0) => new Date(2026, 9, 26, hours, minutes, seconds);
+
+  test('is scored once while nothing changes, with the last piece of the day bar still growing', () => {
+    vi.setSystemTime(monday(10, 0));
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    const first = getCurrentDayScore();
+    vi.advanceTimersByTime(1000);
+    const second = getCurrentDayScore();
+
+    expect(second).toBe(first);
+    expect(second!.pieces.at(-1)!.end).toBe(Date.now());
+  });
+
+  test('is scored again after a new event', () => {
+    vi.setSystemTime(monday(10, 0));
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    const climbing = getCurrentDayScore();
+    stopTimer("WINDOW");
+
+    expect(getCurrentDayScore()).not.toBe(climbing);
+  });
+
+  test('is scored again the second after an event, once its piece of the day bar shows', () => {
+    vi.setSystemTime(monday(10, 0));
+    initStats();
+    initTimer();
+
+    expect(getCurrentDayScore()!.pieces).toEqual([]);
+    vi.advanceTimersByTime(1000);
+    expect(getCurrentDayScore()!.pieces).toHaveLength(1);
+  });
+
+  test('is scored again when it changes on its own, like the workday starting', () => {
+    vi.setSystemTime(monday(8, 59, 58));
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    const beforeWork = getCurrentDayScore();
+    vi.advanceTimersByTime(1000);
+
+    expect(getCurrentDayScore()).not.toBe(beforeWork);
+  });
+
+  test('is scored again at midnight, even before the new day has an event', () => {
+    vi.setSystemTime(monday(23, 59, 58));
+    initStats();
+    initTimer();
+    vi.advanceTimersByTime(1000);
+
+    expect(getCurrentDayScore()?.localDate).toBe('2026-10-26');
+    vi.advanceTimersByTime(1000);
+    expect(getCurrentDayScore()).toBeNull();
   });
 });
 
@@ -258,7 +371,7 @@ describe('Timer transitions', () => {
     initTimer();
     forwardToBreak("WINDOW");
 
-    expect(getRecordedEvents()[1]).toMatchObject({ type: 'OVERDUE_STARTED', cause: 'TIMER_SKIPPED', source: 'WINDOW', countdownMs: 100000 });
+    expect(getRecordedEvents()[1]).toMatchObject({ type: 'OVERDUE_STARTED', cause: 'FORWARDED', source: 'WINDOW', countdownMs: 100000 });
   });
 
   test('starting a break records how long it was overdue', () => {
@@ -331,13 +444,15 @@ describe('Timer transitions', () => {
   test('lunch records where it was taken from and how long, then how it ended', () => {
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });
 
+    vi.setSystemTime(new Date(2026, 9, 26, 12, 0)); // Local noon, so lunch doesn't run into a new day
+
     initStats();
     initTimer();
     vi.advanceTimersByTime(1000); // Transition to OVERDUE
     startLunch("TRAY");
     vi.advanceTimersByTime(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
 
-    const [, , lunchStarted, lunchEnded] = getRecordedEvents().filter((event) => event.type !== 'HEARTBEAT'); // Lunch is long enough for heartbeats
+    const [, , lunchStarted, lunchEnded] = getRecordedEvents();
     expect(lunchStarted).toMatchObject({ type: 'LUNCH_STARTED', source: 'TRAY', from: 'OVERDUE', lunchMs: DEFAULTS.DEFAULT_LUNCH_DURATION_MS });
     expect(lunchEnded).toMatchObject({ type: 'LUNCH_ENDED', cause: 'TIME_UP' });
   });
@@ -389,12 +504,11 @@ describe('End-of-day card', () => {
   test('returns the latest finished workday once, then nothing', () => {
     vi.setSystemTime(new Date('2026-10-27T08:00:00-04:00'));
     vi.mocked(readUserDataTextFile).mockReturnValueOnce(cleanMondayLog);
+    vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastAliveAt: 1000 }, filePath: '' });
     initStats();
 
     expect(takeUnseenSummaryDate()).toBe('2026-10-26');
-    expect(writeToUserDataFile).toHaveBeenLastCalledWith(FILENAMES.STATS.STATE, { lastSummaryDate: '2026-10-26' });
-
-    vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastSummaryDate: '2026-10-26' }, filePath: '' });
+    expect(writeToUserDataFile).toHaveBeenLastCalledWith(FILENAMES.STATS.STATE, { lastAliveAt: 1000, lastSummaryDate: '2026-10-26' });
     expect(takeUnseenSummaryDate()).toBeNull();
   });
 });

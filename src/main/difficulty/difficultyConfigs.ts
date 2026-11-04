@@ -27,12 +27,7 @@ let appliedDifficultyConfigs: DifficultyConfigs;
 export const loadDifficultyConfigs = () => {
   const difficultyConfigsData = getUserDataFromFile<DifficultyConfigs>(FILENAMES.DIFFICULTY.CONFIGS);
   const savedConfigs = difficultyConfigsData?.fileContent;
-  // Custom is merged too, so a file saved before a custom field existed gets that field's default
-  difficultyConfigs = {
-    ...defaultDifficultyConfigs,
-    ...savedConfigs,
-    custom: { ...defaultDifficultyConfigs.custom, ...savedConfigs?.custom },
-  };
+  difficultyConfigs = { ...defaultDifficultyConfigs, ...savedConfigs };
   writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
   applyDifficultyConfigs();
 }

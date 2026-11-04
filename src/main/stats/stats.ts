@@ -1,16 +1,19 @@
 import { randomUUID } from "crypto";
 import { EVENTS, FILENAMES } from "../../shared/constants";
 import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from "../../shared/utils/files";
+import { getTodayDateAsString } from "../../shared/utils/date";
 import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
 import { getAppliedTimerConfigs } from "../timer/timerConfigs";
 import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
 import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
 import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
-import { getDayScores, getTodayScore } from "./checkpoints";
+import { DayScore, getDayScores, getTodayScore } from "./checkpoints";
+import { IS_TEST } from "../testEnv";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
-type Heartbeat = { type: "HEARTBEAT" }; // Shows the app was still alive, so a crash can be placed within a minute
+type AppCrashed = { type: "APP_CRASHED" }; // Recorded on the next launch, at the last moment the app was known to be alive
+type DayStarted = { type: "DAY_STARTED" }; // Gives a day the app runs through its own first event to take the config and offset from
 type CheckpointAdjusted = { type: "CHECKPOINT_ADJUSTED"; by: number }; // Dev only: the admin panel moving today's level
 
 // One line in events.jsonl. Every event carries its own context so it can be read on its own
@@ -26,25 +29,30 @@ export type StatsEvent = {
     snoozeDurationMs: number;
     allottedPowerups: number;
     lunchDurationMs: number;
-    checkpointDecayMs?: number; // Missing from events logged before the drain was part of difficulty
+    checkpointDecayMs: number;
     difficulty: DifficultyLevel;
     levelThresholdMs: number;
     workday: WorkdayConfigs;
   };
-} & (TimerTransition | AppQuit | Heartbeat | CheckpointAdjusted);
+} & (TimerTransition | AppQuit | AppCrashed | DayStarted | CheckpointAdjusted);
 
-const heartbeatIntervalMs = 60 * 1000; // 1 minute
+type StatsState = { lastSummaryDate?: string; lastAliveAt?: number };
+
+const aliveIntervalMs = 60 * 1000; // 1 minute
 const todayScoringWindowMs = 7 * 24 * 60 * 60 * 1000; // 1 week
-let heartbeatTimer: NodeJS.Timeout;
+let aliveTimer: NodeJS.Timeout;
+let statsState: StatsState = {};
+let lastSeenDate = "";
 // shortcut: keeps the whole log in memory so today's score doesn't re-read the file every tick, trim to recent days if it grows large
 let events: StatsEvent[] = [];
+let todayScoreCache: { key: string; score: DayScore | null; computedAt: number; changesAt: number } | null = null;
 
-const recordEvent = (event: TimerTransition | AppQuit | Heartbeat | CheckpointAdjusted) => {
+const recordEvent = (event: TimerTransition | AppQuit | AppCrashed | DayStarted | CheckpointAdjusted, at = Date.now()) => {
   applyWorkdayConfigsOnNewDay(); // A day is scored by its first event, which can land before the workday check does
   const statsEvent: StatsEvent = {
     v: 1,
     id: randomUUID(),
-    at: Date.now(),
+    at,
     tzOffsetMin: 0 - new Date().getTimezoneOffset(), // Flipped, since getTimezoneOffset is positive west of UTC. 0 - keeps UTC at 0, not -0
     config: {
       timerDurationMs: getAppliedTimerConfigs().timerDurationMs,
@@ -70,15 +78,36 @@ export const initStats = () => {
   // A line cut off by a crash has no newline, and the next event would be appended onto it and lost with it
   if (text && !text.endsWith("\n")) appendToUserDataFile(FILENAMES.STATS.EVENTS, "\n");
   events = parseEvents(text);
+  statsState = getUserDataFromFile<StatsState>(FILENAMES.STATS.STATE).fileContent ?? {};
+  lastSeenDate = getTodayDateAsString();
+
+  // Without a quit at the end, the app last ran until it crashed
+  const latest = events.reduce<StatsEvent | undefined>((latest, event) => (latest && latest.at > event.at ? latest : event), undefined);
+  if (latest && latest.type !== "APP_QUIT") {
+    recordEvent({ type: "APP_CRASHED" }, Math.max(statsState.lastAliveAt ?? 0, latest.at));
+  }
+
   timerEmitter.on(EVENTS.TIMER.TRANSITION, recordEvent);
-  // E2E tests control time themselves, so a real-time heartbeat would make their logs unpredictable
-  if (!process.env.PLAYWRIGHT_TEST) {
-    heartbeatTimer = setInterval(() => recordEvent({ type: "HEARTBEAT" }), heartbeatIntervalMs);
+  // E2E tests control time themselves, so a real-time interval would make their logs unpredictable
+  if (!IS_TEST) {
+    aliveTimer = setInterval(markAlive, aliveIntervalMs);
+  }
+};
+
+// Saves when the app was last alive, so a crash can be placed within a minute, and starts each new day with an event
+const markAlive = () => {
+  statsState = { ...statsState, lastAliveAt: Date.now() };
+  writeToUserDataFile(FILENAMES.STATS.STATE, statsState);
+
+  const today = getTodayDateAsString();
+  if (today !== lastSeenDate) {
+    lastSeenDate = today;
+    recordEvent({ type: "DAY_STARTED" });
   }
 };
 
 export const destroyStats = () => {
-  clearInterval(heartbeatTimer);
+  clearInterval(aliveTimer);
 };
 
 export const getEvents = () => {
@@ -112,10 +141,27 @@ export const readEvents = () => {
   return parseEvents(readUserDataTextFile(FILENAMES.STATS.EVENTS));
 };
 
+// Runs every second, so the score is kept until a new event, a new day, or the next moment it changes on its own
 // shortcut: only looks at the last week of events, so a stretch older than that (like overdue all week) is missed
+// shortcut: bestPossible isn't refreshed while stopped since it's only shown while climbing, add its next drop to changesAt if that changes
 export const getCurrentDayScore = () => {
-  const since = Date.now() - todayScoringWindowMs;
-  return getTodayScore(events.filter((event) => event.at > since));
+  const now = Date.now();
+  const key = `${events.length} ${events.at(-1)?.id} ${getTodayDateAsString()}`;
+  const cache = todayScoreCache;
+  if (cache && cache.key === key && now >= cache.computedAt && now < cache.changesAt) {
+    // The bar's last piece is the one still going, so it grows to now
+    const { score } = cache;
+    const live = score?.pieces.at(-1);
+    if (live && score?.inProgress && cache.computedAt > score.workStart) live.end = now;
+    return score;
+  }
+
+  const score = getTodayScore(events.filter((event) => event.at > now - todayScoringWindowMs), now);
+  const changes = [score?.nextCheckpointAt, score?.workStart, score?.workEnd, score?.nextLossAt].filter((time): time is number => time != null && time >= now);
+  // An event right now may have started a piece too short to show yet, so it isn't cached
+  const startedNow = (events.at(-1)?.at ?? 0) >= now;
+  todayScoreCache = { key, score, computedAt: now, changesAt: startedNow ? now : Math.min(...changes) };
+  return score;
 };
 
 export const getAllDayScores = () => {
@@ -125,7 +171,7 @@ export const getAllDayScores = () => {
 // Returns the latest finished workday whose end-of-day card hasn't been shown yet, and marks it shown.
 // Days the app was never open during work hours have nothing to show
 export const takeUnseenSummaryDate = () => {
-  const lastShown = getUserDataFromFile<{ lastSummaryDate: string }>(FILENAMES.STATS.STATE).fileContent?.lastSummaryDate ?? "";
+  const lastShown = statsState.lastSummaryDate ?? "";
   const unseenDates = Object.values(getDayScores(events))
     .filter((score) => !score.inProgress && score.localDate > lastShown)
     .filter((score) => score.pieces.some((piece) => piece.activity !== "CLOSED"))
@@ -134,6 +180,7 @@ export const takeUnseenSummaryDate = () => {
 
   const localDate = unseenDates.at(-1);
   if (!localDate) return null;
-  writeToUserDataFile(FILENAMES.STATS.STATE, { lastSummaryDate: localDate });
+  statsState = { ...statsState, lastSummaryDate: localDate };
+  writeToUserDataFile(FILENAMES.STATS.STATE, statsState);
   return localDate;
 };

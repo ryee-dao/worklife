@@ -32,7 +32,7 @@ export interface DayScore {
 export const MAX_LEVEL = CHECKPOINTS.NAMES.length - 1;
 const minuteMs = 60 * 1000;
 
-// What the app is doing after each event. Events not listed (SNOOZED, HEARTBEAT) don't change it
+// What the app is doing after each event. Events not listed (SNOOZED, DAY_STARTED) don't change it
 const activityAfter: Partial<Record<StatsEvent["type"], Activity>> = {
   APP_STARTED: "WORKING",
   RESUMED: "WORKING",
@@ -44,6 +44,7 @@ const activityAfter: Partial<Record<StatsEvent["type"], Activity>> = {
   LUNCH_ENDED: "WORKING",
   STOPPED: "STOPPED",
   APP_QUIT: "CLOSED",
+  APP_CRASHED: "CLOSED",
 };
 
 // "YYYY-MM-DD" in the given timezone
@@ -69,14 +70,7 @@ const buildSegments = (sortedEvents: StatsEvent[], now: number): Segment[] => {
     segments.push({ start: at, end: at, activity, ...(adjustBy !== undefined && { adjustBy }) });
   };
 
-  let lastEventAt = 0;
   for (const event of sortedEvents) {
-    // Starting while the app was never closed means it crashed, at its last sign of life
-    const last = segments.at(-1);
-    if (event.type === "APP_STARTED" && last && last.activity !== "CLOSED") {
-      switchTo(lastEventAt, "CLOSED");
-    }
-
     const activity = activityAfter[event.type];
     if (event.type === "CHECKPOINT_ADJUSTED") {
       // Split here, so scoring meets the adjustment at the right moment
@@ -84,7 +78,6 @@ const buildSegments = (sortedEvents: StatsEvent[], now: number): Segment[] => {
     } else if (activity && activity !== segments.at(-1)?.activity) {
       switchTo(event.at, activity);
     }
-    lastEventAt = event.at;
   }
 
   const last = segments.at(-1);
@@ -100,14 +93,18 @@ const scoreDay = (dayEvents: StatsEvent[], segments: Segment[], now: number): Da
   if (!config.workday.days.includes(weekday)) return null;
 
   // The clocks can change during the day, so each edge of the workday uses the last offset seen before it
+  const localTimes = dayEvents.map((event) => getLocalTime(event.at, event.tzOffsetMin));
   const offsetBefore = (time: string) => {
-    const eventsBefore = dayEvents.filter((event) => getLocalTime(event.at, event.tzOffsetMin) <= time);
-    return eventsBefore.at(-1)?.tzOffsetMin ?? tzOffsetMin;
+    let offset = tzOffsetMin;
+    localTimes.forEach((localTime, i) => {
+      if (localTime <= time) offset = dayEvents[i].tzOffsetMin;
+    });
+    return offset;
   };
   const workStart = toEpochMs(localDate, config.workday.start, offsetBefore(config.workday.start));
   const workEnd = toEpochMs(localDate, config.workday.end, offsetBefore(config.workday.end));
   const climbMs = (workEnd - workStart) / MAX_LEVEL;
-  const decayMs = config.checkpointDecayMs ?? (workEnd - workStart) * CHECKPOINTS.DECAY_RATIO;
+  const decayMs = config.checkpointDecayMs;
   const scoredUntil = Math.min(Math.max(now, workStart), workEnd); // Only score time that has happened
 
   // The climb so far. While climbing, base is the level the run started from. While stopped, the level right after the drop
@@ -213,7 +210,12 @@ export const getDayScores = (events: StatsEvent[], now = Date.now()) => {
   const eventsByDay = new Map<string, StatsEvent[]>();
   for (const event of sortedEvents) {
     const localDate = getLocalDate(event.at, event.tzOffsetMin);
-    eventsByDay.set(localDate, [...(eventsByDay.get(localDate) ?? []), event]);
+    const dayEvents = eventsByDay.get(localDate);
+    if (dayEvents) {
+      dayEvents.push(event);
+    } else {
+      eventsByDay.set(localDate, [event]);
+    }
   }
 
   const scores: Record<string, DayScore> = {};

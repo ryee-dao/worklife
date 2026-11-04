@@ -7,6 +7,7 @@ import {
 } from "../../shared/utils/files";
 import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from "../limit/limitState";
 import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
+import { IS_TEST } from "../testEnv";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK" | "LUNCH";
 export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday
@@ -17,7 +18,7 @@ export type TimerTransition =
   | { type: "STOPPED"; source: Source; from: "RUNNING" | "OVERDUE" | "BREAK" | "LUNCH"; countdownMs: number }
   | { type: "RESUMED"; source: Source; countdownMs: number }
   | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
-  | { type: "OVERDUE_STARTED"; cause: "TIMER_SKIPPED"; source: Source; countdownMs: number } // Forward to break, named before the rename
+  | { type: "OVERDUE_STARTED"; cause: "FORWARDED"; source: Source; countdownMs: number }
   | { type: "BREAK_STARTED"; source: Source; overdueMs: number }
   | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; powerupsLeft: number }
   | { type: "BREAK_COMPLETED" }
@@ -50,7 +51,7 @@ export interface StoredTimerState {
 const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
 const tickIntervalMs = 1 * 1000; // 1 second
-let timerState: TimerState | StoredTimerState;
+let timerState: StoredTimerState;
 
 let tickTimer: NodeJS.Timeout
 const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
@@ -153,7 +154,6 @@ export const emitTimerStatus = () => {
 
   // Emit along additional data along with the timer state
   const stateWithActions = getTimerState();
-  console.log('emitTimerStatus()', statusMapper[timerState.status], stateWithActions)
   timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
 };
 
@@ -171,8 +171,6 @@ const onTick = () => {
 };
 
 const checkTimer = () => {
-  console.log('checkTimer()', timerState);
-
   // Perform logic on timerState based on status
   switch (timerState.status) {
     case "STOPPED":
@@ -270,7 +268,7 @@ const runTimer = () => {
   clearInterval(tickTimer);
   // When running e2e tests, we don't set an interval to control the timing
   // This is to prevent flakiness in tests
-  if (!process.env.PLAYWRIGHT_TEST) {
+  if (!IS_TEST) {
     tickTimer = setInterval(onTick, tickIntervalMs);
   }
   timerState.status = "RUNNING";
@@ -287,7 +285,7 @@ export const startBreak = (source: Source) => {
 
   // When running e2e tests, we don't set an interval to control the timing
   // This is to prevent flakiness in tests
-  if (!process.env.PLAYWRIGHT_TEST) {
+  if (!IS_TEST) {
     tickTimer = setInterval(onTick, tickIntervalMs);
   }
   transitionToNextState();
@@ -315,7 +313,7 @@ export const skipBreak = (source: Source) => {
 
 export const forwardToBreak = (source: Source) => {
   if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
-  emitTransition({ type: "OVERDUE_STARTED", cause: "TIMER_SKIPPED", source, countdownMs: timerState.currentCountdownMs });
+  emitTransition({ type: "OVERDUE_STARTED", cause: "FORWARDED", source, countdownMs: timerState.currentCountdownMs });
   timerState.currentCountdownMs = 0;
   transitionToNextState();
   emitTimerStatus();
@@ -368,7 +366,7 @@ const isInWarning = () => {
 
 // Returns the status saved by the last run, or null on the first run ever
 const loadTimerStateFromFile = (): TimerStatus | null => {
-  const timerData = getUserDataFromFile<TimerState>(FILENAMES.TIMER.STATE);
+  const timerData = getUserDataFromFile<StoredTimerState>(FILENAMES.TIMER.STATE);
 
   // If no timer data is returned, set new state in file
   timerState = { ...defaultTimerData, ...timerData?.fileContent }
@@ -390,7 +388,7 @@ export const getTimerState = (): TimerState => ({
 });
 
 // Expose a function that allows end to end tests to manually speed up timers 
-if (process.env.PLAYWRIGHT_TEST) {
+if (IS_TEST) {
   global.__test_fastForwardTimerOneSecond = () => {
     // Can only fast forward one second/tick at a time 
     // because for some reason, the event loop doesn't allow batches (not sure why)

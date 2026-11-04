@@ -4,7 +4,7 @@ import { StatsEvent } from './stats';
 import { WorkdayConfigs } from '../workday/workdayConfigs';
 
 const defaultWorkday: WorkdayConfigs = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false };
-const normalConfig = { workday: defaultWorkday };
+const normalConfig = { workday: defaultWorkday, checkpointDecayMs: 15 * 60 * 1000 }; // Normal's drain on a 9 to 5 day
 const tzOffsetMin = -240; // New York in October
 
 // Monday, October 26, 2026 is a workday. The 31st is a Saturday
@@ -74,7 +74,7 @@ describe('Climbing', () => {
   });
 
   test('uses the workday the day started with', () => {
-    const lateConfig = { workday: { ...defaultWorkday, start: '11:00' } }; // 6 hours, so a checkpoint every 1.5
+    const lateConfig = { ...normalConfig, workday: { ...defaultWorkday, start: '11:00' } }; // 6 hours, so a checkpoint every 1.5
     const events = [createEvent('APP_STARTED', '11:00', {}, lateConfig), createEvent('APP_QUIT', '17:30', {}, lateConfig)];
 
     expect(scoreMonday(events, onMonday('12:30')).level).toBe(GLIMMER);
@@ -101,7 +101,7 @@ describe('Stopping', () => {
     expect(scoreMonday(events).level).toBe(SHINE); // Glow, plus 2 unbroken hours
   });
 
-  test('staying stopped loses another checkpoint every 1/32 of the workday', () => {
+  test('staying stopped loses another checkpoint every drain, 15 minutes on Normal', () => {
     const events = workdayWith(createEvent('STOPPED', '15:00', { from: 'RUNNING' })); // Shine, down to Glow
 
     expect(scoreMonday(events, onMonday('15:14')).level).toBe(GLOW);
@@ -190,9 +190,18 @@ describe('The app closing', () => {
     expect(scoreMonday(events).level).toBe(GLIMMER);
   });
 
-  test('a crash is placed at the last heartbeat, with the same grace as a restart', () => {
-    const quickRecovery = workdayWith(createEvent('HEARTBEAT', '12:00'), createEvent('APP_STARTED', '12:04'));
-    const slowRecovery = workdayWith(createEvent('HEARTBEAT', '12:00'), createEvent('APP_STARTED', '12:06'));
+  test('a crash counts as closed from the last moment the app was alive', () => {
+    const events = workdayWith(createEvent('APP_CRASHED', '13:00'), createEvent('APP_STARTED', '13:40'));
+
+    // The same as closed longer: Glow, down to Glimmer at 13:00, drained to Dim by 13:15, then 3h20m unbroken
+    expect(scoreMonday(events).level).toBe(GLIMMER);
+    // Even before the app is back
+    expect(scoreMonday(events.slice(0, 2), onMonday('13:30')).level).toBe(DIM);
+  });
+
+  test('reopening within 5 minutes of a crash is a restart, any later is a stop', () => {
+    const quickRecovery = workdayWith(createEvent('APP_CRASHED', '12:00'), createEvent('APP_STARTED', '12:05'));
+    const slowRecovery = workdayWith(createEvent('APP_CRASHED', '12:00'), createEvent('APP_STARTED', '12:06'));
 
     expect(scoreMonday(quickRecovery).level).toBe(RADIANT);
     expect(scoreMonday(slowRecovery).level).toBe(GLOW); // Glimmer, down to Dim at the crash, then 4h54m unbroken
@@ -309,13 +318,6 @@ describe('Drain speed', () => {
     expect(scoreMonday(events, onMonday('15:07')).level).toBe(GLOW);
     expect(scoreMonday(events, onMonday('15:08')).level).toBe(GLIMMER);
   });
-
-  test('events logged before it existed drain like Normal', () => {
-    const events = [createEvent('APP_STARTED', '08:30'), createEvent('STOPPED', '15:00', { source: 'WINDOW', from: 'RUNNING' })];
-
-    expect(scoreMonday(events, onMonday('15:14')).level).toBe(GLOW);
-    expect(scoreMonday(events, onMonday('15:15')).level).toBe(GLIMMER);
-  });
 });
 
 describe('Admin checkpoint adjustments', () => {
@@ -355,7 +357,7 @@ describe('Admin checkpoint adjustments', () => {
 });
 
 describe('Clock changes', () => {
-  const everyDay = { workday: { ...defaultWorkday, days: [0, 1, 2, 3, 4, 5, 6] } };
+  const everyDay = { ...normalConfig, workday: { ...defaultWorkday, days: [0, 1, 2, 3, 4, 5, 6] } };
   const newYorkEvent = (type: string, localTime: string, offset: '-04:00' | '-05:00') => createEvent(type, '00:00', {
     at: Date.parse(`2026-11-01T${localTime}:00${offset}`),
     tzOffsetMin: offset === '-04:00' ? -240 : -300,
@@ -364,7 +366,7 @@ describe('Clock changes', () => {
   test('a workday after the clocks go back uses the new offset, even if the day began before them', () => {
     const events = [
       newYorkEvent('APP_STARTED', '00:30', '-04:00'),
-      newYorkEvent('HEARTBEAT', '08:59', '-05:00'),
+      newYorkEvent('SNOOZED', '08:59', '-05:00'), // Any event after the change, so the offset is known before work starts
       newYorkEvent('APP_QUIT', '17:00', '-05:00'),
     ];
 

@@ -89,7 +89,6 @@ export const initEventListeners = () => {
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,
     (event, configs: TimerConfigs) => {
-      // throw new Error("test error")
       setTimerConfigs(configs)
     }
   );

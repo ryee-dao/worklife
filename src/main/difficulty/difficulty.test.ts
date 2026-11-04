@@ -19,7 +19,6 @@ import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunch
 import { getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
 import { getAppliedTimerConfigs } from '../timer/timerConfigs';
-import { getUserDataFromFile } from '../../shared/utils/files';
 
 const customConfigs: DifficultyConfigs['custom'] = {
   breakDurationMs: 40 * 1000,
@@ -147,19 +146,6 @@ describe('Custom difficulty', () => {
     expect(getAllottedPowerups()).toBe(customConfigs.allottedPowerups);
     expect(getLunchDurationMs()).toBe(customConfigs.lunchDurationMs);
     expect(getCheckpointDecayMs()).toBe(customConfigs.checkpointDecayMs);
-  });
-
-  test('a custom difficulty saved before lunch existed gets the default lunch', () => {
-    vi.mocked(getUserDataFromFile).mockReturnValueOnce({
-      fileContent: { level: 'CUSTOM', custom: { breakDurationMs: 40 * 1000, allottedBreaks: 2 } },
-      filePath: '',
-    });
-    loadDifficultyConfigs();
-
-    expect(getBreakDurationMs()).toBe(40 * 1000);
-    expect(getLunchDurationMs()).toBe(DEFAULTS.DEFAULT_LUNCH_DURATION_MS);
-    expect(getAllottedPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
-    expect(getCheckpointDecayMs()).toBe(DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS);
   });
 
   test('ignores the timer length', () => {

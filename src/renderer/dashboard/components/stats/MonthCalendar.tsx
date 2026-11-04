@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { DayScore } from "../../../../main/stats/checkpoints";
 import { CHECKPOINTS } from "../../../../shared/constants";
 import { FillMode, getLevelFill, LEVEL_COLORS } from "./checkpointStyles";
+import { getTodayDateAsString } from "../../../../shared/utils/date";
 
 interface MonthCalendarProps {
   scores: Record<string, DayScore>;
@@ -13,15 +14,12 @@ const maxLevel = CHECKPOINTS.NAMES.length - 1;
 const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const fillModeNames: Record<FillMode, string> = { SHARE: "Fill by checkpoint", WHOLE: "Whole day" };
 
-// "YYYY-MM-DD" in local time
-const toLocalDate = (date: Date) => date.toLocaleDateString("en-CA");
-
 // "YYYY-MM", the month a local date is in
 const toMonth = (localDate: string) => localDate.slice(0, 7);
 
 const addMonths = (month: string, count: number) => {
   const [year, monthIndex] = month.split("-").map(Number);
-  return toLocalDate(new Date(year, monthIndex - 1 + count, 1)).slice(0, 7);
+  return getTodayDateAsString(new Date(year, monthIndex - 1 + count, 1)).slice(0, 7);
 };
 
 // Every day of the month, after blanks for the weekdays before the 1st
@@ -35,7 +33,7 @@ const getMonthDays = (month: string) => {
 
 export default function MonthCalendar({ scores, selectedDate }: MonthCalendarProps) {
   const navigate = useNavigate();
-  const today = toLocalDate(new Date());
+  const today = getTodayDateAsString();
   const [month, setMonth] = useState(toMonth(selectedDate ?? today));
   const [fillMode, setFillMode] = useState<FillMode>("SHARE");
 

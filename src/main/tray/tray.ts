@@ -4,8 +4,9 @@ import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, 
 import { convertMsToMinutes } from '../../shared/utils/time';
 import { DayScore } from '../stats/checkpoints';
 import { CHECKPOINTS } from '../../shared/constants';
-import { formatMsToMMSS } from '../../shared/utils/time';
+import { formatClockTime, formatMsToMMSS } from '../../shared/utils/time';
 import { settingsWindow } from '../windows/settingsWindow';
+import { IS_TEST } from '../testEnv';
 
 type StatusKey = TimerStatus | 'WARNING';
 
@@ -36,8 +37,6 @@ export function buildStatusIcons() {
   }
 }
 
-const formatClockTime = (epochMs: number) => new Date(epochMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-
 // e.g. "Today: Glow · Shine at 3:00 PM". A clock time instead of a countdown, so the menu isn't rebuilt every second
 function describeTodayScore(score: DayScore) {
   const today = `Today: ${CHECKPOINTS.NAMES[score.level]}`;
@@ -63,6 +62,9 @@ export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: D
 
   if (isNewTray || statusKey !== lastStatusKey) {
     tray.setImage(statusIcons[statusKey]);
+    if (process.platform === 'win32' && settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.setOverlayIcon(statusIcons[statusKey], statusKey);
+    }
     lastStatusKey = statusKey;
   }
 
@@ -125,19 +127,11 @@ export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: D
     tray.setContextMenu(trayMenu);
     lastMenuLabels = menuLabels;
   }
-
-  // if (process.platform === 'darwin') {
-  //   app.dock!.setIcon(statusIcons[statusKey]);
-  // }
-
-  if (process.platform === 'win32' && settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.setOverlayIcon(statusIcons[statusKey], statusKey);
-  }
 }
 
 export function createTray(width: number = 16, height: number = 16) {
   // Each test run would add another icon to the taskbar, so only tray tests turn it on
-  if (process.env.PLAYWRIGHT_TEST && !process.env.PLAYWRIGHT_TRAY) {
+  if (IS_TEST && !process.env.PLAYWRIGHT_TRAY) {
     return;
   }
 
@@ -150,6 +144,6 @@ export function createTray(width: number = 16, height: number = 16) {
 }
 
 // Tests can't right-click the real tray, so they click the menu items directly
-if (process.env.PLAYWRIGHT_TEST) {
+if (IS_TEST) {
   global.__test_getTrayMenu = () => trayMenu;
 }

@@ -7,7 +7,7 @@ import { OverdueConfigs } from "../../main/overdue/overdueConfigs";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => () => void;
-  onWarning: (callback: () => void) => void;
+  onWarning: (callback: () => void) => () => void;
   getTimerState: () => Promise<TimerState>;
   onTodayScore: (callback: (score: DayScore | null) => void) => () => void;
   onShowDay: (callback: (localDate: string) => void) => () => void;

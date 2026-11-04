@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { WorkdayConfigs } from "../../../../main/workday/workdayConfigs";
 import SettingsPanel from "./SettingsPanel";
+import { isValidWorkdayHours } from "../../../../shared/utils/time";
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; // Index matches Date.getDay()
 
@@ -10,8 +11,7 @@ export default function WorkdaySettings() {
   const [end, setEnd] = useState("");
   const [autoStopAtEnd, setAutoStopAtEnd] = useState(false);
 
-  // shortcut: overnight workdays aren't supported yet, so the end must come after the start
-  const hoursValid = start !== "" && start < end; // "HH:MM" strings compare correctly as text
+  const hoursValid = isValidWorkdayHours(start, end);
 
   const toggleDay = (day: number) => {
     const newDays = days.includes(day) ? days.filter((d) => d !== day) : [...days, day];

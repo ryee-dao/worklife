@@ -32,10 +32,6 @@ export const getLevelFill = (level: number, fillMode: FillMode) => {
   };
 };
 
-export const formatClockTime = (epochMs: number) => {
-  return new Date(epochMs).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-};
-
 // "H:MM:SS", or "M:SS" under an hour
 export const formatCountdown = (ms: number) => {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));

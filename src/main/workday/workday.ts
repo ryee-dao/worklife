@@ -1,5 +1,6 @@
 import { stopTimer, startTimer } from "../timer/timerState";
 import { convertTimeToMinutes } from "../../shared/utils/time";
+import { IS_TEST } from "../testEnv";
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "./workdayConfigs";
 
 const workdayCheckIntervalMs = 60 * 1000; // 1 minute
@@ -42,7 +43,7 @@ export const initWorkday = (onEnd: () => void = () => {}) => {
   onWorkdayEnd = onEnd;
   wasInWorkday = isInWorkday(new Date(), getAppliedWorkdayConfigs());
   // E2E tests control time themselves, so a real-time check would make them flaky
-  if (!process.env.PLAYWRIGHT_TEST) {
+  if (!IS_TEST) {
     workdayCheckTimer = setInterval(checkWorkday, workdayCheckIntervalMs);
   }
 };

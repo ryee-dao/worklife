@@ -95,7 +95,7 @@ test("App launches with a visible window and starts up with valid components & s
       .map((line) => JSON.parse(line));
 
     expect(events.map((event) => event.type)).toEqual(["APP_STARTED", "OVERDUE_STARTED", "BREAK_STARTED", "APP_QUIT"]);
-    expect.soft(events[1]).toMatchObject({ cause: "TIMER_SKIPPED", source: "WINDOW", countdownMs: convertMinutesToMs(44) + 50 * 1000 });
+    expect.soft(events[1]).toMatchObject({ cause: "FORWARDED", source: "WINDOW", countdownMs: convertMinutesToMs(44) + 50 * 1000 });
     expect.soft(events[2]).toMatchObject({ source: "WINDOW", overdueMs: 10 * 1000 });
     expect.soft(events[3]).toMatchObject({ status: "BREAK" });
   });

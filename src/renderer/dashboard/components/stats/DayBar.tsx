@@ -1,5 +1,6 @@
 import { Activity, DayScore } from "../../../../main/stats/checkpoints";
-import { ACTIVITY_COLORS, ACTIVITY_NAMES, formatClockTime } from "./checkpointStyles";
+import { ACTIVITY_COLORS, ACTIVITY_NAMES } from "./checkpointStyles";
+import { formatClockTime } from "../../../../shared/utils/time";
 
 // The workday from start to end, colored by what the app was doing
 export default function DayBar({ score }: { score: DayScore }) {

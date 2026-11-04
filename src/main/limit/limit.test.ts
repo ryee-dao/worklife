@@ -4,6 +4,7 @@ import { destroyTimers, timerEmitter } from '../timer/timerState';
 import { calculateRemainingLunches, calculateRemainingPowerups, getLimitState, resetTodayLimits, increaseLunchesUsed, increasePowerupsUsed, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
 import { DEFAULTS, LUNCHES_PER_DAY } from "../../shared/constants"
 import { getAllottedPowerups } from '../difficulty/difficulty';
+import { getTodayDateAsString } from '../../shared/utils/date';
 
 // Add mocks
 vi.mock('../../shared/utils/files', () => ({
@@ -27,6 +28,7 @@ beforeEach(() => {
   vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: undefined, filePath: '' });
   vi.mocked(getAllottedPowerups).mockReset();
   vi.mocked(getAllottedPowerups).mockReturnValue(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
+  vi.mocked(getTodayDateAsString).mockReturnValue("2026-01-23");
 });
 
 afterEach(() => {
@@ -77,7 +79,7 @@ describe('Limit configs effects', () => {
     expect(powerupsRemaining).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
 
     // Modify the limit file to reflect a new state
-    seedLimitState({ lastResetDate: "2020-02-20", powerupsUsed: 3, lunchesUsed: 0 })
+    seedLimitState({ lastResetDate: "2026-01-23", powerupsUsed: 3, lunchesUsed: 0 })
     loadLimitStateFromFile();
 
     // Expect that the remaining power-up count reflects based on limit file data
@@ -138,7 +140,7 @@ describe('Daily reset logic', () => {
     expect(state.powerupsUsed).toBe(2);
   });
 
-  test('resetDailyLimits works when called independently (simulating the 5-min interval)', () => {
+  test('resetDailyLimits works when called independently', () => {
     // Start with yesterday's state
     seedLimitState({ lastResetDate: "2026-01-22", powerupsUsed: 1, lunchesUsed: 0 });
     loadLimitStateFromFile();
@@ -149,6 +151,20 @@ describe('Daily reset logic', () => {
     const state = getLimitState();
     expect(state.powerupsUsed).toBe(0);
     expect(state.lastResetDate).toBe("2026-01-23");
+  });
+
+  test('power-ups come back right after midnight without a restart', async () => {
+    // The real date helper, so the fake clock decides what "today" is
+    const actualDate = await vi.importActual<typeof import('../../shared/utils/date')>('../../shared/utils/date');
+    vi.mocked(getTodayDateAsString).mockImplementation(actualDate.getTodayDateAsString);
+    vi.setSystemTime(new Date(2026, 0, 23, 23, 59));
+    initLimits();
+    increasePowerupsUsed();
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS - 1);
+
+    vi.setSystemTime(new Date(2026, 0, 24, 0, 1));
+
+    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
   });
 
   test('remaining power-ups returns full count after daily reset', () => {
@@ -233,19 +249,5 @@ describe('Resetting today from the admin panel', () => {
     expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
     expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
     expect(writeToUserDataFile).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ powerupsUsed: 0, lunchesUsed: 0 }));
-  });
-});
-
-describe('Files saved before power-ups', () => {
-  test('a file with the old skip and snooze counts starts power-ups and lunch at 0', () => {
-    vi.mocked(getUserDataFromFile).mockReturnValue({
-      fileContent: { lastResetDate: "2026-01-23", skippedBreakCount: 2, snoozedCount: 1 },
-      filePath: '',
-    });
-
-    initLimits();
-
-    expect(calculateRemainingPowerups()).toBe(DEFAULTS.DEFAULT_ALLOTTED_POWERUPS);
-    expect(calculateRemainingLunches()).toBe(LUNCHES_PER_DAY);
   });
 });

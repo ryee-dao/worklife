@@ -80,7 +80,6 @@ export const LUNCHES_PER_DAY = 1;
 // Each unbroken share of the workday climbs one checkpoint, so a 9 to 5 day climbs every 2 hours
 export const CHECKPOINTS = {
   NAMES: ["Dim", "Glimmer", "Glow", "Shine", "Radiant"],
-  DECAY_RATIO: 1 / 32,                 // For events logged before the drain was part of difficulty: Normal's drain
   LATE_START_GRACE_MS: 30 * 60 * 1000, // Starting this late still counts as on time
   RESTART_GRACE_MS: 5 * 60 * 1000,     // Closed this long is a restart, not a stop
 } as const;
