@@ -1,5 +1,7 @@
 /dist
 /node_modules
+/verify-user-data
+/verify-app.log
 *.tsbuildinfo
 .DS_Store
 .tmp

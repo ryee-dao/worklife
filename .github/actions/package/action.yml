@@ -1,0 +1,35 @@
+name: Package
+description: Builds the installers with electron-builder and checks they are signed as expected and start
+
+# Shared by the pull request gate and the release build, so what gets published is exactly what was checked
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 22
+        cache: npm
+
+    - run: npm ci
+      shell: bash
+
+    # Ad-hoc signed (identity "-" in package.json): no Apple identity to look up, and electron-builder
+    # treats a pull request or merge-triggered run as a pull request and would skip signing without CSC_FOR_PULL_REQUEST.
+    # No upload from here: the caller decides what to do with dist/
+    - run: npm run dist -- --publish never
+      shell: bash
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+        CSC_FOR_PULL_REQUEST: true
+
+    # Linux runners have no screen, so give the app a virtual one. Ubuntu's sandbox restriction is left on,
+    # since that's what a user's machine has; the AppImage launcher handles it with --no-sandbox
+    - name: Verify installers (Linux)
+      if: runner.os == 'Linux'
+      run: xvfb-run --auto-servernum bash scripts/verifyInstaller.sh
+      shell: bash
+
+    - name: Verify installers
+      if: runner.os != 'Linux'
+      run: bash scripts/verifyInstaller.sh
+      shell: bash
