@@ -1,0 +1,19 @@
+name: Release label
+
+# A required check on main, so a PR can't be merged without saying what kind of release it is
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+jobs:
+  label:
+    name: Release label
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          count=$(echo "$LABELS" | tr ' ' '\n' | grep -c '^release:' || true)
+          if [ "$count" = 1 ]; then exit 0; fi
+          echo "::error::Add exactly one label: release:major, release:minor, release:patch or release:none (found $count)"
+          exit 1

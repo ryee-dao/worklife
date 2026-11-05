@@ -48,6 +48,9 @@
     "win": {
       "target": "nsis"
     },
+    "linux": {
+      "target": "AppImage"
+    },
     "files": [
       "dist/**/*",
       "!dist/*.tsbuildinfo",
