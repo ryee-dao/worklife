@@ -65,9 +65,13 @@ case "$os" in
     status=$(powershell -NoProfile -Command "(Get-AuthenticodeSignature '$exe').Status" | tr -d '\r')
     echo "Windows installer signature: $status"
     [[ "$status" == "$EXPECT_WIN_SIGNATURE" ]] || { echo "Expected $EXPECT_WIN_SIGNATURE"; exit 1; }
-    powershell -NoProfile -Command "Start-Process -Wait -FilePath (Resolve-Path '$exe') -ArgumentList '/S'"
+    # WaitForExit waits for the installer alone. -Wait would also wait for the app the installer launches when done
+    powershell -NoProfile -Command "\$p = Start-Process -PassThru -FilePath (Resolve-Path '$exe') -ArgumentList '/S'; \$p.WaitForExit(); exit \$p.ExitCode" || { echo "Installer exited with $?"; exit 1; }
+    echo "Silent install finished"
     stop_app # The installer starts the app when it finishes; it's started again below with the scratch folder
-    launch_check "$(cygpath "$LOCALAPPDATA")/Programs/WorkLife/WorkLife.exe"
+    app="$(cygpath "$LOCALAPPDATA")/Programs/WorkLife/WorkLife.exe"
+    ls -l "$app"
+    launch_check "$app"
     ;;
   Linux)
     # Nothing signs or warns on Linux, so only the launch is checked
