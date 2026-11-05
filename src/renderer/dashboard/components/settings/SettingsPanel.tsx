@@ -20,7 +20,6 @@ export default function SettingsPanel<T>({
 
   useEffect(() => {
     load().then((value) => {
-      console.log('Loading values for settingPanel:', value)
       onLoaded(value);
       setIsLoading(false);
     });

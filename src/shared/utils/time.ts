@@ -28,3 +28,16 @@ export function convertMsToSeconds(ms: number): number {
 export function convertMinutesToMs(minutes: number): number {
   return minutes * 60 * 1000
 }
+
+export const formatClockTime = (epochMs: number) => {
+  return new Date(epochMs).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+};
+
+// "HH:MM" to minutes since midnight
+export function convertTimeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+// "HH:MM" strings compare correctly as text. shortcut: overnight workdays aren't supported yet, so the end must come after the start
+export const isValidWorkdayHours = (start: string, end: string) => start !== "" && start < end;

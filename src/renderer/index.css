@@ -2,4 +2,10 @@
 
 @theme {
   --breakpoint-xsm: 360px;
+  --animate-flash: flash 1s infinite;
+
+  /* The day bar flashes red while checkpoints drain */
+  @keyframes flash {
+    50% { box-shadow: 0 0 0 3px #ef4444; background-color: #fecaca; }
+  }
 }

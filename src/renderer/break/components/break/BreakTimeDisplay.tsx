@@ -1,5 +1,5 @@
-import { TimerState } from "../../../../main/timer/timerState";
-import { formatMsToMMSS } from "../../../../shared/utils/time";
+import { TimerState } from "@main/timer/timerState";
+import { formatMsToMMSS } from "@shared/utils/time";
 
 interface BreakTimeDisplayProps {
   timerState: TimerState;
@@ -8,15 +8,12 @@ interface BreakTimeDisplayProps {
 export default function BreakTimeDisplay({
   timerState,
 }: BreakTimeDisplayProps) {
-  const formattedTime = formatMsToMMSS(timerState.currentCountdownMs);
-  const hours = formattedTime.split(":")[0];
-  const minutes = formattedTime.split(":")[1];
+  const [minutes, seconds] = formatMsToMMSS(timerState.currentCountdownMs).split(":");
   return (
     <div data-testid="break-window-time-display">
       <div className="h-full text-blue-800 font-bold text-4xl md:text-9xl tracking-widest">
-        <span>{hours}</span> : <span>{minutes}</span>
+        <span>{minutes}</span> : <span>{seconds}</span>
       </div>
-      <div></div>
     </div>
   );
 }

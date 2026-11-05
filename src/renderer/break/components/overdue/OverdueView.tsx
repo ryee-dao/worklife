@@ -1,4 +1,4 @@
-import { TimerState } from "../../../../main/timer/timerState";
+import { TimerState } from "@main/timer/timerState";
 import OverdueButtons from "./OverdueButtons";
 import OverdueTimeDisplay from "./OverdueTimeDisplay";
 

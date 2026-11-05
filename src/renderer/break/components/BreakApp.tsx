@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TimerState } from "../../../main/timer/timerState";
+import { TimerState } from "@main/timer/timerState";
 import BreakView from "./break/BreakView";
 import OverdueView from "./overdue/OverdueView";
 
@@ -8,9 +8,7 @@ export default function BreakWindow() {
   const [timerStateObject, setTimerStateObject] = useState<TimerState>();
   useEffect(() => {
     window.electronAPI.getTimerState().then(setTimerStateObject);
-    window.electronAPI.onTimerUpdate((timerState) => {
-      setTimerStateObject(timerState);
-    });
+    return window.electronAPI.onTimerUpdate(setTimerStateObject);
   }, []);
 
   return (

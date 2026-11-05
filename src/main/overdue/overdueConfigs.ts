@@ -1,5 +1,5 @@
-import { DEFAULTS, FILENAMES, CONSTRAINTS } from "../../shared/constants";
-import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
+import { DEFAULTS, FILENAMES, CONSTRAINTS } from "@shared/constants";
+import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
 
 const MAXIMUM_WINDOW_LEVEL = CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_LEVEL;
 const MAXIMUM_WINDOW_RATIO = CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO;
@@ -17,11 +17,22 @@ export interface OverdueConfigs {
 }
 
 let overdueConfigs: OverdueConfigs;
+// The configs the app runs on. Saved changes are only applied after a break
+let appliedOverdueConfigs: OverdueConfigs;
 
 export const loadOverdueConfigs = () => {
   const overdueConfigsData = getUserDataFromFile<OverdueConfigs>(FILENAMES.OVERDUE.CONFIGS);
   overdueConfigs = { ...defaultOverdueConfigs, ...overdueConfigsData?.fileContent };
   writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, overdueConfigs);
+  applyOverdueConfigs();
+}
+
+export const applyOverdueConfigs = () => {
+  appliedOverdueConfigs = { ...overdueConfigs };
+}
+
+export const getAppliedOverdueConfigs = () => {
+  return appliedOverdueConfigs;
 }
 
 export const getOverdueConfigs = () => {

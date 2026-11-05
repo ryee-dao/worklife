@@ -1,0 +1,11 @@
+{
+  /* This config file type-checks the tests (e2e and the main process unit tests) */
+  "extends": "../src/main/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "..",
+    "tsBuildInfoFile": "../dist/tsconfig.tests.tsbuildinfo"
+  },
+  "include": ["../src/main/**/*", "../src/shared/**/*", "./**/*"],
+  "exclude": []
+}
