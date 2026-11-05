@@ -53,7 +53,9 @@ const recordEvent = (event: TimerTransition | AppQuit | AppCrashed | DayStarted 
     v: 1,
     id: randomUUID(),
     at,
-    tzOffsetMin: 0 - new Date().getTimezoneOffset(), // Flipped, since getTimezoneOffset is positive west of UTC. 0 - keeps UTC at 0, not -0
+    // Taken at the event's own moment, since a crash is recorded later and may sit on the other side of a clock change.
+    // Flipped, since getTimezoneOffset is positive west of UTC. 0 - keeps UTC at 0, not -0
+    tzOffsetMin: 0 - new Date(at).getTimezoneOffset(),
     config: {
       timerDurationMs: getAppliedTimerConfigs().timerDurationMs,
       breakDurationMs: getBreakDurationMs(),

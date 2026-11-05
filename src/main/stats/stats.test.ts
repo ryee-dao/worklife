@@ -153,6 +153,24 @@ describe('Crashes', () => {
     expect(getRecordedEvents().map((e) => [e.type, e.at])).toEqual([['APP_CRASHED', 61000], ['APP_STARTED', Date.now()]]);
   });
 
+  test('a crash on the other side of a clock change keeps the offset of when it happened', () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+    try {
+      const crashedAt = Date.parse('2026-10-30T21:10:00Z'); // Friday 17:10 EDT, two days before the clocks went back
+      vi.setSystemTime(new Date('2026-11-02T14:00:00Z')); // Monday 09:00 EST
+      vi.mocked(readUserDataTextFile).mockReturnValueOnce(logLine('APP_STARTED', crashedAt - 1000));
+      vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastAliveAt: crashedAt }, filePath: '' });
+
+      initStats();
+      initTimer();
+
+      expect(getRecordedEvents().map((e) => [e.type, e.tzOffsetMin])).toEqual([['APP_CRASHED', -240], ['APP_STARTED', -300]]);
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
+
   test('a clean quit is not a crash', () => {
     vi.mocked(readUserDataTextFile).mockReturnValueOnce(logLine('APP_STARTED', 1000) + logLine('APP_QUIT', 2000));
     vi.mocked(getUserDataFromFile).mockReturnValue({ fileContent: { lastAliveAt: 1500 }, filePath: '' });
