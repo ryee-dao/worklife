@@ -16,7 +16,8 @@ user_data_for_app="$user_data"
 
 stop_app() {
   if [[ "$os" == Windows ]]; then
-    powershell -NoProfile -Command "Stop-Process -Name WorkLife -Force -ErrorAction SilentlyContinue"
+    # PowerShell exits 1 when nothing matched, even with SilentlyContinue, and set -e would end the script there
+    powershell -NoProfile -Command "Stop-Process -Name WorkLife -Force -ErrorAction SilentlyContinue" || true
   else
     # Every process of this launch carries the scratch folder in its command line. SIGKILL, since the app sometimes hangs on a polite quit
     pkill -9 -f "$user_data" || true
@@ -68,7 +69,7 @@ case "$os" in
     # WaitForExit waits for the installer alone. -Wait would also wait for the app the installer launches when done
     powershell -NoProfile -Command "\$p = Start-Process -PassThru -FilePath (Resolve-Path '$exe') -ArgumentList '/S'; \$p.WaitForExit(); exit \$p.ExitCode" || { echo "Installer exited with $?"; exit 1; }
     echo "Silent install finished"
-    stop_app # The installer starts the app when it finishes; it's started again below with the scratch folder
+    stop_app # In case the installer started the app; it's started again below with the scratch folder
     app="$(cygpath "$LOCALAPPDATA")/Programs/WorkLife/WorkLife.exe"
     ls -l "$app"
     launch_check "$app"
