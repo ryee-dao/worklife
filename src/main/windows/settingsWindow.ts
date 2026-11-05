@@ -1,8 +1,8 @@
 import { BrowserWindow } from "electron";
 import path from "path";
-import { PRELOAD_PATH, IS_DEV, RENDERER_PATH } from "../env";
-import { emitTimerStatus } from "../timer/timerState";
-import { EVENTS } from "../../shared/constants";
+import { PRELOAD_PATH, IS_DEV, RENDERER_PATH } from "@main/env";
+import { emitTimerStatus } from "@main/timer/timerState";
+import { EVENTS } from "@shared/constants";
 
 export let settingsWindow: BrowserWindow | null = null;
 

@@ -1,22 +1,22 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
-import { destroyTimers, timerEmitter } from '../timer/timerState';
+import { getUserDataFromFile, writeToUserDataFile } from '@shared/utils/files';
+import { destroyTimers, timerEmitter } from '@main/timer/timerState';
 import { calculateRemainingLunches, calculateRemainingPowerups, getLimitState, resetTodayLimits, increaseLunchesUsed, increasePowerupsUsed, initLimits, LimitState, loadLimitStateFromFile, resetDailyLimits } from './limitState';
-import { DEFAULTS, LUNCHES_PER_DAY } from "../../shared/constants"
-import { getAllottedPowerups } from '../difficulty/difficulty';
-import { getTodayDateAsString } from '../../shared/utils/date';
+import { DEFAULTS, LUNCHES_PER_DAY } from "@shared/constants"
+import { getAllottedPowerups } from '@main/difficulty/difficulty';
+import { getTodayDateAsString } from '@shared/utils/date';
 
 // Add mocks
-vi.mock('../../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined })),
   writeToUserDataFile: vi.fn(),
 }));
 
-vi.mock('../../shared/utils/date', () => ({
+vi.mock('@shared/utils/date', () => ({
   getTodayDateAsString: vi.fn(() => "2026-01-23"),
 }));
 
-vi.mock('../difficulty/difficulty', () => ({
+vi.mock('@main/difficulty/difficulty', () => ({
   getAllottedPowerups: vi.fn(() => DEFAULTS.DEFAULT_ALLOTTED_POWERUPS),
 }))
 
@@ -155,7 +155,7 @@ describe('Daily reset logic', () => {
 
   test('power-ups come back right after midnight without a restart', async () => {
     // The real date helper, so the fake clock decides what "today" is
-    const actualDate = await vi.importActual<typeof import('../../shared/utils/date')>('../../shared/utils/date');
+    const actualDate = await vi.importActual<typeof import('@shared/utils/date')>('@shared/utils/date');
     vi.mocked(getTodayDateAsString).mockImplementation(actualDate.getTodayDateAsString);
     vi.setSystemTime(new Date(2026, 0, 23, 23, 59));
     initLimits();

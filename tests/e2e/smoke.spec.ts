@@ -1,13 +1,13 @@
 import { expect, Page } from "@playwright/test";
 import { test } from "./fixtures";
-import { FILENAMES, DEFAULTS } from "./../../src/shared/constants"
+import { FILENAMES, DEFAULTS } from "@shared/constants"
 import { spawn } from "child_process";
 import electronPath from "electron";
 import fs from "fs";
 import path from "path";
-import { TimerState } from "../../src/main/timer/timerState"
-import { StatsEvent } from "../../src/main/stats/stats"
-import { convertMinutesToMs } from "../../src/shared/utils/time"
+import { TimerState } from "@main/timer/timerState"
+import { StatsEvent } from "@main/stats/stats"
+import { convertMinutesToMs } from "@shared/utils/time"
 
 test.describe.configure({ mode: 'parallel' });
 

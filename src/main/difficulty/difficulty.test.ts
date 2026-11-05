@@ -1,24 +1,24 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { DEFAULTS } from '../../shared/constants';
+import { DEFAULTS } from '@shared/constants';
 
 // Add mocks
-vi.mock('../../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined, filePath: '' })),
   writeToUserDataFile: vi.fn(),
 }));
 
-vi.mock('../timer/timerConfigs', () => ({
+vi.mock('@main/timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(),
 }));
 
-vi.mock('../workday/workdayConfigs', () => ({
+vi.mock('@main/workday/workdayConfigs', () => ({
   getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false })),
 }));
 
 import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from './difficulty';
-import { getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
+import { getAppliedWorkdayConfigs } from '@main/workday/workdayConfigs';
 import { applyDifficultyConfigs, DifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs } from './difficultyConfigs';
-import { getAppliedTimerConfigs } from '../timer/timerConfigs';
+import { getAppliedTimerConfigs } from '@main/timer/timerConfigs';
 
 const customConfigs: DifficultyConfigs['custom'] = {
   breakDurationMs: 40 * 1000,

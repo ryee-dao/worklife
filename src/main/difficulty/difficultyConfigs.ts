@@ -1,5 +1,5 @@
-import { DEFAULTS, DIFFICULTY_PRESETS, FILENAMES } from "../../shared/constants";
-import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
+import { DEFAULTS, DIFFICULTY_PRESETS, FILENAMES } from "@shared/constants";
+import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
 
 export type DifficultyLevel = keyof typeof DIFFICULTY_PRESETS | "CUSTOM";
 

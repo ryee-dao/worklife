@@ -1,10 +1,10 @@
-import { FILENAMES, LUNCHES_PER_DAY } from "../../shared/constants";
-import { getTodayDateAsString } from "../../shared/utils/date";
+import { FILENAMES, LUNCHES_PER_DAY } from "@shared/constants";
+import { getTodayDateAsString } from "@shared/utils/date";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../../shared/utils/files";
-import { getAllottedPowerups } from "../difficulty/difficulty";
+} from "@shared/utils/files";
+import { getAllottedPowerups } from "@main/difficulty/difficulty";
 
 export interface LimitState {
   lastResetDate: string;

@@ -1,6 +1,6 @@
 import SettingsTab from "./SettingsTab";
 import { ClockAlert, Clock9, Gauge, Briefcase, Wrench } from 'lucide-react';
-import { IS_DEV } from "../../../common/constants";
+import { IS_DEV } from "@renderer/common/constants";
 
 
 export default function SettingsSidebar() {

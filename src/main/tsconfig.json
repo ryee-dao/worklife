@@ -3,14 +3,21 @@
   "compilerOptions": {
     "target": "es2022",
     "module": "commonjs",
-    "outDir": "../../dist",
+    "outDir": "../../dist/types",
     "rootDir": "..",
     "strict": true,
     "esModuleInterop": true,
-    "sourceMap": true,
     "composite": true,
     "skipLibCheck": true,
     "tsBuildInfoFile": "../../dist/tsconfig.main.tsbuildinfo",
+    // Type-check only: esbuild bundles the JS; renderer references this project, so it must emit something
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "paths": {
+      "@main/*": ["./*"],
+      "@shared/*": ["../shared/*"],
+      "@assets/*": ["../assets/*"]
+    },
   },
   "include": [
     "./**/*",

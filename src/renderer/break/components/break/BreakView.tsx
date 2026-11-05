@@ -1,6 +1,6 @@
-import BreakTimeDisplay from "../break/BreakTimeDisplay";
-import { TimerState } from "../../../../main/timer/timerState";
-import BreakButtons from "../break/BreakButtons";
+import BreakTimeDisplay from "@renderer/break/components/break/BreakTimeDisplay";
+import { TimerState } from "@main/timer/timerState";
+import BreakButtons from "@renderer/break/components/break/BreakButtons";
 
 interface BreakViewProps {
   timerState: TimerState;

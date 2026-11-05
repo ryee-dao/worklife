@@ -1,7 +1,7 @@
 import { expect, Page } from "@playwright/test";
 import { test } from "../fixtures";
-import { FILENAMES, DEFAULTS } from "../../../src/shared/constants"
-import { convertMsToSeconds } from "../../../src/shared/utils/time"
+import { FILENAMES, DEFAULTS } from "@shared/constants"
+import { convertMsToSeconds } from "@shared/utils/time"
 import { clickAndWaitForClose, getWindowBounds } from "../helpers";
 
 test.describe.configure({ mode: 'parallel' });

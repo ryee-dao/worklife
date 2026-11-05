@@ -1,16 +1,17 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
-import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, forwardToBreak, snoozeTimer, startLunch } from '../timer/timerState';
-import { convertMsToMinutes } from '../../shared/utils/time';
-import { DayScore } from '../stats/checkpoints';
-import { CHECKPOINTS } from '../../shared/constants';
-import { formatClockTime, formatMsToMMSS } from '../../shared/utils/time';
-import { settingsWindow } from '../windows/settingsWindow';
-import { IS_TEST } from '../testEnv';
+import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, forwardToBreak, snoozeTimer, startLunch } from '@main/timer/timerState';
+import { convertMsToMinutes } from '@shared/utils/time';
+import { DayScore } from '@main/stats/checkpoints';
+import { CHECKPOINTS } from '@shared/constants';
+import { formatClockTime, formatMsToMMSS } from '@shared/utils/time';
+import { settingsWindow } from '@main/windows/settingsWindow';
+import { IS_TEST } from '@main/testEnv';
+import { ASSETS_DIR } from '@main/env';
 
 type StatusKey = TimerStatus | 'WARNING';
 
-export const ICON_DIR = path.join(__dirname, '../../assets/icons');
+export const ICON_DIR = path.join(ASSETS_DIR, 'icons');
 const STATUS_ICON_PATHS = {
   RUNNING: path.join(ICON_DIR, 'tray-green.png'),
   WARNING: path.join(ICON_DIR, 'tray-yellow.png'),
@@ -137,7 +138,7 @@ export function createTray(width: number = 16, height: number = 16) {
 
   // Set icon for app
   const trayImage = nativeImage.createFromPath(
-    path.join(__dirname, "../../assets/dog.png")
+    path.join(ASSETS_DIR, "dog.png")
   );
   tray = new Tray(trayImage.resize({ width, height }));
   tray.setToolTip("Work Life");

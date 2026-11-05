@@ -1,6 +1,6 @@
-import { DIFFICULTY_PRESETS } from "../constants";
-import type { DifficultyConfigs } from "../../main/difficulty/difficultyConfigs";
-import type { WorkdayConfigs } from "../../main/workday/workdayConfigs";
+import { DIFFICULTY_PRESETS } from "@shared/constants";
+import type { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
+import type { WorkdayConfigs } from "@main/workday/workdayConfigs";
 import { convertTimeToMinutes } from "./time";
 
 const breakRoundingMs = 15 * 1000;

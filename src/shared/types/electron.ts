@@ -1,9 +1,9 @@
-import { TimerState } from "../../main/timer/timerState";
-import { TimerConfigs } from "../../main/timer/timerConfigs"
-import { DifficultyConfigs } from "../../main/difficulty/difficultyConfigs";
-import { WorkdayConfigs } from "../../main/workday/workdayConfigs";
-import { DayScore } from "../../main/stats/checkpoints";
-import { OverdueConfigs } from "../../main/overdue/overdueConfigs";
+import { TimerState } from "@main/timer/timerState";
+import { TimerConfigs } from "@main/timer/timerConfigs"
+import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
+import { WorkdayConfigs } from "@main/workday/workdayConfigs";
+import { DayScore } from "@main/stats/checkpoints";
+import { OverdueConfigs } from "@main/overdue/overdueConfigs";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => () => void;

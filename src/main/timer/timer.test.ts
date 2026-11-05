@@ -1,20 +1,20 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DEFAULTS, EVENTS } from '../../shared/constants';
+import { DEFAULTS, EVENTS } from '@shared/constants';
 
 // Add mocks
-vi.mock('../../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined })),
   writeToUserDataFile: vi.fn(),
 }));
 
-vi.mock('../limit/limitState', () => ({
+vi.mock('@main/limit/limitState', () => ({
   calculateRemainingPowerups: vi.fn(() => 3),
   increasePowerupsUsed: vi.fn(),
   calculateRemainingLunches: vi.fn(() => 1),
   increaseLunchesUsed: vi.fn(),
 }));
 
-vi.mock('../difficulty/difficulty', () => ({
+vi.mock('@main/difficulty/difficulty', () => ({
   getAllottedPowerups: vi.fn(() => 3),
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
@@ -29,8 +29,8 @@ vi.mock('./timerConfigs', () => ({
 }));
 
 import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, TimerState, TimerTransition, StoredTimerState, startBreak } from './timerState';
-import { getUserDataFromFile, writeToUserDataFile } from '../../shared/utils/files';
-import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from '../limit/limitState';
+import { getUserDataFromFile, writeToUserDataFile } from '@shared/utils/files';
+import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from '@main/limit/limitState';
 
 beforeEach(() => {
   vi.useFakeTimers();

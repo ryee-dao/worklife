@@ -1,6 +1,6 @@
-import { FILENAMES } from "../../shared/constants";
-import { getTodayDateAsString } from "../../shared/utils/date";
-import { getUserDataFromFile, writeToUserDataFile } from "../../shared/utils/files";
+import { FILENAMES } from "@shared/constants";
+import { getTodayDateAsString } from "@shared/utils/date";
+import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
 
 export interface WorkdayConfigs {
   days: number[];   // 0 = Sunday, matching Date.getDay()

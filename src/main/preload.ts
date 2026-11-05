@@ -1,11 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { EVENTS } from "../shared/constants";
+import { EVENTS } from "@shared/constants";
 import { TimerState } from "./timer/timerState";
 import { TimerConfigs } from "./timer/timerConfigs";
 import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "./workday/workdayConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
-import { ElectronAPI } from "../shared/types/electron";
+import { ElectronAPI } from "@shared/types/electron";
 import { DayScore } from "./stats/checkpoints";
 
 const electronAPI: ElectronAPI = {

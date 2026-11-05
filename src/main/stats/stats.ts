@@ -1,15 +1,15 @@
 import { randomUUID } from "crypto";
-import { EVENTS, FILENAMES } from "../../shared/constants";
-import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from "../../shared/utils/files";
-import { getTodayDateAsString } from "../../shared/utils/date";
-import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "../timer/timerState";
-import { getAppliedTimerConfigs } from "../timer/timerConfigs";
-import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
-import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
-import { DifficultyLevel, getAppliedDifficultyConfigs } from "../difficulty/difficultyConfigs";
-import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "../workday/workdayConfigs";
+import { EVENTS, FILENAMES } from "@shared/constants";
+import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from "@shared/utils/files";
+import { getTodayDateAsString } from "@shared/utils/date";
+import { getTimerState, timerEmitter, TimerStatus, TimerTransition } from "@main/timer/timerState";
+import { getAppliedTimerConfigs } from "@main/timer/timerConfigs";
+import { getAppliedOverdueConfigs } from "@main/overdue/overdueConfigs";
+import { getAllottedPowerups, getBreakDurationMs, getCheckpointDecayMs, getLunchDurationMs, getSnoozeDurationMs } from "@main/difficulty/difficulty";
+import { DifficultyLevel, getAppliedDifficultyConfigs } from "@main/difficulty/difficultyConfigs";
+import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "@main/workday/workdayConfigs";
 import { DayScore, getDayScores, getTodayScore } from "./checkpoints";
-import { IS_TEST } from "../testEnv";
+import { IS_TEST } from "@main/testEnv";
 
 type AppQuit = { type: "APP_QUIT"; status: TimerStatus; countdownMs: number; overdueMs: number };
 type AppCrashed = { type: "APP_CRASHED" }; // Recorded on the next launch, at the last moment the app was known to be alive

@@ -1,10 +1,10 @@
 import { BrowserWindow, Size, screen } from "electron";
-import { setWorkArea, workArea } from "../display";
-import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "../env";
-import { getWorkArea, refreshWorkAreaForBounds } from "../display";
-import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "../overdue/overdueGeometry";
-import { emitTimerStatus, TimerState, getTimerState } from "../timer/timerState";
-import { getAppliedOverdueConfigs } from "../overdue/overdueConfigs";
+import { setWorkArea, workArea } from "@main/display";
+import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "@main/env";
+import { getWorkArea, refreshWorkAreaForBounds } from "@main/display";
+import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "@main/overdue/overdueGeometry";
+import { emitTimerStatus, TimerState, getTimerState } from "@main/timer/timerState";
+import { getAppliedOverdueConfigs } from "@main/overdue/overdueConfigs";
 import path from "path";
 
 // Constants related to overdue resizing logic

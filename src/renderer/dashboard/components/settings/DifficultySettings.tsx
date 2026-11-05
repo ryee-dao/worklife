@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { AlarmClockPlus, Hourglass, Sandwich, TreePalm, Wrench, Zap } from "lucide-react";
-import { DifficultyConfigs, DifficultyLevel } from "../../../../main/difficulty/difficultyConfigs";
-import { WorkdayConfigs } from "../../../../main/workday/workdayConfigs";
-import { getPresetConfigs } from "../../../../shared/utils/difficulty";
-import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs } from "../../../../shared/utils/time";
-import { IS_DEV } from "../../../common/constants";
+import { DifficultyConfigs, DifficultyLevel } from "@main/difficulty/difficultyConfigs";
+import { WorkdayConfigs } from "@main/workday/workdayConfigs";
+import { getPresetConfigs } from "@shared/utils/difficulty";
+import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs } from "@shared/utils/time";
+import { IS_DEV } from "@renderer/common/constants";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "../../../common/components/NumberInput";
+import NumberInput from "@renderer/common/components/NumberInput";
 import DifficultyCard, { DifficultyValues, PresetLevel } from "./DifficultyCard";
 
 const presetNames: Record<PresetLevel, string> = {

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { DayScore } from "../../../../main/stats/checkpoints";
-import { CHECKPOINTS } from "../../../../shared/constants";
+import { DayScore } from "@main/stats/checkpoints";
+import { CHECKPOINTS } from "@shared/constants";
 import { FillMode, getLevelFill, LEVEL_COLORS } from "./checkpointStyles";
-import { getTodayDateAsString } from "../../../../shared/utils/date";
+import { getTodayDateAsString } from "@shared/utils/date";
 
 interface MonthCalendarProps {
   scores: Record<string, DayScore>;

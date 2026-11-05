@@ -4,7 +4,7 @@ import { applyDifficultyConfigs, getAppliedDifficultyConfigs, loadDifficultyConf
 import { applyWorkdayConfigs, getAppliedWorkdayConfigs, loadWorkdayConfigs, setWorkdayConfigs } from './workday/workdayConfigs';
 import { applyOverdueConfigs, getAppliedOverdueConfigs, loadOverdueConfigs, setOverdueConfigs } from './overdue/overdueConfigs';
 
-vi.mock('../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined, filePath: '' })),
   writeToUserDataFile: vi.fn(),
 }));

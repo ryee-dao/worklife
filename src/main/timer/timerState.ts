@@ -1,13 +1,13 @@
 import { EventEmitter } from "events";
-import { DEFAULTS, EVENTS, FILENAMES } from "../../shared/constants";
-import { getAppliedTimerConfigs } from "../timer/timerConfigs";
+import { DEFAULTS, EVENTS, FILENAMES } from "@shared/constants";
+import { getAppliedTimerConfigs } from "@main/timer/timerConfigs";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
-} from "../../shared/utils/files";
-import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from "../limit/limitState";
-import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "../difficulty/difficulty";
-import { IS_TEST } from "../testEnv";
+} from "@shared/utils/files";
+import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from "@main/limit/limitState";
+import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "@main/difficulty/difficulty";
+import { IS_TEST } from "@main/testEnv";
 
 export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK" | "LUNCH";
 export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday

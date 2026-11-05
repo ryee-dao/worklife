@@ -1,22 +1,22 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DEFAULTS, FILENAMES } from '../../shared/constants';
+import { DEFAULTS, FILENAMES } from '@shared/constants';
 
 // Add mocks
-vi.mock('../../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined })),
   writeToUserDataFile: vi.fn(),
   appendToUserDataFile: vi.fn(),
   readUserDataTextFile: vi.fn(() => ''),
 }));
 
-vi.mock('../limit/limitState', () => ({
+vi.mock('@main/limit/limitState', () => ({
   calculateRemainingPowerups: vi.fn(() => 2),
   increasePowerupsUsed: vi.fn(),
   calculateRemainingLunches: vi.fn(() => 1),
   increaseLunchesUsed: vi.fn(),
 }));
 
-vi.mock('../difficulty/difficulty', () => ({
+vi.mock('@main/difficulty/difficulty', () => ({
   getAllottedPowerups: vi.fn(() => 3),
   getBreakDurationMs: vi.fn(() => DEFAULTS.DEFAULT_BREAK_DURATION_MS),
   getSnoozeDurationMs: vi.fn(() => DEFAULTS.DEFAULT_SNOOZE_DURATION_MS),
@@ -24,20 +24,20 @@ vi.mock('../difficulty/difficulty', () => ({
   getCheckpointDecayMs: vi.fn(() => DEFAULTS.DEFAULT_CHECKPOINT_DECAY_MS),
 }));
 
-vi.mock('../difficulty/difficultyConfigs', () => ({
+vi.mock('@main/difficulty/difficultyConfigs', () => ({
   getAppliedDifficultyConfigs: vi.fn(() => ({ level: 'NORMAL' })),
 }));
 
-vi.mock('../workday/workdayConfigs', () => ({
+vi.mock('@main/workday/workdayConfigs', () => ({
   getAppliedWorkdayConfigs: vi.fn(() => ({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false })),
   applyWorkdayConfigsOnNewDay: vi.fn(),
 }));
 
-vi.mock('../overdue/overdueConfigs', () => ({
+vi.mock('@main/overdue/overdueConfigs', () => ({
   getAppliedOverdueConfigs: vi.fn(() => ({ levelThresholdMs: 180000, windowLevelCap: 5, windowRatioCap: 0.9 })),
 }));
 
-vi.mock('../timer/timerConfigs', () => ({
+vi.mock('@main/timer/timerConfigs', () => ({
   getAppliedTimerConfigs: vi.fn(() => ({
     timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
     warningThresholdMs: 5000,
@@ -45,9 +45,9 @@ vi.mock('../timer/timerConfigs', () => ({
 }));
 
 import { destroyStats, getCurrentDayScore, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
-import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '../timer/timerState';
-import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '../../shared/utils/files';
-import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs } from '../workday/workdayConfigs';
+import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '@main/timer/timerState';
+import { appendToUserDataFile, getUserDataFromFile, readUserDataTextFile, writeToUserDataFile } from '@shared/utils/files';
+import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs } from '@main/workday/workdayConfigs';
 
 beforeEach(() => {
   vi.useFakeTimers();

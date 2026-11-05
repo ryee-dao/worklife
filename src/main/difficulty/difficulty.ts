@@ -1,6 +1,6 @@
-import { getPresetConfigs } from "../../shared/utils/difficulty";
-import { getAppliedTimerConfigs } from "../timer/timerConfigs";
-import { getAppliedWorkdayConfigs } from "../workday/workdayConfigs";
+import { getPresetConfigs } from "@shared/utils/difficulty";
+import { getAppliedTimerConfigs } from "@main/timer/timerConfigs";
+import { getAppliedWorkdayConfigs } from "@main/workday/workdayConfigs";
 import { getAppliedDifficultyConfigs } from "./difficultyConfigs";
 
 const getAppliedValues = () => {

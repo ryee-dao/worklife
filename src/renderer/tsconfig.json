@@ -16,6 +16,15 @@
     "paths": {
       "@assets/*": [
         "../assets/*"
+      ],
+      "@renderer/*": [
+        "./*"
+      ],
+      "@main/*": [
+        "../main/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
       ]
     },
     /* Bundler mode */

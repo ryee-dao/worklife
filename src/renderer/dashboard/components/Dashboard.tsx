@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 import TopTabs from "./TopTabs";
 import Timer from "./timer/Timer";
 import Settings from "./settings/Settings";
-import { TimerState } from "../../../main/timer/timerState";
+import { TimerState } from "@main/timer/timerState";
 import TimeSettings from "./settings/TimerSettings";
 import WorkdaySettings from "./settings/WorkdaySettings";
 import DifficultySettings from "./settings/DifficultySettings";
 import OverdueConfigsForm from "./settings/OverdueConfigsForm";
-import { playWarningSound } from "../../common/utils/sound";
-import { DayScore } from "../../../main/stats/checkpoints";
+import { playWarningSound } from "@renderer/common/utils/sound";
+import { DayScore } from "@main/stats/checkpoints";
 import Stats from "./stats/Stats";
 import AdminSettings from "./settings/AdminSettings";
-import { IS_DEV } from "../../common/constants";
+import { IS_DEV } from "@renderer/common/constants";
 
 // Opens a day's end-of-day card in the Stats tab
 const showDay = (localDate: string) => {

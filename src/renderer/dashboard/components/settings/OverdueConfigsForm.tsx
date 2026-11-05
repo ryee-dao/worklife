@@ -1,9 +1,9 @@
 import { useState } from "react";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "../../../common/components/NumberInput";
-import { OverdueConfigs } from "../../../../main/overdue/overdueConfigs";
-import { CONSTRAINTS } from "../../../../shared/constants";
-import { convertMsToSeconds, convertSecondsToMs } from "../../../../shared/utils/time";
+import NumberInput from "@renderer/common/components/NumberInput";
+import { OverdueConfigs } from "@main/overdue/overdueConfigs";
+import { CONSTRAINTS } from "@shared/constants";
+import { convertMsToSeconds, convertSecondsToMs } from "@shared/utils/time";
 
 export default function OverdueConfigsForm() {
 

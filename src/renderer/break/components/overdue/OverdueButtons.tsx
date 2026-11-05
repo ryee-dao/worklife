@@ -1,8 +1,8 @@
-import { TimerState } from "../../../../main/timer/timerState";
+import { TimerState } from "@main/timer/timerState";
 import { FastForward, Sandwich, Square, TreePalm } from 'lucide-react';
-import CircularButton from "../../../common/components/CircularButton";
-import SlashedIcon from "../../../common/components/SlashedIcon";
-import PowerupCost from "../../../common/components/PowerupCost";
+import CircularButton from "@renderer/common/components/CircularButton";
+import SlashedIcon from "@renderer/common/components/SlashedIcon";
+import PowerupCost from "@renderer/common/components/PowerupCost";
 
 interface OverdueButtonsProps {
   timerState: TimerState;

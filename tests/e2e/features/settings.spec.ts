@@ -1,10 +1,10 @@
 import { expect } from "@playwright/test";
 import { test } from "../fixtures";
-import { FILENAMES, DEFAULTS, DIFFICULTY_PRESETS } from "../../../src/shared/constants"
+import { FILENAMES, DEFAULTS, DIFFICULTY_PRESETS } from "@shared/constants"
 import fs from "fs";
 import path from "path";
-import { TimerState } from "../../../src/main/timer/timerState"
-import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds } from "../../../src/shared/utils/time"
+import { TimerState } from "@main/timer/timerState"
+import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds } from "@shared/utils/time"
 import { clickAndWaitForClose } from "../helpers";
 
 test.describe.configure({ mode: 'parallel' });

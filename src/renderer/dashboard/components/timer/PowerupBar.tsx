@@ -1,6 +1,6 @@
 import { Sandwich, Zap } from "lucide-react";
-import { TimerState } from "../../../../main/timer/timerState";
-import { convertMsToMinutes } from "../../../../shared/utils/time";
+import { TimerState } from "@main/timer/timerState";
+import { convertMsToMinutes } from "@shared/utils/time";
 
 interface PowerupBarProps {
   timerState: TimerState;

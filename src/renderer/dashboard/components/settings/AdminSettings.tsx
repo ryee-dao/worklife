@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { TimerConfigs } from "../../../../main/timer/timerConfigs";
-import { DifficultyConfigs } from "../../../../main/difficulty/difficultyConfigs";
-import { WorkdayConfigs } from "../../../../main/workday/workdayConfigs";
-import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs, isValidWorkdayHours } from "../../../../shared/utils/time";
+import { TimerConfigs } from "@main/timer/timerConfigs";
+import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
+import { WorkdayConfigs } from "@main/workday/workdayConfigs";
+import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs, isValidWorkdayHours } from "@shared/utils/time";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "../../../common/components/NumberInput";
+import NumberInput from "@renderer/common/components/NumberInput";
 
 interface AdminConfigs {
   timer: TimerConfigs;

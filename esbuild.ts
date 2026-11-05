@@ -10,14 +10,20 @@ const isWatch = process.argv.includes('--watch');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const buildOptions: BuildOptions = {
-  entryPoints: ['src/main/preload.ts'],
+  entryPoints: { preload: 'src/main/preload.ts', 'main/main': 'src/main/main.ts' },
   bundle: true,
-  outfile: 'dist/preload.js',
+  outdir: 'dist',
   platform: 'node',
   target: 'node24',
   format: 'cjs',
   external: ['electron'],
   sourcemap: true,
+  // Explicit, since files in src/shared would otherwise pick up the root tsconfig, which has no paths
+  alias: {
+    '@main': path.join(__dirname, 'src/main'),
+    '@shared': path.join(__dirname, 'src/shared'),
+    '@assets': path.join(__dirname, 'src/assets'),
+  },
 };
 
 function copyAssets() {
@@ -37,14 +43,14 @@ async function build() {
       const ctx = await esbuild.context(buildOptions);
       await ctx.watch();
       copyAssets(); // Copy once on initial build
-      console.log('👀 Watching preload...');
+      console.log('👀 Watching main and preload...');
     } else {
       await esbuild.build(buildOptions);
       copyAssets();
-      console.log('✅ Preload built successfully');
+      console.log('✅ Main and preload built successfully');
     }
   } catch (error) {
-    console.error('❌ Preload build failed:', error);
+    console.error('❌ Main and preload build failed:', error);
     process.exit(1);
   }
 }

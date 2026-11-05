@@ -1,8 +1,8 @@
 import { FastForward, Square } from "lucide-react";
-import { TimerState } from "../../../../main/timer/timerState";
-import SlashedIcon from "../../../common/components/SlashedIcon";
-import CircularButton from "../../../common/components/CircularButton";
-import PowerupCost from "../../../common/components/PowerupCost";
+import { TimerState } from "@main/timer/timerState";
+import SlashedIcon from "@renderer/common/components/SlashedIcon";
+import CircularButton from "@renderer/common/components/CircularButton";
+import PowerupCost from "@renderer/common/components/PowerupCost";
 
 interface BreakButtonProps {
   timerState: TimerState;

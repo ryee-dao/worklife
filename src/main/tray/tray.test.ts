@@ -1,12 +1,12 @@
 import { describe, test, expect, vi, beforeEach, it } from 'vitest';
-import { DEFAULTS } from '../../shared/constants';
+import { DEFAULTS } from '@shared/constants';
 import { updateTray, buildStatusIcons, ICON_DIR } from './tray';
-import { TimerState } from '../timer/timerState';
-import { DayScore } from '../stats/checkpoints';
+import { TimerState } from '@main/timer/timerState';
+import { DayScore } from '@main/stats/checkpoints';
 import { existsSync } from 'fs';
 import path from 'path';
 
-vi.mock('../main', () => ({
+vi.mock('@main/main', () => ({
   settingsWindow: null,
 }));
 

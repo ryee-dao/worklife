@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { getDayScores, getTodayScore } from './checkpoints';
 import { StatsEvent } from './stats';
-import { WorkdayConfigs } from '../workday/workdayConfigs';
+import { WorkdayConfigs } from '@main/workday/workdayConfigs';
 
 const defaultWorkday: WorkdayConfigs = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false };
 const normalConfig = { workday: defaultWorkday, checkpointDecayMs: 15 * 60 * 1000 }; // Normal's drain on a 9 to 5 day

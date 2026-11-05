@@ -1,9 +1,9 @@
 import { PlayIcon, StopIcon } from "@heroicons/react/24/outline";
 import { AlarmClockPlus, SkipForward } from "lucide-react";
-import { TimerState } from "../../../../main/timer/timerState";
-import { convertMsToMinutes } from "../../../../shared/utils/time";
-import CircularButton from "../../../common/components/CircularButton";
-import PowerupCost from "../../../common/components/PowerupCost";
+import { TimerState } from "@main/timer/timerState";
+import { convertMsToMinutes } from "@shared/utils/time";
+import CircularButton from "@renderer/common/components/CircularButton";
+import PowerupCost from "@renderer/common/components/PowerupCost";
 
 interface TimerButtonProps {
   timerState: TimerState;

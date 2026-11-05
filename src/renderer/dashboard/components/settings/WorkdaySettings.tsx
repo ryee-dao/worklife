@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { WorkdayConfigs } from "../../../../main/workday/workdayConfigs";
+import { WorkdayConfigs } from "@main/workday/workdayConfigs";
 import SettingsPanel from "./SettingsPanel";
-import { isValidWorkdayHours } from "../../../../shared/utils/time";
+import { isValidWorkdayHours } from "@shared/utils/time";
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; // Index matches Date.getDay()
 

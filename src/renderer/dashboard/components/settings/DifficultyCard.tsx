@@ -1,6 +1,6 @@
 import { AlarmClockPlus, Hourglass, Sandwich, TreePalm, Zap } from "lucide-react";
-import { DifficultyConfigs } from "../../../../main/difficulty/difficultyConfigs";
-import { LEVEL_COLORS } from "../stats/checkpointStyles";
+import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
+import { LEVEL_COLORS } from "@renderer/dashboard/components/stats/checkpointStyles";
 
 export type PresetLevel = "EASY" | "NORMAL" | "HARD";
 export type DifficultyValues = DifficultyConfigs["custom"];

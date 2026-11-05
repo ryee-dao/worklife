@@ -1,21 +1,21 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { FILENAMES } from '../../shared/constants';
+import { FILENAMES } from '@shared/constants';
 
 // Add mocks
-vi.mock('../../shared/utils/files', () => ({
+vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined, filePath: '' })),
   writeToUserDataFile: vi.fn(),
 }));
 
-vi.mock('../timer/timerState', () => ({
+vi.mock('@main/timer/timerState', () => ({
   startTimer: vi.fn(),
   stopTimer: vi.fn(),
 }));
 
 import { destroyWorkday, initWorkday, isInWorkday } from './workday';
 import { applyWorkdayConfigs, getAppliedWorkdayConfigs, loadWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from './workdayConfigs';
-import { stopTimer, startTimer } from '../timer/timerState';
-import { getUserDataFromFile } from '../../shared/utils/files';
+import { stopTimer, startTimer } from '@main/timer/timerState';
+import { getUserDataFromFile } from '@shared/utils/files';
 
 const defaultWorkday: WorkdayConfigs = { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false };
 const oneMinuteMs = 60 * 1000;

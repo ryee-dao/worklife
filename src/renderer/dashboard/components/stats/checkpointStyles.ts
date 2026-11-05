@@ -1,5 +1,5 @@
-import { Activity } from "../../../../main/stats/checkpoints";
-import { CHECKPOINTS } from "../../../../shared/constants";
+import { Activity } from "@main/stats/checkpoints";
+import { CHECKPOINTS } from "@shared/constants";
 
 const maxLevel = CHECKPOINTS.NAMES.length - 1;
 

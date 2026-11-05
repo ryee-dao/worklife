@@ -1,6 +1,6 @@
-import { stopTimer, startTimer } from "../timer/timerState";
-import { convertTimeToMinutes } from "../../shared/utils/time";
-import { IS_TEST } from "../testEnv";
+import { stopTimer, startTimer } from "@main/timer/timerState";
+import { convertTimeToMinutes } from "@shared/utils/time";
+import { IS_TEST } from "@main/testEnv";
 import { applyWorkdayConfigsOnNewDay, getAppliedWorkdayConfigs, WorkdayConfigs } from "./workdayConfigs";
 
 const workdayCheckIntervalMs = 60 * 1000; // 1 minute

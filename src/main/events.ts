@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { tray, updateTray } from './tray/tray';
-import { EVENTS } from "../shared/constants";
+import { EVENTS } from "@shared/constants";
 import { applyDifficultyConfigs, DifficultyConfigs, getDifficultyConfigs, setDifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { applyTimerConfigs, getTimerConfigs, setTimerConfigs, TimerConfigs } from "./timer/timerConfigs";
 import {

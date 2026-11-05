@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { DayScore } from "../../../../main/stats/checkpoints";
+import { DayScore } from "@main/stats/checkpoints";
 import MonthCalendar from "./MonthCalendar";
 import DayCard from "./DayCard";
 import TodayPanel from "./TodayPanel";

@@ -1,4 +1,4 @@
-import { CHECKPOINTS } from "../../shared/constants";
+import { CHECKPOINTS } from "@shared/constants";
 import type { StatsEvent } from "./stats";
 
 // Overdue and breaks count as working: taking the break is the point

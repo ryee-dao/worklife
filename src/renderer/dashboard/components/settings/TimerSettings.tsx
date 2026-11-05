@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { convertMinutesToMs, convertMsToMinutes } from "../../../../shared/utils/time";
-import { TimerConfigs } from "../../../../main/timer/timerConfigs";
+import { convertMinutesToMs, convertMsToMinutes } from "@shared/utils/time";
+import { TimerConfigs } from "@main/timer/timerConfigs";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "../../../common/components/NumberInput";
+import NumberInput from "@renderer/common/components/NumberInput";
 
 export default function TimerSettings() {
   const [timerDurationInMinutes, setTimerDurationInMinutes] = useState(0);

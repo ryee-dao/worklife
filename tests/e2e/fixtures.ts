@@ -4,7 +4,7 @@ import { ElectronApplication, Page } from "playwright";
 import { launchApp, createTestUserDataDir, TestClock } from "./helpers";
 import fs from "fs";
 import path from "path";
-import { DEFAULTS, FILENAMES } from "../../src/shared/constants";
+import { DEFAULTS, FILENAMES } from "@shared/constants";
 
 type UserDataDir = {
   path: string;
@@ -87,8 +87,10 @@ const test = base.extend<{
           ),
         ]);
       } catch {
-        // If close hangs (window tracing stuck, process unresponsive), force kill it
-        app.process().kill()
+        // If close hangs (window tracing stuck, process unresponsive), force kill it.
+        // SIGKILL, since Electron treats the default SIGTERM as another quit request and an app stuck quitting ignores it
+        console.warn('App did not quit within 10s, force killed');
+        app.process().kill('SIGKILL');
       }
     }
   },

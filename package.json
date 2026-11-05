@@ -4,9 +4,9 @@
   "description": "Tool to reclaim work-life balance",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\" \"npm run _dev:electron:start\"",
-    "dev:debug": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:preload:watch\"",
-    "build": "npm run _build:vite && npm run _build:electron && npm run _build:preload",
+    "dev": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:esbuild:watch\" \"npm run _dev:electron:start\"",
+    "dev:debug": "npx kill-port 5173 && npm run _dev:init && concurrently --kill-others \"npm run _dev:vite\" \"npm run _dev:electron:watch\" \"npm run _dev:esbuild:watch\"",
+    "build": "npm run _build:vite && npm run _build:electron && npm run _build:esbuild",
     "dist": "npm run build && electron-builder",
     "start": "npm run build && electron .",
     "lint": "npx tsc --build && eslint src/ tests/",
@@ -15,14 +15,14 @@
     "test:unit:verbose": "vitest run",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:quick": "npm run build && playwright test --project=smoke --project=layout",
-    "_dev:init": "tsc --build src/main && npx tsx esbuild.preload.ts",
+    "_dev:init": "tsc --build src/main && npx tsx esbuild.ts",
     "_dev:vite": "vite",
     "_dev:electron:watch": "tsc --build src/main -w",
-    "_dev:preload:watch": "npx tsx esbuild.preload.ts --watch",
+    "_dev:esbuild:watch": "npx tsx esbuild.ts --watch",
     "_dev:electron:start": "nodemon --watch dist/main --exec \"cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron . --no-sandbox\"",
     "_build:vite": "vite build",
     "_build:electron": "tsc --build src/main",
-    "_build:preload": "npx tsx esbuild.preload.ts",
+    "_build:esbuild": "npx tsx esbuild.ts",
     "prepare": "npx simple-git-hooks"
   },
   "simple-git-hooks": {
@@ -51,6 +51,7 @@
     "files": [
       "dist/**/*",
       "!dist/*.tsbuildinfo",
+      "!dist/types/**",
       "!dist/mac*",
       "!dist/win*",
       "!dist/linux*",
