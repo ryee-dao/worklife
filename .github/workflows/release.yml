@@ -1,0 +1,101 @@
+name: Release
+
+# Builds the installers and publishes a GitHub release when a PR with a release label merges into main.
+# The version lives in the tag only: branch protection stops a workflow from pushing a version bump commit,
+# so package.json is set inside the runner before building and stays a placeholder in the repo.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, like 1.2.0 (re-cuts a release without a PR)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      sha: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0 # Needs the tags to find the latest version
+
+      - id: next
+        env:
+          INPUT: ${{ inputs.version }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          if [ -n "$INPUT" ]; then
+            echo "version=$INPUT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo v0.0.0)
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          case " $LABELS " in
+            *" release:major "*) version="$((major + 1)).0.0" ;;
+            *" release:minor "*) version="$major.$((minor + 1)).0" ;;
+            *" release:patch "*) version="$major.$minor.$((patch + 1))" ;;
+            *) echo "No release:major/minor/patch label, nothing to release"; exit 0 ;;
+          esac
+          echo "Releasing v$version (latest tag $latest)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    if: needs.version.outputs.version != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm version ${{ needs.version.outputs.version }} --no-git-tag-version
+
+      # Unsigned builds: no Apple identity to look up, and no upload until every OS has built
+      - run: npm run dist -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
+          if-no-files-found: error
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: installers
+          merge-multiple: true
+
+      - run: gh release create "v$VERSION" installers/* --target "$SHA" --title "v$VERSION" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
