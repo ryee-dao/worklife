@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import type { TimerState } from '@main/timer/timerState';
 import { DEFAULTS } from '@shared/constants';
-import { DEMO_BREAK_MS, DEMO_LEVEL_THRESHOLD_MS, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from './tour';
+import { DEMO_BREAK_MS, DEMO_LEVEL_THRESHOLD_MS, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from './beats';
 
 const running: TimerState = {
   status: 'RUNNING',

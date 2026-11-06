@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { TimerState } from "@main/timer/timerState";
 import { OverdueLevelObject } from "@main/overdue/overdueGeometry";
 import BreakWindowFrame from "@renderer/common/components/BreakWindowFrame";
-import { CARD_MARGIN_PX, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from "./tour";
+import { CARD_MARGIN_PX, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from "./beats";
 import { useElementRect } from "./useElementRect";
 
 interface TourProps {
