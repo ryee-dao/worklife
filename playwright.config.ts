@@ -19,5 +19,13 @@ export default defineConfig({
     { name: "smoke", testMatch: "smoke.spec.ts" },       // Does the app start and basically work
     { name: "layout", testMatch: "layout.spec.ts" },     // Nothing is hidden, wrapped or overlapping
     { name: "features", testMatch: "features/**/*.spec.ts" },
+    // The browser demo, served from the same build
+    { name: "web", testMatch: "web/**/*.spec.ts", use: { browserName: "chromium", baseURL: "http://127.0.0.1:4173", viewport: { width: 1000, height: 820 } } },
   ],
+  webServer: {
+    command: "npx vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    url: "http://127.0.0.1:4173/",
+    reuseExistingServer: true,
+    timeout: 30 * 1000,
+  },
 });

@@ -1,6 +1,7 @@
 import { expect, Locator, Page } from "@playwright/test";
 import { ElectronApplication } from "playwright";
 import { test } from "./fixtures";
+import { FILENAMES } from "@shared/constants";
 
 test.describe.configure({ mode: 'parallel' });
 
@@ -42,6 +43,30 @@ async function expectNoSidewaysScroll(page: Page) {
   expect(fits, "page is wider than the window").toBe(true);
 }
 
+// Fails when an element's middle is off the window's middle, as letter-spacing or a stray flex row can push it
+async function expectCentered(page: Page, locator: Locator) {
+  const box = (await locator.boundingBox())!;
+  const windowWidth = await page.evaluate(() => window.innerWidth);
+  expect(Math.abs(box.x + box.width / 2 - windowWidth / 2), `${locator} is off center`).toBeLessThanOrEqual(2);
+}
+
+test("Overdue and break windows keep their title and time centered", async ({ launchElectron }) => {
+  const { settingsWindow, electronApp } = await launchElectron();
+  const [breakWindow] = await Promise.all([
+    electronApp.waitForEvent('window'),
+    settingsWindow.getByTestId("timer-buttons-container").getByTestId('forward-button').click(),
+  ]);
+
+  await expect(breakWindow.getByTestId("overdue-window-time-display")).toBeVisible();
+  await expectCentered(breakWindow, breakWindow.getByTestId("overdue-window-title"));
+  await expectCentered(breakWindow, breakWindow.getByTestId("overdue-window-time-display"));
+
+  await breakWindow.getByTestId("overdue-window-start-break-button").click();
+  await expect(breakWindow.getByTestId("break-window-time-display")).toBeVisible();
+  await expectCentered(breakWindow, breakWindow.getByTestId("break-window-title"));
+  await expectCentered(breakWindow, breakWindow.getByTestId("break-window-time-display"));
+});
+
 for (const size of windowSizes) {
   test(`Timer tab fits at ${size.width}×${size.height}`, async ({ launchElectron }) => {
     const { electronApp, settingsWindow, testClock } = await launchElectron();
@@ -71,6 +96,32 @@ for (const size of windowSizes) {
     await expectSingleLine(settingsWindow.getByTestId("calendar-month"));
     await expectNoOverlap(todayPanel, calendar);
     await expectNoOverlap(calendar, dayCard);
+    await expectNoSidewaysScroll(settingsWindow);
+  });
+
+  test(`Tour fits at ${size.width}×${size.height}`, async ({ userDataDir, launchElectron }) => {
+    userDataDir.seed(FILENAMES.TOUR.STATE, { seen: false });
+    const { electronApp, settingsWindow } = await launchElectron();
+    await resizeWindow(electronApp, settingsWindow, size);
+    const card = settingsWindow.getByTestId("tour-card");
+    const next = settingsWindow.getByTestId("tour-next");
+
+    // The first two beats spotlight the timer tab, and the card must leave the spotlight clear
+    for (const target of ["timer-time-digits", "toggle-timer-button"]) {
+      await expect(card).toBeInViewport({ ratio: 1 });
+      await expect(settingsWindow.getByTestId("tour-spotlight")).toBeVisible();
+      await expectNoOverlap(card, settingsWindow.getByTestId(target));
+      await next.click();
+    }
+
+    // The demo window stays inside the dashboard window, and its title fits on one line
+    const demo = settingsWindow.getByTestId("demo-break-window");
+    const title = demo.getByTestId("overdue-window-title");
+    await expect(title).toBeVisible();
+    await expect(demo).toBeInViewport({ ratio: 1 });
+    await expectSingleLine(title);
+    await expect(card).toBeInViewport({ ratio: 1 });
+    await expectNoOverlap(card, demo.getByTestId("overdue-window-start-break-button"));
     await expectNoSidewaysScroll(settingsWindow);
   });
 }

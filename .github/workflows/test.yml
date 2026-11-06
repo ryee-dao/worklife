@@ -26,6 +26,14 @@ jobs:
       - run: npm run lint
       - run: npm run test:unit
 
+      # The web demo tests run in a browser; Electron brings its own
+      - name: Install Chromium (Linux)
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium
+        if: runner.os != 'Linux'
+        run: npx playwright install chromium
+
       # Ubuntu blocks the sandbox Electron needs unless this is turned off
       - name: Allow Electron sandbox
         if: runner.os == 'Linux'

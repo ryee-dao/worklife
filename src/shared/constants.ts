@@ -29,6 +29,8 @@ export const EVENTS = {
     DEV_APPLY_WORKDAY: "dev:apply_workday",
     DEV_RESET_DAY: "dev:reset_day",
     DEV_ADJUST_CHECKPOINT: "dev:adjust_checkpoint",
+    TOUR_GET_SEEN: "tour:get_seen",
+    TOUR_MARK_SEEN: "tour:mark_seen",
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",
@@ -64,6 +66,7 @@ export const FILENAMES = {
   WORKDAY: { CONFIGS: "workdayConfigs.json", STATE: "workdayState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
   STATS: { EVENTS: "events.jsonl", STATE: "statsState.json" },
+  TOUR: { STATE: "tourState.json" },
 } as const;
 
 // Break and snooze lengths are a share of the timer, so they scale with longer work sessions.

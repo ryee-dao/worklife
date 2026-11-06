@@ -2,10 +2,29 @@
 
 @theme {
   --breakpoint-xsm: 360px;
+
+  /* Container breakpoints equal to the window ones, for views that size to the box they're in: their own window, or a demo box */
+  --container-window-xsm: 360px;
+  --container-window-sm: 640px;
+  --container-window-md: 768px;
+  --container-window-lg: 1024px;
+
   --animate-flash: flash 1s infinite;
+  --animate-tour-pulse: tour-pulse 1.5s ease-out infinite;
 
   /* The day bar flashes red while checkpoints drain */
   @keyframes flash {
     50% { box-shadow: 0 0 0 3px #ef4444; background-color: #fecaca; }
   }
+
+  /* The tour's ring around the button to press */
+  @keyframes tour-pulse {
+    0% { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+}
+
+/* A full-height chain, so a view can fill its window with h-full and also fill a demo box */
+html, body, #root {
+  height: 100%;
 }

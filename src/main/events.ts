@@ -24,6 +24,7 @@ import { resetTodayLimits } from "./limit/limitState";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 import { getAllDayScores, getCurrentDayScore, recordCheckpointAdjusted, takeUnseenSummaryDate } from "./stats/stats";
+import { isTourSeen, markTourSeen } from "./tour/tourState";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -85,6 +86,8 @@ export const initEventListeners = () => {
   ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_GET_DAYS, getAllDayScores);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_TAKE_UNSEEN_SUMMARY, takeUnseenSummaryDate);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_GET_SEEN, isTourSeen);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_MARK_SEEN, markTourSeen);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,

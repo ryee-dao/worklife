@@ -31,6 +31,8 @@ export interface ElectronAPI {
   loadDifficultyConfigs: () => Promise<DifficultyConfigs>
   loadOverdueConfigs: () => Promise<OverdueConfigs>
   loadWorkdayConfigs: () => Promise<WorkdayConfigs>
+  getTourSeen: () => Promise<boolean>;
+  markTourSeen: () => Promise<void>;
 }
 
 declare global {

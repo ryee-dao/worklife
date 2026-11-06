@@ -92,6 +92,12 @@ const electronAPI: ElectronAPI = {
   devAdjustCheckpoint: async (by: number) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_ADJUST_CHECKPOINT, by);
   },
+  getTourSeen: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TOUR_GET_SEEN);
+  },
+  markTourSeen: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TOUR_MARK_SEEN);
+  },
 }
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);
