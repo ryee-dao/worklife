@@ -1,8 +1,7 @@
 name: Test
 
+# Pull requests only: every change reaches main through one, with these checks required, so a run on main would repeat them
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:

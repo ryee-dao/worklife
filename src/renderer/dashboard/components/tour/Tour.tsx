@@ -69,6 +69,11 @@ export default function Tour({ timerState, onDone }: TourProps) {
     }
   };
 
+  // A demo break ends the way a real one does: the window goes away and the tour moves on
+  useEffect(() => {
+    if (demo?.status === "BREAK" && demo.currentCountdownMs === 0) advance();
+  }, [demo]);
+
   // The demo window's buttons are the real ones, so their clicks are stopped here before they reach the app.
   // Only the button the beat names does anything, and what it does is move the tour on
   const onDemoClick = (event: MouseEvent) => {
@@ -84,7 +89,8 @@ export default function Tour({ timerState, onDone }: TourProps) {
 
   return (
     <div ref={root} data-testid="tour" className="fixed inset-0 z-50 select-none">
-      {beat.demo && <div className="absolute inset-0 bg-slate-900/60" />}
+      {/* Demo beats dim the tab behind them; a beat whose target isn't on screen (replayed mid-break) dims it too, rather than showing nothing */}
+      {(beat.demo || (beat.target && !target)) && <div className={`absolute inset-0 ${beat.demo ? "bg-slate-900/85" : "bg-slate-900/60"}`} />}
       {beat.target && (
         <div
           data-testid="tour-spotlight"
