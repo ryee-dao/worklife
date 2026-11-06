@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { TimerState } from "@main/timer/timerState";
 import { OverdueLevelObject } from "@main/overdue/overdueGeometry";
 import BreakWindowFrame from "@renderer/common/components/BreakWindowFrame";
-import { CARD_MARGIN_PX, demoOverdueLevels, placeCard, startDemo, tickDemo, TOUR_BEATS } from "./tour";
+import { CARD_MARGIN_PX, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from "./tour";
 import { useElementRect } from "./useElementRect";
 
 interface TourProps {
@@ -19,13 +19,14 @@ const CARD_BAND_PX = 140; // Room kept for the card until it's measured
 // the beats that need it. Everything behind the overlay is blocked, so the only live control is the one each beat names
 export default function Tour({ timerState, onDone }: TourProps) {
   const [step, setStep] = useState(0);
+  const [skipped, setSkipped] = useState(false);
   const [demo, setDemo] = useState<TimerState>();
   const [levels, setLevels] = useState<OverdueLevelObject[]>([]);
   const [screen, setScreen] = useState({ width: 0, height: 0 });
   const root = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const beat = TOUR_BEATS[step];
-  const isLast = step === TOUR_BEATS.length - 1;
+  const beat = skipped ? SKIP_BEAT : TOUR_BEATS[step];
+  const isLast = skipped || step === TOUR_BEATS.length - 1;
   const target = useElementRect(beat.target, root);
   const pulse = useElementRect(beat.advanceOn, root);
   const card = useElementRect("tour-card", root);
@@ -120,21 +121,30 @@ export default function Tour({ timerState, onDone }: TourProps) {
       >
         <h2 className="text-lg font-bold text-slate-900">{beat.title}</h2>
         <p className="text-sm text-slate-700 leading-snug">{beat.body}</p>
-        <div className="flex items-center justify-between pt-1.5 min-h-9">
-          <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${TOUR_BEATS.length}`}>
-            {TOUR_BEATS.map((_, index) => (
-              <i key={index} className={`size-1.5 rounded-full ${index === step ? "bg-slate-900" : "bg-slate-300"}`} />
-            ))}
-          </div>
-          {beat.action && (
-            <button
-              data-testid="tour-next"
-              onClick={advance}
-              className="h-9 px-4 rounded-lg bg-slate-900 text-white text-sm font-semibold cursor-pointer hover:bg-slate-700"
-            >
-              {beat.action}
-            </button>
+        <div className="flex items-center gap-4 pt-1.5 min-h-9">
+          {!skipped && (
+            <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${TOUR_BEATS.length}`}>
+              {TOUR_BEATS.map((_, index) => (
+                <i key={index} className={`size-1.5 rounded-full ${index === step ? "bg-slate-900" : "bg-slate-300"}`} />
+              ))}
+            </div>
           )}
+          <div className="ml-auto flex items-center gap-4">
+            {!isLast && (
+              <button data-testid="tour-skip" onClick={() => setSkipped(true)} className="text-sm text-slate-500 cursor-pointer hover:text-slate-900">
+                Skip
+              </button>
+            )}
+            {beat.action && (
+              <button
+                data-testid="tour-next"
+                onClick={advance}
+                className="h-9 px-4 rounded-lg bg-slate-900 text-white text-sm font-semibold cursor-pointer hover:bg-slate-700"
+              >
+                {beat.action}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

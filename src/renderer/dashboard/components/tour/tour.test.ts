@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import type { TimerState } from '@main/timer/timerState';
 import { DEFAULTS } from '@shared/constants';
-import { DEMO_BREAK_MS, DEMO_LEVEL_THRESHOLD_MS, demoOverdueLevels, placeCard, startDemo, tickDemo, TOUR_BEATS } from './tour';
+import { DEMO_BREAK_MS, DEMO_LEVEL_THRESHOLD_MS, demoOverdueLevels, placeCard, SKIP_BEAT, startDemo, tickDemo, TOUR_BEATS } from './tour';
 
 const running: TimerState = {
   status: 'RUNNING',
@@ -27,6 +27,11 @@ describe('tour beats', () => {
     const overdue = TOUR_BEATS.find((beat) => beat.demo === 'OVERDUE')!;
     expect(overdue.advanceOn).toBe('overdue-window-start-break-button');
     expect(TOUR_BEATS.at(-1)).toMatchObject({ route: '/timer', action: 'Start working' });
+  });
+
+  test('skipping points at the button that brings the tour back', () => {
+    expect(SKIP_BEAT).toMatchObject({ target: 'replay-tour', action: 'OK' });
+    expect(SKIP_BEAT.demo).toBeUndefined();
   });
 });
 

@@ -14,7 +14,6 @@ import Stats from "./stats/Stats";
 import AdminSettings from "./settings/AdminSettings";
 import { IS_DEV } from "@renderer/common/constants";
 import Tour from "./tour/Tour";
-import { TourContext } from "./tour/TourContext";
 
 // Opens a day's end-of-day card in the Stats tab
 const showDay = (localDate: string) => {
@@ -51,10 +50,17 @@ export default function Dashboard() {
   return (
     <div className="h-screen bg-slate-50 flex flex-col">
       <HashRouter>
-        <TourContext.Provider value={{ replay: () => setTourOpen(true) }}>
         {/* Inert while the tour is open, so the keyboard can't reach the stop button behind it either */}
         <div inert={tourOpen} className="contents">
         <TopTabs />
+        <button
+          data-testid="replay-tour"
+          title="Show the tour"
+          onClick={() => setTourOpen(true)}
+          className="fixed bottom-3 right-3 z-40 size-7 rounded-full border border-slate-300 bg-white text-sm font-semibold text-slate-500 cursor-pointer hover:border-slate-400 hover:text-slate-900"
+        >
+          ?
+        </button>
         <Routes>
           <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
           <Route path="/stats/:localDate?" element={<Stats todayScore={todayScore} />} />
@@ -72,7 +78,6 @@ export default function Dashboard() {
         </Routes>
         </div>
         {tourOpen && timerStateObject && <Tour timerState={timerStateObject} onDone={finishTour} />}
-        </TourContext.Provider>
       </HashRouter>
     </div>
   );

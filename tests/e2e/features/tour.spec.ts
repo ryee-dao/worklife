@@ -97,13 +97,29 @@ test("The first run walks through the tour once", async ({ userDataDir, launchEl
   });
 });
 
-test("A later launch skips the tour, and the settings can replay it", async ({ launchElectron }) => {
+test("A later launch has no tour, the corner button replays it, and skipping points back at the button", async ({ userDataDir, launchElectron }) => {
   const { settingsWindow } = await launchElectron();
+  const heading = settingsWindow.getByTestId("tour-card").getByRole("heading");
   await expect(settingsWindow.getByTestId("timer-time-display")).toBeVisible();
   await expect(settingsWindow.getByTestId("tour")).toBeHidden();
 
-  await settingsWindow.getByTestId("tabs-navbar").getByRole("link", { name: "Settings" }).click();
+  await settingsWindow.getByTestId("tabs-navbar").getByRole("link", { name: "Stats" }).click();
   await settingsWindow.getByTestId("replay-tour").click();
-  await expect(settingsWindow.getByTestId("tour-card").getByRole("heading")).toHaveText("Already running.");
+  await expect(heading).toHaveText("Already running.");
   await expect.poll(() => settingsWindow.evaluate(() => location.hash)).toBe("#/timer");
+
+  // Skip from a demo beat, so the demo window goes away with it
+  await settingsWindow.getByTestId("tour-next").click();
+  await settingsWindow.getByTestId("tour-next").click();
+  await expect(settingsWindow.getByTestId("demo-break-window")).toBeVisible();
+  await settingsWindow.getByTestId("tour-skip").click();
+  await expect(heading).toHaveText("Skipped.");
+  await expect(settingsWindow.getByTestId("demo-break-window")).toBeHidden();
+  await expect(settingsWindow.getByTestId("tour-spotlight")).toBeVisible();
+  await expect(settingsWindow.getByTestId("tour-skip")).toBeHidden();
+  expect(await isBlockedByTour(settingsWindow, "replay-tour")).toBe(true);
+
+  await settingsWindow.getByTestId("tour-next").click();
+  await expect(settingsWindow.getByTestId("tour")).toBeHidden();
+  await expect.poll(() => fs.readFileSync(path.join(userDataDir.path, FILENAMES.TOUR.STATE), "utf-8")).toBe(JSON.stringify({ seen: true }));
 });

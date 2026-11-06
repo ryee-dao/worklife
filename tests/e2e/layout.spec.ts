@@ -79,6 +79,8 @@ for (const size of windowSizes) {
     await expectSingleLine(digits);
     await expectNoOverlap(settingsWindow.getByTestId("timer-powerup-bar"), digits);
     await expectNoOverlap(settingsWindow.getByTestId("timer-buttons-container"), digits);
+    // The buttons row spans the window, so check the corner button against the last button in it
+    await expectNoOverlap(settingsWindow.getByTestId("replay-tour"), settingsWindow.getByTestId("timer-buttons-container").getByRole("button").last());
     await expectNoSidewaysScroll(settingsWindow);
   });
 
@@ -123,5 +125,12 @@ for (const size of windowSizes) {
     await expect(card).toBeInViewport({ ratio: 1 });
     await expectNoOverlap(card, demo.getByTestId("overdue-window-start-break-button"));
     await expectNoSidewaysScroll(settingsWindow);
+
+    // Skipping spotlights the corner button, which the card must leave clear too
+    await settingsWindow.getByTestId("tour-skip").click();
+    await expect(settingsWindow.getByTestId("tour-card").getByRole("heading")).toHaveText("Skipped.");
+    await expect(settingsWindow.getByTestId("tour-spotlight")).toBeVisible();
+    await expect(card).toBeInViewport({ ratio: 1 });
+    await expectNoOverlap(card, settingsWindow.getByTestId("replay-tour"));
   });
 }

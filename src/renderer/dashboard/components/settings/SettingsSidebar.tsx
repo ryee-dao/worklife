@@ -1,12 +1,9 @@
 import SettingsTab from "./SettingsTab";
 import { ClockAlert, Clock9, Gauge, Briefcase, Wrench } from 'lucide-react';
 import { IS_DEV } from "@renderer/common/constants";
-import { useTour } from "../tour/TourContext";
 
 
 export default function SettingsSidebar() {
-  const { replay } = useTour();
-
   return <div className="flex flex-col shrink-0 w-2/5 sm:w-1/5 py-3 bg-slate-200">
     <h3 className="font-bold tracking-wide md:tracking-widest pl-1">CONFIGS</h3>
     <SettingsTab to="/settings/timer" text="Timer" icon={Clock9} />
@@ -14,12 +11,5 @@ export default function SettingsSidebar() {
     <SettingsTab to="/settings/difficulty" text="Difficulty" icon={Gauge} />
     <SettingsTab to="/settings/overdue" text="Overdue" icon={ClockAlert} />
     {IS_DEV && <SettingsTab to="/settings/admin" text="Admin" icon={Wrench} />}
-    <button
-      data-testid="replay-tour"
-      onClick={replay}
-      className="mt-auto mx-3 self-start text-xs whitespace-nowrap text-slate-500 underline cursor-pointer hover:text-slate-800"
-    >
-      Show the tour again
-    </button>
   </div>
 }

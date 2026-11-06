@@ -59,6 +59,14 @@ export const TOUR_BEATS: TourBeat[] = [
   },
 ];
 
+// Skipping ends on this beat, so the way back is shown before the tour goes away
+export const SKIP_BEAT: TourBeat = {
+  route: "/timer", target: "replay-tour",
+  title: "Skipped.",
+  body: "Press ? in the corner whenever you want the tour back.",
+  action: "OK",
+};
+
 export const DEMO_LEVEL_THRESHOLD_MS = 4 * 1000; // The real window grows every few minutes; the demo every few seconds
 export const DEMO_BREAK_MS = 30 * 1000;
 
