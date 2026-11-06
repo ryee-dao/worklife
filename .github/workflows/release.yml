@@ -62,18 +62,10 @@ jobs:
         with:
           ref: ${{ needs.version.outputs.sha }}
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
       - run: npm version ${{ needs.version.outputs.version }} --no-git-tag-version
 
-      # Unsigned builds: no Apple identity to look up, and no upload until every OS has built
-      - run: npm run dist -- --publish never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+      # Builds and verifies the installers; nothing is uploaded until every OS has passed
+      - uses: ./.github/actions/package
 
       - uses: actions/upload-artifact@v7
         with:
