@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { END_BEATS, TOUR_BEATS, TourBeat } from './beats';
-import { currentBeat, hasTimedOut, isFading, namesAction, nextSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, tourUpdateOf } from './session';
+import { currentBeat, hasTimedOut, isFading, namesAction, nextSession, prevSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, tourUpdateOf } from './session';
 
 const ticks = (session: TourSession, seconds: number) => {
   for (let i = 0; i < seconds; i++) session = tickSession(session);
@@ -52,6 +52,28 @@ describe('the tour clock', () => {
     expect(after.step).toBe(OVERDUE_STEP + 2);
     expect(after.clock).toMatchObject({ status: 'RUNNING', currentCountdownMs: TOUR.COUNTDOWN_MS });
     expect(ticks(after, 5).clock.currentCountdownMs).toBe(TOUR.COUNTDOWN_MS);
+  });
+});
+
+describe('going back', () => {
+  test('steps back a beat, out of the window and into it again, and from the last card; not from the first beat or a skip', () => {
+    const first = startSession(false);
+    expect(tourUpdateOf(first).canGoBack).toBe(false);
+    expect(prevSession(first)).toBe(first);
+
+    const overdue = ticks(toStep(first, OVERDUE_STEP), TOUR.RUN_MS / 1000);
+    const before = prevSession(overdue);
+    expect(before.step).toBe(OVERDUE_STEP - 1);
+    expect(before.clock).toMatchObject({ status: 'RUNNING', currentCountdownMs: TOUR.COUNTDOWN_MS }); // The window closes with the beat
+    const onBreak = nextSession(overdue, true)!;
+    expect(prevSession(onBreak).clock).toMatchObject({ status: 'RUNNING', currentCountdownMs: TOUR.RUN_MS }); // Counts down to the window again
+    expect(prevSession(nextSession(onBreak, true)!).clock.status).toBe('BREAK');
+
+    const end = nextSession(toStep(first, TOUR_BEATS.length - 1), true)!;
+    expect(tourUpdateOf(end).canGoBack).toBe(true);
+    expect(prevSession(end)).toMatchObject({ step: TOUR_BEATS.length - 1, end: null });
+    expect(tourUpdateOf(skipSession(first, false)).canGoBack).toBe(false);
+    expect(tourUpdateOf(skipSession(startSession(true), true)).canGoBack).toBe(false); // A skipped first run's start prompt: just the start button
   });
 });
 

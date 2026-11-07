@@ -33,10 +33,9 @@ test("Stats tab shows today's checkpoint live, and the month calendar", async ({
     await expect(settingsWindow.getByTestId("today-panel").getByTestId("day-bar")).toHaveClass(/animate-flash/);
   });
 
-  await test.step("The calendar can fill each day by checkpoint or as a whole", async () => {
-    await expect(todayCell).toHaveAttribute("style", /linear-gradient/);
-    await settingsWindow.getByTestId("calendar-fill-mode").click();
-    await expect(todayCell).not.toHaveAttribute("style", /linear-gradient/);
+  await test.step("The calendar fills each day diagonally to its checkpoint, and shows the stage", async () => {
+    await expect(todayCell).toHaveAttribute("style", /linear-gradient\(to (top right|right top)/);
+    await expect(settingsWindow.getByTestId("today-panel").getByTestId("checkpoint-stage")).toHaveText("1");
   });
 
   await test.step("The calendar goes back a month, but not past this one", async () => {

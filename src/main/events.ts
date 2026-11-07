@@ -26,7 +26,7 @@ import { resetTodayLimits } from "./limit/limitState";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 import { getAllDayScores, getCurrentDayScore, recordCheckpointAdjusted, takeUnseenSummaryDate } from "./stats/stats";
-import { getTour, startTour, tourAction, tourEmitter, tourNext, tourSkip, tourTimerState } from "./tour/tour";
+import { getTour, startTour, tourAction, tourEmitter, tourNext, tourPrev, tourSkip, tourTimerState, tourTodayScore } from "./tour/tour";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -46,7 +46,7 @@ const onTimerUpdate = (state: TimerState) => {
   updateTray(tray!, state, todayScore);
   // While a tour is on, the windows show its clock in place of the real timer
   broadcastStateToRendererWindows(tourTimerState() ?? state, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
-  broadcastStateToRendererWindows(todayScore, [settingsWindow], EVENTS.IPC_CHANNELS.STATS_TODAY);
+  broadcastStateToRendererWindows(tourTodayScore() ?? todayScore, [settingsWindow], EVENTS.IPC_CHANNELS.STATS_TODAY);
 };
 
 // The break window belongs to the tour while one is on. The real timer's window comes back when it ends
@@ -105,6 +105,7 @@ export const initEventListeners = () => {
   ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_GET, getTour);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_START, startTour);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_NEXT, tourNext);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_PREV, tourPrev);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_SKIP, tourSkip);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(

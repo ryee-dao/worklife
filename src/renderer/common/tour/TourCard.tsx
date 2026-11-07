@@ -16,6 +16,11 @@ export default function TourCard({ tour, className = "" }: TourCardProps) {
       className={`absolute left-1/2 -translate-x-1/2 z-30 w-[min(30rem,100%_-_2rem)] rounded-2xl bg-white p-4 sm:p-5 shadow-2xl flex flex-col gap-1.5 pointer-events-auto ${className}`}
     >
       <h2 className="text-lg font-bold text-slate-900">{beat.title}</h2>
+      {!isEnd && (
+        <button data-testid="tour-skip" onClick={() => window.electronAPI.tourSkip()} className="absolute top-4 right-4 sm:top-5 sm:right-5 text-xs text-slate-400 cursor-pointer hover:text-slate-900">
+          Skip tour
+        </button>
+      )}
       <p className="text-sm text-slate-700 leading-snug">{beat.body}</p>
       <div className="flex items-center gap-4 pt-1.5 min-h-9">
         {!isEnd && (
@@ -26,15 +31,15 @@ export default function TourCard({ tour, className = "" }: TourCardProps) {
           </div>
         )}
         <div className="ml-auto flex items-center gap-4">
+          {tour.canGoBack && (
+            <button data-testid="tour-back" onClick={() => window.electronAPI.tourPrev()} className="text-sm text-slate-500 cursor-pointer hover:text-slate-900">
+              Back
+            </button>
+          )}
           {beat.link && (
             <a href={beat.link.href} target="_blank" rel="noreferrer" className="text-sm font-semibold text-slate-700 underline hover:text-slate-900">
               {beat.link.label}
             </a>
-          )}
-          {!isEnd && (
-            <button data-testid="tour-skip" onClick={() => window.electronAPI.tourSkip()} className="text-sm text-slate-500 cursor-pointer hover:text-slate-900">
-              Skip
-            </button>
           )}
           {beat.action && (
             <button

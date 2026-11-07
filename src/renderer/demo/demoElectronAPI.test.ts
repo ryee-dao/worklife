@@ -98,13 +98,13 @@ describe('demo tour', () => {
   test('a fresh page opens on the tour, showing its clock, and the start prompt starts the real timer', async () => {
     const { api, fastForward } = createDemoElectronAPI({ now, autoTick: false });
     const state = latest(api);
-    expect((await api.getTour())?.beat.title).toBe('Already running.');
+    expect((await api.getTour())?.beat.title).toBe('The timer.');
     expect(state()).toMatchObject({ status: 'RUNNING', currentCountdownMs: TOUR.COUNTDOWN_MS });
     fastForward(2);
     expect(state().currentCountdownMs).toBe(TOUR.COUNTDOWN_MS - 2000);
 
     api.stop(); // Not what the card names, so nothing happens
-    expect((await api.getTour())?.beat.title).toBe('Already running.');
+    expect((await api.getTour())?.beat.title).toBe('The timer.');
 
     api.tourSkip();
     expect((await api.getTour())?.beat.title).toBe('Press start.');
@@ -129,7 +129,7 @@ describe('demo tour', () => {
     expect(state()).toMatchObject({ status: 'BREAK', currentCountdownMs: TOUR.BREAK_MS });
     expect(onBreak?.beat.link?.label).toBe('Download the app');
     fastForward(TOUR.BREAK_MS / 1000);
-    expect((await api.getTour())?.beat.title).toBe('Stats.');
+    expect((await api.getTour())?.beat.title).toBe('Checkpoints.');
   });
 
   test('a replay holds the timer and times out when nothing is clicked', async () => {
@@ -161,9 +161,9 @@ describe('demo stats', () => {
     expect(Object.keys(scores).some((localDate) => localDate.startsWith('2026-10'))).toBe(true);
   });
 
-  test('history only has workdays', () => {
+  test('history covers every day of the week, since the demo workday is every day', () => {
     const events = seedHistory(now());
     const weekdays = new Set(events.map((event) => new Date(event.at).getDay()));
-    expect([...weekdays].sort()).toEqual([1, 2, 3, 4, 5]);
+    expect([...weekdays].sort()).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 });

@@ -9,7 +9,8 @@ import { getDayScores, getTodayScore } from "@main/stats/checkpoints";
 import { createOverdueLevelsArray } from "@main/overdue/overdueGeometry";
 import { getPresetConfigs } from "@shared/utils/difficulty";
 import { LUNCHES_PER_DAY } from "@shared/constants";
-import { hasTimedOut, namesAction, nextSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, TourUpdate, tourUpdateOf } from "@shared/tour/session";
+import { tourScore } from "@shared/tour/score";
+import { currentBeat, hasTimedOut, namesAction, nextSession, prevSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, TourUpdate, tourUpdateOf } from "@shared/tour/session";
 
 const DOWNLOAD_URL = "https://github.com/ryee-dao/worklife/releases";
 
@@ -28,7 +29,7 @@ export const DEMO_CONFIGS: DemoConfigs = {
     custom: { breakDurationMs: 30 * 1000, snoozeDurationMs: 60 * 1000, allottedPowerups: 3, lunchDurationMs: 5 * 60 * 1000, checkpointDecayMs: 60 * 1000 },
   },
   overdue: { levelThresholdMs: 10 * 1000, windowLevelCap: 5, windowRatioCap: 0.9 },
-  workday: { days: [1, 2, 3, 4, 5], start: "09:00", end: "17:00", autoStopAtEnd: false },
+  workday: { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59", autoStopAtEnd: false }, // Any time the page is opened is a workday in progress
 };
 
 // Past days are scored on ordinary settings, so a ten-minute stop costs a checkpoint rather than ten
@@ -71,6 +72,14 @@ const makeEvent = (transition: DemoTransition, at: number, configs: DemoConfigs)
   };
 };
 
+// A clock time of the demo's workday, "HH:MM", on a day
+const atTime = (day: Date, time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes).getTime();
+};
+const workdayStart = (day: Date) => atTime(day, DEMO_CONFIGS.workday.start);
+const workdayEnd = (day: Date) => atTime(day, DEMO_CONFIGS.workday.end);
+
 // A few weeks of workdays, in a repeating mix: a full day, a short stop, a lunch, and a late start
 export const seedHistory = (now: number): StatsEvent[] => {
   const events: StatsEvent[] = [];
@@ -82,27 +91,27 @@ export const seedHistory = (now: number): StatsEvent[] => {
     day.setDate(today.getDate() - daysAgo);
     if (!DEMO_CONFIGS.workday.days.includes(day.getDay())) continue;
 
-    const at = (hours: number, minutes = 0) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes).getTime();
     const push = (transition: DemoTransition, time: number) => events.push(makeEvent(transition, time, HISTORY_CONFIGS));
     const shape = day.getDate() % 4;
+    const [start, end] = [workdayStart(day), workdayEnd(day)];
+    const mid = (start + end) / 2;
+    const minutes = (count: number) => count * 60 * 1000;
 
-    push({ type: "APP_STARTED", previousStatus: null }, shape === 3 ? at(10, 20) : at(9));
+    push({ type: "APP_STARTED", previousStatus: null }, shape === 3 ? start + minutes(80) : start);
     if (shape === 1) {
-      push({ type: "STOPPED", source: "WINDOW", from: "RUNNING", countdownMs: 0 }, at(14, 10));
-      push({ type: "RESUMED", source: "WINDOW", countdownMs: 0 }, at(14, 20));
+      push({ type: "STOPPED", source: "WINDOW", from: "RUNNING", countdownMs: 0 }, mid);
+      push({ type: "RESUMED", source: "WINDOW", countdownMs: 0 }, mid + minutes(10));
     }
     if (shape === 2) {
-      push({ type: "LUNCH_STARTED", source: "WINDOW", from: "RUNNING", lunchMs: 45 * 60 * 1000 }, at(12, 30));
-      push({ type: "LUNCH_ENDED", cause: "TIME_UP" }, at(13, 15));
+      push({ type: "LUNCH_STARTED", source: "WINDOW", from: "RUNNING", lunchMs: minutes(45) }, mid);
+      push({ type: "LUNCH_ENDED", cause: "TIME_UP" }, mid + minutes(45));
     }
-    push({ type: "APP_QUIT", status: "RUNNING", countdownMs: 0, overdueMs: 0 }, at(17, 5));
+    push({ type: "APP_QUIT", status: "RUNNING", countdownMs: 0, overdueMs: 0 }, end);
   }
 
   // Today's work started on time too, so the stats show a day in progress rather than one that began when the page opened
-  const workStart = new Date(today);
-  workStart.setHours(9, 0, 0, 0);
-  if (DEMO_CONFIGS.workday.days.includes(today.getDay()) && now > workStart.getTime()) {
-    events.push(makeEvent({ type: "APP_STARTED", previousStatus: null }, workStart.getTime(), DEMO_CONFIGS));
+  if (DEMO_CONFIGS.workday.days.includes(today.getDay()) && now > workdayStart(today)) {
+    events.push(makeEvent({ type: "APP_STARTED", previousStatus: null }, workdayStart(today), DEMO_CONFIGS));
   }
   return events;
 };
@@ -177,7 +186,7 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     };
   };
 
-  const todayScore = () => getTodayScore(events, now());
+  const todayScore = () => (tour && tourScore(currentBeat(tour), now())) ?? getTodayScore(events, now());
 
   const emit = () => {
     const state = getState();
@@ -381,6 +390,11 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     },
     tourNext: () => {
       if (tour) advance(nextSession(tour, realStopped()));
+    },
+    tourPrev: () => {
+      if (!tour) return;
+      tour = prevSession(tour);
+      emit();
     },
     tourSkip: () => {
       if (!tour) return;

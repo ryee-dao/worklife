@@ -22,7 +22,7 @@ test("The first run walks through the tour on its own clock, then starts the tim
   const snapshot = (name: string) => settingsWindow.screenshot({ path: testInfo.outputPath(`${name}.png`) });
 
   await test.step("The tour's clock runs in the timer's place, and the stop button can't be reached", async () => {
-    await expect(heading).toHaveText("Already running.");
+    await expect(heading).toHaveText("The timer.");
     await expect(digits).toHaveText("45 : 00");
     await testClock.fastForward(2);
     await expect(digits).toHaveText("44 : 58");
@@ -45,6 +45,8 @@ test("The first run walks through the tour on its own clock, then starts the tim
     await expect(digits).toHaveText("00 : 03");
     [breakWindow] = await Promise.all([electronApp.waitForEvent("window"), testClock.fastForward(3)]);
     await expect(breakWindow.getByTestId("overdue-window-title")).toBeVisible();
+    await expect(breakWindow.getByTestId("tour-note")).toContainText("press the palm");
+    await breakWindow.screenshot({ path: testInfo.outputPath("3b-overdue-window.png") });
     await expect(breakWindow.getByTestId("tour-pulse")).toBeVisible();
     const before = (await getWindowBounds(electronApp, breakWindow))!;
     await testClock.fastForward(4);
@@ -59,7 +61,7 @@ test("The first run walks through the tour on its own clock, then starts the tim
 
   await test.step("Then the break, with its card in the window, which closes when the break is over", async () => {
     const card = breakWindow.getByTestId("tour-card");
-    await expect(card.getByRole("heading")).toHaveText("Breaks find you.");
+    await expect(card.getByRole("heading")).toHaveText("The break.");
     await expect(breakWindow.getByTestId("break-window-time-display")).toContainText("00 : 15");
     await expect(settingsWindow.getByTestId("tour-card")).toBeHidden();
     await breakWindow.screenshot({ path: testInfo.outputPath("4-break.png") });
@@ -67,11 +69,32 @@ test("The first run walks through the tour on its own clock, then starts the tim
     await expect.poll(() => breakWindow.isClosed()).toBe(true);
   });
 
-  await test.step("Stats, then Difficulty", async () => {
-    await expect(heading).toHaveText("Stats.");
+  await test.step("Back from Stats reopens the break window on the break, and it runs out again", async () => {
+    await expect(heading).toHaveText("Checkpoints.");
+    [breakWindow] = await Promise.all([electronApp.waitForEvent("window"), settingsWindow.getByTestId("tour-back").click()]);
+    await expect(breakWindow.getByTestId("break-window-time-display")).toContainText("00 : 15");
+    await expect(breakWindow.getByTestId("tour-card").getByRole("heading")).toHaveText("The break.");
+    await testClock.fastForward(15);
+    await expect.poll(() => breakWindow.isClosed()).toBe(true);
+  });
+
+  await test.step("Stats shows the tour's day climbing, then stopped; then the settings pages", async () => {
+    await expect(heading).toHaveText("Checkpoints.");
     await expect.poll(() => settingsWindow.evaluate(() => location.hash)).toBe("#/stats");
-    await expect(settingsWindow.getByTestId("today-panel")).toBeVisible();
+    await expect(settingsWindow.getByTestId("today-level")).toHaveText("Glow");
     await snapshot("5-stats");
+    await next.click();
+    await expect(heading).toHaveText("If you stop.");
+    await expect(settingsWindow.getByTestId("today-level")).toHaveText("Glimmer");
+    await expect(settingsWindow.getByTestId("today-panel").getByTestId("day-bar")).toHaveClass(/animate-flash/);
+    await snapshot("5b-stopped");
+    await next.click();
+    await expect(heading).toHaveText("Timer.");
+    await expect.poll(() => settingsWindow.evaluate(() => location.hash)).toBe("#/settings/timer");
+    await next.click();
+    await expect(heading).toHaveText("Workday.");
+    await next.click();
+    await expect(heading).toHaveText("Overdue.");
     await next.click();
     await expect(heading).toHaveText("Difficulty.");
     await expect.poll(() => settingsWindow.evaluate(() => location.hash)).toBe("#/settings/difficulty");
@@ -104,7 +127,7 @@ test("A replay holds the real timer, skipping points back at the corner button, 
 
   await settingsWindow.getByTestId("tabs-navbar").getByRole("link", { name: "Stats" }).click();
   await settingsWindow.getByTestId("replay-tour").click();
-  await expect(heading).toHaveText("Already running.");
+  await expect(heading).toHaveText("The timer.");
   await expect.poll(() => settingsWindow.evaluate(() => location.hash)).toBe("#/timer");
   await expect(digits).toHaveText("45 : 00");
   await testClock.fastForward(2);

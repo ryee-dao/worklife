@@ -43,7 +43,7 @@ export default function SettingsPanel<T>({
     <div className="p-3 flex flex-col h-full">
       <h2 className="font-semibold text-lg md:text-2xl">{title}</h2>
       <hr className="text-slate-400 my-1" />
-      <div className="grow text-sm md:text-lg">{children}</div>
+      <div data-testid="settings-fields" className="grow text-sm md:text-lg">{children}</div>
       <div className="w-3/4 self-center text-xs lg:text-base text-slate-800 tracking-wider font-medium flex flex-col items-center">
         <button
           disabled={!isValid}

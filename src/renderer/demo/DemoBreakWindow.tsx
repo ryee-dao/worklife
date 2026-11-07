@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { TimerState } from "@main/timer/timerState";
 import { convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, OverdueLevelObject } from "@main/overdue/overdueGeometry";
-import { TourUpdate } from "@shared/tour/session";
 import BreakApp from "@renderer/break/components/BreakApp";
 
 interface DemoBreakWindowProps {
@@ -11,19 +10,16 @@ interface DemoBreakWindowProps {
 const CLAMP_MS = 200;
 const isOpen = (state?: TimerState) => state?.status === "OVERDUE" || state?.status === "BREAK";
 
-// Stands in for the app's second window. In the tour it's a real browser window, where the browser allows one, so its growth and
-// its edges can be felt. Otherwise it's drawn over the dashboard, and only the window itself takes clicks, so the tabs still work
+// Stands in for the app's second window: a real browser window, so its growth and its edges can be felt. When the browser blocks
+// the popup, it's drawn over the dashboard instead, and only the window itself takes clicks, so the tabs still work
 export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
   const [timerState, setTimerState] = useState<TimerState>();
-  const [tour, setTour] = useState<TourUpdate | null>(null);
   const [screen, setScreen] = useState({ width: window.innerWidth, height: window.innerHeight });
   const popup = useRef<Window | null>(null);
   const [inPopup, setInPopup] = useState(false);
   const open = isOpen(timerState);
-  const inTour = tour !== null;
 
   useEffect(() => window.electronAPI.onTimerUpdate(setTimerState), []);
-  useEffect(() => window.electronAPI.onTourUpdate(setTour), []);
   useEffect(() => {
     const measure = () => setScreen({ width: window.innerWidth, height: window.innerHeight });
     window.addEventListener("resize", measure);
@@ -36,7 +32,8 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
     return convertOverdueLevelObjectToScreenSize(box, convertOverdueTimeToOverdueLevelObject(timerState!.overdueTimeMs, getLevels()));
   };
 
-  // The real window opens as the tour goes overdue, within the click that got it there, and closes when the window would
+  // The window opens as the timer goes overdue and closes when the app's would. Overdue comes on a tick, so outside the tour the
+  // browser allows it only once popups are allowed for the site
   useEffect(() => {
     if (!open) {
       popup.current?.close();
@@ -44,10 +41,10 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
       setInPopup(false);
       return;
     }
-    if (!inTour || popup.current) return;
+    if (popup.current) return;
     popup.current = window.open("../break/index.html", "worklife-demo", "popup,width=400,height=300");
     setInPopup(popup.current !== null);
-  }, [open, inTour]);
+  }, [open]);
 
   useEffect(() => {
     const win = popup.current;
@@ -57,7 +54,8 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
     if (timerState.status === "BREAK") win.moveTo(0, 0);
   }, [timerState]);
 
-  // Dragged off the screen, it's put back, as the app does it. Closed by hand, the page draws it instead
+  // Dragged off the screen, it's put back, and behind the dashboard, it's brought to the front, as the app's window stays on top.
+  // Closed by hand, the page draws it instead
   // shortcut: one screen, from its top-left corner; a second monitor isn't clamped against
   useEffect(() => {
     const interval = setInterval(() => {
@@ -68,6 +66,7 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
         setInPopup(false);
         return;
       }
+      if (!win.document.hasFocus()) win.focus();
       const x = Math.max(0, Math.min(win.screenX, window.screen.availWidth - win.outerWidth));
       const y = Math.max(0, Math.min(win.screenY, window.screen.availHeight - win.outerHeight));
       if (x !== win.screenX || y !== win.screenY) win.moveTo(x, y);
@@ -81,6 +80,7 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
   // Above the tour's dim layer, as the real window is above everything. The box is a container, so the view sizes to it
   return (
     <div data-testid="demo-break-host" className="fixed inset-0 z-[60] pointer-events-none">
+      <p className="absolute inset-x-0 top-2 text-center text-sm text-slate-600">Popup blocked. Allow popups for this site to see the real window.</p>
       <div
         data-testid="demo-break-window"
         className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden shadow-2xl pointer-events-auto [container-type:size]

@@ -41,8 +41,8 @@ export default function Tour({ tour }: { tour: TourUpdate }) {
       data-fading={tour.fading}
       className={`fixed inset-0 z-50 select-none pointer-events-none transition-opacity ${tour.fading ? "opacity-0 duration-[5000ms]" : "duration-150"}`}
     >
-      {/* Demo beats dim the tab behind them; a beat whose target isn't on screen (replayed mid-break) dims it too, rather than showing nothing */}
-      {(beat.demo || (beat.target && !target)) && (
+      {/* The spotlight dims the tab around its target. Without one on screen (a demo beat, or a replay mid-break) the whole tab is dimmed */}
+      {(beat.demo || beat.target) && !target && (
         <div className={`absolute inset-0 pointer-events-auto ${beat.demo ? "bg-slate-900/85" : "bg-slate-900/60"}`} />
       )}
       {beat.target && (

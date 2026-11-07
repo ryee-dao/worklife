@@ -7,7 +7,8 @@ import {
 } from "@main/timer/timerState";
 import { activateKioskModeForBreakWindow, closeBreakWindow, createBreakWindow, moveBreakWindowAwayFrom, resizeBreakWindow } from "@main/windows/breakWindow";
 import { settingsWindow } from "@main/windows/settingsWindow";
-import { hasTimedOut, namesAction, nextSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, tourUpdateOf } from "@shared/tour/session";
+import { currentBeat, hasTimedOut, namesAction, nextSession, prevSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, tourUpdateOf } from "@shared/tour/session";
+import { tourScore } from "@shared/tour/score";
 import { isTourSeen, markTourSeen } from "./tourState";
 
 // The tour: a mock scenario on the real screens. It holds the timer, shows its own clock in the timer's place, and opens the real
@@ -28,18 +29,21 @@ const clockState = (): TimerState => ({
 // The timer state the windows see while a tour is on: its clock, until the last card hands the real timer back
 export const tourTimerState = (): TimerState | null => (session && !showsRealTimer(session) ? clockState() : null);
 
+// The day the Stats tab shows while a tour is on, where a beat has one
+export const tourTodayScore = () => (session ? tourScore(currentBeat(session), Date.now()) : null);
+
 const inWindow = (status?: TimerStatus) => status === "OVERDUE" || status === "BREAK";
 
-// The break window follows the tour's clock the way it follows the real one
+// The break window follows the tour's clock the way it follows the real one. Going back can open it straight onto a break
 const applyWindow = (from: TimerStatus | undefined, to: TimerStatus | undefined) => {
-  if (to === "OVERDUE" && from !== "OVERDUE") {
-    createBreakWindow(() => session?.clock.status ?? getTimerState().status);
-    resizeBreakWindow(clockState(), levels);
+  if (inWindow(to) && !inWindow(from)) {
+    createBreakWindow(() => session?.clock.status ?? getTimerState().status); // Kiosk on load when it opens on a break
+    if (to === "OVERDUE") resizeBreakWindow(clockState(), levels);
     if (settingsWindow) moveBreakWindowAwayFrom(settingsWindow.getBounds()); // So the card on the dashboard stays readable while it grows
   } else if (to === "OVERDUE") {
     resizeBreakWindow(clockState(), levels);
   }
-  if (to === "BREAK" && from !== "BREAK") activateKioskModeForBreakWindow();
+  if (to === "BREAK" && from === "OVERDUE") activateKioskModeForBreakWindow();
   if (inWindow(from) && !inWindow(to)) closeBreakWindow();
 };
 
@@ -82,6 +86,10 @@ const advance = (next: TourSession | null) => (next ? set(next) : endTour());
 
 export const tourNext = () => {
   if (session) advance(nextSession(session, realStopped()));
+};
+
+export const tourPrev = () => {
+  if (session) set(prevSession(session));
 };
 
 export const tourSkip = () => {

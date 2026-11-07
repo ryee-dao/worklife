@@ -58,7 +58,7 @@ export default function TodayPanel({ score }: { score: DayScore | null }) {
 
   return (
     <div data-testid="today-panel" className="bg-white border border-slate-200 rounded-xl px-3.5 py-3">
-      <div className="flex items-center gap-3.5">
+      <div data-testid="today-checkpoint" className="flex items-center gap-3.5">
         <CheckpointOrb level={score.level} />
         <div className="grow min-w-0">
           <div data-testid="today-level" className="text-xl font-extrabold">{NAMES[score.level]}</div>

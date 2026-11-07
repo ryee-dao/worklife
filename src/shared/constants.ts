@@ -36,6 +36,7 @@ export const EVENTS = {
     TOUR_GET: "tour:get",
     TOUR_START: "tour:start",
     TOUR_NEXT: "tour:next",
+    TOUR_PREV: "tour:prev",
     TOUR_SKIP: "tour:skip",
     CONFIGS: {
       SAVE: {

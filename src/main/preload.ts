@@ -107,6 +107,9 @@ const electronAPI: ElectronAPI = {
   tourNext: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_NEXT);
   },
+  tourPrev: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_PREV);
+  },
   tourSkip: () => {
     ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_SKIP);
   },

@@ -22,6 +22,7 @@ export interface TourSession {
   firstRun: boolean;
   step: number;        // Index into TOUR_BEATS
   end: TourEnd | null; // Set once the tour is on its last card
+  skipped: boolean;    // The last card was reached by Skip
   clock: TourClock;
   runMs: number;       // Clock time left to tick before it holds
   idleMs: number;      // Since the last click
@@ -33,11 +34,12 @@ export interface TourUpdate {
   step: number;
   total: number;
   fading: boolean;
+  canGoBack: boolean;
 }
 
 const HELD: TourClock = { status: "RUNNING", currentCountdownMs: TOUR.COUNTDOWN_MS, overdueTimeMs: 0 };
 
-export const startSession = (firstRun: boolean): TourSession => ({ firstRun, step: 0, end: null, clock: HELD, runMs: TOUR.RUN_MS, idleMs: 0 });
+export const startSession = (firstRun: boolean): TourSession => ({ firstRun, step: 0, end: null, skipped: false, clock: HELD, runMs: TOUR.RUN_MS, idleMs: 0 });
 
 export const currentBeat = (session: TourSession): TourBeat => (session.end ? END_BEATS[session.end] : TOUR_BEATS[session.step]);
 
@@ -50,11 +52,15 @@ export const hasTimedOut = (session: TourSession) => !session.firstRun && sessio
 
 export const namesAction = (session: TourSession, action: AvailableActions) => currentBeat(session).advanceOn === action;
 
+// Back goes to the beat before, or from the last card to the last beat. Not after a skip, which left from anywhere
+const canGoBack = (session: TourSession) => (session.end ? !session.skipped : session.step > 0);
+
 export const tourUpdateOf = (session: TourSession): TourUpdate => ({
   beat: currentBeat(session),
   step: session.end ? TOUR_BEATS.length : session.step,
   total: TOUR_BEATS.length,
   fading: isFading(session),
+  canGoBack: canGoBack(session),
 });
 
 const endOf = (session: TourSession, realStopped: boolean): TourEnd => (session.firstRun && realStopped ? "FIRST_RUN" : "REPLAY");
@@ -76,10 +82,16 @@ export const nextSession = (session: TourSession, realStopped: boolean): TourSes
   return { ...session, step, idleMs: 0, ...clockFor(TOUR_BEATS[step], session) };
 };
 
+export const prevSession = (session: TourSession): TourSession => {
+  if (!canGoBack(session)) return session;
+  const step = session.end ? TOUR_BEATS.length - 1 : session.step - 1;
+  return { ...session, step, end: null, idleMs: 0, ...clockFor(TOUR_BEATS[step], session) };
+};
+
 // A skipped first run still ends on the start prompt, so the timer gets started
 export const skipSession = (session: TourSession, realStopped: boolean): TourSession => {
   if (session.end) return session;
-  return { ...session, idleMs: 0, end: session.firstRun && realStopped ? "FIRST_RUN" : "SKIPPED", clock: HELD, runMs: 0 };
+  return { ...session, idleMs: 0, skipped: true, end: session.firstRun && realStopped ? "FIRST_RUN" : "SKIPPED", clock: HELD, runMs: 0 };
 };
 
 // One second

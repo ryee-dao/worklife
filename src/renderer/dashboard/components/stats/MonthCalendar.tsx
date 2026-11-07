@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { DayScore } from "@main/stats/checkpoints";
 import { CHECKPOINTS } from "@shared/constants";
-import { FillMode, getLevelFill, LEVEL_COLORS } from "./checkpointStyles";
+import { getLevelFill, LEVEL_COLORS } from "./checkpointStyles";
 import { getTodayDateAsString } from "@shared/utils/date";
 
 interface MonthCalendarProps {
@@ -12,7 +12,6 @@ interface MonthCalendarProps {
 
 const maxLevel = CHECKPOINTS.NAMES.length - 1;
 const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const fillModeNames: Record<FillMode, string> = { SHARE: "Fill by checkpoint", WHOLE: "Whole day" };
 
 // "YYYY-MM", the month a local date is in
 const toMonth = (localDate: string) => localDate.slice(0, 7);
@@ -35,7 +34,6 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
   const navigate = useNavigate();
   const today = getTodayDateAsString();
   const [month, setMonth] = useState(toMonth(selectedDate ?? today));
-  const [fillMode, setFillMode] = useState<FillMode>("SHARE");
 
   // Show the month of the day picked, like a past day's end-of-day card
   useEffect(() => {
@@ -82,7 +80,7 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
               onClick={() => navigate(`/stats/${localDate}`)}
               className={`relative h-9 border rounded-md outline-offset-1 text-left text-[10px] leading-none p-1 text-stone-700
                 enabled:cursor-pointer disabled:opacity-35 ${score?.inProgress ? "opacity-60" : ""} ${outline}`}
-              style={score ? getLevelFill(score.level, fillMode) : { borderColor: "#e2e8f0" }}
+              style={score ? getLevelFill(score.level) : { borderColor: "#e2e8f0" }}
             >
               <span className="absolute top-0.5 left-1">{Number(localDate.slice(8))}</span>
             </button>
@@ -97,10 +95,6 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
             {name}
           </span>
         ))}
-        <button data-testid="calendar-fill-mode" onClick={() => setFillMode(fillMode === "SHARE" ? "WHOLE" : "SHARE")}
-          className="ml-auto underline cursor-pointer">
-          {fillModeNames[fillMode === "SHARE" ? "WHOLE" : "SHARE"]}
-        </button>
       </div>
     </div>
   );

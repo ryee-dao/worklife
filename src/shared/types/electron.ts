@@ -36,6 +36,7 @@ export interface ElectronAPI {
   getTour: () => Promise<TourUpdate | null>;
   startTour: () => void;
   tourNext: () => void;
+  tourPrev: () => void;
   tourSkip: () => void;
 }
 

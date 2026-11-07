@@ -33,6 +33,7 @@ export default function WorkdaySettings() {
         setAutoStopAtEnd(configs.autoStopAtEnd);
       }}
     >
+      <div data-testid="workday-schedule">
       <div data-testid="workday-days" className="tracking-wider p-2">
         I work on{" "}
         {dayNames.map((dayName, day) => (
@@ -57,6 +58,7 @@ export default function WorkdaySettings() {
         {!hoursValid && (
           <p className="text-sm text-red-600 mt-1">The workday must end after it starts</p>
         )}
+      </div>
       </div>
 
       <div data-testid="workday-auto-stop" className="tracking-wider p-2">

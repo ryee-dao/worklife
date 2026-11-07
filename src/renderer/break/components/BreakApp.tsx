@@ -41,6 +41,12 @@ export default function BreakWindow() {
               style={{ left: palm.left - PULSE_GAP_PX, top: palm.top - PULSE_GAP_PX, width: palm.width + 2 * PULSE_GAP_PX, height: palm.height + 2 * PULSE_GAP_PX }}
             />
           )}
+          {/* The overdue window starts small, so it repeats the dashboard's card, which goes by fast, as one strip over its title */}
+          {tour.beat.demo === "OVERDUE" && (
+            <p data-testid="tour-note" className="absolute inset-x-3 top-3 rounded-xl bg-white px-4 py-2 text-sm text-slate-700 shadow-2xl">
+              {tour.beat.windowBody}
+            </p>
+          )}
           {/* The break covers the screen, so its card is drawn here, above the title, which leaves the countdown clear */}
           {tour.beat.demo === "BREAK" && <TourCard tour={tour} className="top-4" />}
         </div>
