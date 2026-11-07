@@ -54,6 +54,16 @@ const tickIntervalMs = 1 * 1000; // 1 second
 let timerState: StoredTimerState;
 
 let tickTimer: NodeJS.Timeout
+let heldTick: (() => void) | null = null; // The tour's clock, run in the timer's place while a tour holds it
+
+// The one interval: the timer's tick, or the tour's while it holds the timer
+const startTicking = () => {
+  clearInterval(tickTimer);
+  // When running e2e tests, there's no interval, so the tests control the timing themselves
+  if (!IS_TEST) {
+    tickTimer = setInterval(heldTick ?? onTick, tickIntervalMs);
+  }
+};
 const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
@@ -85,6 +95,23 @@ export const destroyTimers = () => {
   clearInterval(tickTimer);
 };
 
+// A tour holds the timer: no ticks and nothing logged, with the tour's own clock in the interval's place
+export const holdTimer = (tick: () => void) => {
+  heldTick = tick;
+  startTicking();
+};
+
+export const releaseTimer = () => {
+  heldTick = null;
+  startTicking();
+};
+
+// The first run waits for the tour's start prompt. Nothing is logged: no work was interrupted
+export const holdForFirstRun = () => {
+  timerState.status = "STOPPED";
+  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+};
+
 const fallbackTimer = () => {
   // Fallback time delay so break time doesn't start too soon on startup
   if (
@@ -97,7 +124,7 @@ const fallbackTimer = () => {
 }
 
 // Stop is offered on the break screens too, as an escape hatch. It costs a checkpoint like any stop
-const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
+export const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
   const availableActions: AvailableActions[] = [];
   const hasPowerups = calculateRemainingPowerups() > 0;
   const hasLunch = calculateRemainingLunches() > 0;
@@ -265,12 +292,7 @@ export const startTimer = (source: Source) => {
 };
 
 const runTimer = () => {
-  clearInterval(tickTimer);
-  // When running e2e tests, we don't set an interval to control the timing
-  // This is to prevent flakiness in tests
-  if (!IS_TEST) {
-    tickTimer = setInterval(onTick, tickIntervalMs);
-  }
+  startTicking();
   timerState.status = "RUNNING";
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
@@ -281,13 +303,7 @@ export const startBreak = (source: Source) => {
     return;
   }
   emitTransition({ type: "BREAK_STARTED", source, overdueMs: timerState.overdueTimeMs });
-  clearInterval(tickTimer); // Clear any existing tick intervals
-
-  // When running e2e tests, we don't set an interval to control the timing
-  // This is to prevent flakiness in tests
-  if (!IS_TEST) {
-    tickTimer = setInterval(onTick, tickIntervalMs);
-  }
+  startTicking();
   transitionToNextState();
   emitTimerStatus();
   writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
@@ -392,6 +408,6 @@ if (IS_TEST) {
   global.__test_fastForwardTimerOneSecond = () => {
     // Can only fast forward one second/tick at a time 
     // because for some reason, the event loop doesn't allow batches (not sure why)
-    onTick();
+    (heldTick ?? onTick)();
   };
 }

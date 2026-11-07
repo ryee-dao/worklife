@@ -14,6 +14,7 @@ import { buildStatusIcons, createTray, tray } from "./tray/tray";
 import { registerDisplayListenersForBreakWindow, setOverdueLevelsArray } from "./windows/breakWindow";
 import { createSettingsWindow, registerSettingsWindowListeners, settingsWindow, showDaySummary } from "./windows/settingsWindow";
 import { destroyStats, initStats, recordAppQuit, takeUnseenSummaryDate } from "./stats/stats";
+import { initTour } from "./tour/tour";
 
 export let forceQuit = false; // Allows app.quit() to bypass logic to minimize on close
 
@@ -51,6 +52,7 @@ function initApp() {
   registerSettingsWindowListeners(() => forceQuit)
   createTray()
   setOverdueLevelsArray();
+  initTour();
 }
 
 // When the app.close() signal is emitted, set a flag {forceQuit}, that tells the app: 

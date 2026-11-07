@@ -1,8 +1,7 @@
 name: Test
 
+# Pull requests only: every change reaches main through one, with these checks required, so a run on main would repeat them
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:
@@ -25,6 +24,14 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:unit
+
+      # The web demo tests run in a browser; Electron brings its own
+      - name: Install Chromium (Linux)
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium
+        if: runner.os != 'Linux'
+        run: npx playwright install chromium
 
       # Ubuntu blocks the sandbox Electron needs unless this is turned off
       - name: Allow Electron sandbox

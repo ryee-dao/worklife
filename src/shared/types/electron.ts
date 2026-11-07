@@ -4,6 +4,7 @@ import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "@main/workday/workdayConfigs";
 import { DayScore } from "@main/stats/checkpoints";
 import { OverdueConfigs } from "@main/overdue/overdueConfigs";
+import { TourUpdate } from "@shared/tour/session";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => () => void;
@@ -31,6 +32,11 @@ export interface ElectronAPI {
   loadDifficultyConfigs: () => Promise<DifficultyConfigs>
   loadOverdueConfigs: () => Promise<OverdueConfigs>
   loadWorkdayConfigs: () => Promise<WorkdayConfigs>
+  onTourUpdate: (callback: (tour: TourUpdate | null) => void) => () => void;
+  getTour: () => Promise<TourUpdate | null>;
+  startTour: () => void;
+  tourNext: () => void;
+  tourSkip: () => void;
 }
 
 declare global {

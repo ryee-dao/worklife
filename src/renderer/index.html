@@ -1,13 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Work Life</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkLife demo</title>
+    <style>
+        body { margin: 0; background: #e2e8f0; color: #0f172a; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        main { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 32px 16px 48px; }
+        h1 { margin: 0; font-size: 28px; }
+        p { margin: 0; max-width: 800px; text-align: center; line-height: 1.5; color: #334155; }
+        iframe { width: 800px; max-width: 100%; height: 600px; border: 0; border-radius: 10px; background: #f8fafc; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25); }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .actions > * { height: 38px; padding: 0 16px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; font: 600 14px system-ui; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
+        .actions > *:hover { background: #f1f5f9; }
+        .note { font-size: 14px; color: #64748b; }
+    </style>
 </head>
 
 <body>
-    <div id="root"></div>
-    <script type="module" src="/main.tsx"></script>
+    <main>
+        <h1>WorkLife</h1>
+        <p>A break timer with one rule: don't click stop.</p>
+        <iframe id="app" src="./demo/index.html" title="WorkLife demo"></iframe>
+        <p class="note">
+            The app's real screens, with a simulated timer: 2-minute blocks and 30-second breaks.
+            On your computer the overdue and break windows open over everything. Here the tour opens them as browser windows, and after it they open inside the frame.
+        </p>
+        <div class="actions">
+            <button id="replay" type="button">Replay the tour</button>
+            <a href="https://github.com/ryee-dao/worklife/releases">Download</a>
+            <a href="https://github.com/ryee-dao/worklife">Source</a>
+        </div>
+    </main>
+    <script type="module" src="./shell.ts"></script>
 </body>
 
 </html>

@@ -39,6 +39,8 @@ const test = base.extend<{
     });
     // Every day is a workday all day, so today's score shows the same whatever day and time the tests run
     seed(FILENAMES.WORKDAY.CONFIGS, { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59", autoStopAtEnd: false });
+    // The first-run tour would sit over everything; the tour's own tests seed it back to unseen
+    seed(FILENAMES.TOUR.STATE, { seen: true });
     await use({ path: dir, seed });
   },
 

@@ -7,6 +7,7 @@ import { WorkdayConfigs } from "./workday/workdayConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "@shared/types/electron";
 import { DayScore } from "./stats/checkpoints";
+import { TourUpdate } from "@shared/tour/session";
 
 const electronAPI: ElectronAPI = {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -91,6 +92,23 @@ const electronAPI: ElectronAPI = {
   },
   devAdjustCheckpoint: async (by: number) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_ADJUST_CHECKPOINT, by);
+  },
+  onTourUpdate: (callback: (tour: TourUpdate | null) => void) => {
+    const listener = (_event: unknown, tour: TourUpdate | null) => callback(tour);
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.TOUR_UPDATE, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.TOUR_UPDATE, listener);
+  },
+  getTour: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TOUR_GET);
+  },
+  startTour: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_START);
+  },
+  tourNext: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_NEXT);
+  },
+  tourSkip: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_SKIP);
   },
 }
 

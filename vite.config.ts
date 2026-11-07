@@ -18,6 +18,9 @@ export default defineConfig({
       input: {
         dashboard: path.resolve(__dirname, 'src/renderer/dashboard/index.html'),
         break: path.resolve(__dirname, 'src/renderer/break/index.html'),
+        // The browser demo for GitHub Pages: the shell page and the app it frames
+        shell: path.resolve(__dirname, 'src/renderer/index.html'),
+        demo: path.resolve(__dirname, 'src/renderer/demo/index.html'),
       }
     }
   },

@@ -11,7 +11,8 @@ export default function OverdueTimeDisplay({ timerState }: OverdueTimeDisplayPro
   return (
     <div
       data-testid="overdue-window-time-display"
-      className="text-red-700 font-bold text-xl xsm:text-3xl sm:text-6xl md:text-8xl lg:text-[9rem] tracking-normal xsm:tracking-wide md:tracking-widest"
+      className="text-red-700 font-bold text-xl @window-xsm:text-3xl @window-sm:text-6xl @window-md:text-8xl @window-lg:text-[9rem]
+        tracking-normal @window-xsm:tracking-wide @window-md:tracking-widest @window-xsm:pl-[0.025em] @window-md:pl-[0.1em]"
     >
       <span>{minutes}</span> : <span>{seconds}</span>
     </div>

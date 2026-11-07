@@ -82,7 +82,7 @@ export default function DifficultySettings() {
     >
       <div data-testid="difficulty-level" className="pt-3 sm:pt-4 px-1 sm:px-2 flex flex-col items-center">
         {presets.length > 0 && (
-          <div className="w-full max-w-3xl grid grid-cols-3 gap-2 sm:gap-4">
+          <div data-testid="difficulty-presets" className="w-full max-w-3xl grid grid-cols-3 gap-2 sm:gap-4 rounded-2xl">
             {presets.map(({ preset, values }) => (
               <DifficultyCard
                 key={preset}

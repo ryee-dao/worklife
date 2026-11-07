@@ -8,8 +8,8 @@ interface OverdueButtonsProps {
   timerState: TimerState;
 }
 
-// Every button in the window is the same size
-const buttonSize = "h-[min(22vh,20vw)] w-[min(22vh,20vw)]";
+// Every button in the window is the same size, a share of the box the view is in
+const buttonSize = "h-[min(22cqh,20cqw)] w-[min(22cqh,20cqw)]";
 
 export default function OverdueButtons({ timerState }: OverdueButtonsProps) {
   const canStartBreak = timerState.availableActions.includes("breaktime");
@@ -17,7 +17,7 @@ export default function OverdueButtons({ timerState }: OverdueButtonsProps) {
   const canLunch = timerState.availableActions.includes("lunch");
 
   return (
-    <div className="flex gap-[3vw]">
+    <div className="flex gap-[3cqw]">
       <CircularButton
         testId="overdue-window-skip-break-button"
         title="Skip break (uses a power-up)"

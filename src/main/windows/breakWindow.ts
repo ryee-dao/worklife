@@ -1,9 +1,9 @@
-import { BrowserWindow, Size, screen } from "electron";
+import { BrowserWindow, Rectangle, Size, screen } from "electron";
 import { setWorkArea, workArea } from "@main/display";
 import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "@main/env";
 import { getWorkArea, refreshWorkAreaForBounds } from "@main/display";
 import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "@main/overdue/overdueGeometry";
-import { emitTimerStatus, TimerState, getTimerState } from "@main/timer/timerState";
+import { emitTimerStatus, TimerState, TimerStatus, getTimerState } from "@main/timer/timerState";
 import { getAppliedOverdueConfigs } from "@main/overdue/overdueConfigs";
 import path from "path";
 
@@ -12,7 +12,8 @@ let lastAppliedOverdueLevelIdx: number = -1;
 export let currentOverdueSize: Size | undefined;
 
 export let breakWindow: BrowserWindow | null = null;
-export function createBreakWindow() {
+// The status the window opens on: the timer's, or the tour's clock while a tour owns the window
+export function createBreakWindow(status: () => TimerStatus = () => getTimerState().status) {
   // Init break/overdue window
   breakWindow = new BrowserWindow({
     show: false,
@@ -41,7 +42,7 @@ export function createBreakWindow() {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
     }
 
-    if (getTimerState().status === "BREAK") {
+    if (status() === "BREAK") {
       activateKioskModeForBreakWindow();
     }
   });
@@ -127,10 +128,12 @@ export function closeBreakWindow() {
   }
 }
 
-export const resizeBreakWindow = (timerState: TimerState) => {
+// Grows the window with the overdue time, on the user's levels or the tour's
+export const resizeBreakWindow = (timerState: TimerState, levels: OverdueLevelObject[] = overdueLevelsArray) => {
+  if (!breakWindow || breakWindow.isDestroyed()) return;
   const overdueLevelObject = convertOverdueTimeToOverdueLevelObject(
     timerState.overdueTimeMs,
-    overdueLevelsArray
+    levels
   )
 
   // Only resize when crossing into a new level — not every tick
@@ -149,6 +152,18 @@ export const resizeBreakWindow = (timerState: TimerState) => {
     lastAppliedOverdueLevelIdx = overdueLevelObject.levelIdx;
   }
 }
+
+// Puts the window in the corner of the work area farthest from another window, so what that window shows stays readable as this one grows
+export const moveBreakWindowAwayFrom = (other: Rectangle) => {
+  if (!breakWindow || breakWindow.isDestroyed() || !workArea) return;
+  const { width, height } = breakWindow.getBounds();
+  const otherOnTheLeft = other.x + other.width / 2 < workArea.x + workArea.width / 2;
+  const otherAtTheTop = other.y + other.height / 2 < workArea.y + workArea.height / 2;
+  breakWindow.setPosition(
+    otherOnTheLeft ? workArea.x + workArea.width - width : workArea.x,
+    otherAtTheTop ? workArea.y + workArea.height - height : workArea.y,
+  );
+};
 
 let overdueLevelsArray: OverdueLevelObject[];
 export const setOverdueLevelsArray = () => {

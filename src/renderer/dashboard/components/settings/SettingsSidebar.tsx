@@ -4,7 +4,7 @@ import { IS_DEV } from "@renderer/common/constants";
 
 
 export default function SettingsSidebar() {
-  return <div className="flex flex-col w-2/5 sm:w-1/5 py-3 bg-slate-200">
+  return <div className="flex flex-col shrink-0 w-2/5 sm:w-1/5 py-3 bg-slate-200">
     <h3 className="font-bold tracking-wide md:tracking-widest pl-1">CONFIGS</h3>
     <SettingsTab to="/settings/timer" text="Timer" icon={Clock9} />
     <SettingsTab to="/settings/workday" text="Workday" icon={Briefcase} />
