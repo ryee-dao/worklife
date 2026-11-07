@@ -116,21 +116,16 @@ for (const size of windowSizes) {
       await next.click();
     }
 
-    // The demo window stays inside the dashboard window, and its title fits on one line
-    const demo = settingsWindow.getByTestId("demo-break-window");
-    const title = demo.getByTestId("overdue-window-title");
-    await expect(title).toBeVisible();
-    await expect(demo).toBeInViewport({ ratio: 1 });
-    await expectSingleLine(title);
+    // The overdue beat's card stays on the dashboard while its window opens elsewhere
+    await expect(card.getByRole("heading")).toHaveText("Time's up.");
     await expect(card).toBeInViewport({ ratio: 1 });
-    await expectNoOverlap(card, demo.getByTestId("overdue-window-start-break-button"));
     await expectNoSidewaysScroll(settingsWindow);
 
-    // Skipping spotlights the corner button, which the card must leave clear too
+    // A skipped first run ends on the start prompt, and the card must leave the start button clear
     await settingsWindow.getByTestId("tour-skip").click();
-    await expect(settingsWindow.getByTestId("tour-card").getByRole("heading")).toHaveText("Skipped.");
+    await expect(card.getByRole("heading")).toHaveText("Press start.");
     await expect(settingsWindow.getByTestId("tour-spotlight")).toBeVisible();
     await expect(card).toBeInViewport({ ratio: 1 });
-    await expectNoOverlap(card, settingsWindow.getByTestId("replay-tour"));
+    await expectNoOverlap(card, settingsWindow.getByTestId("tour-advance"));
   });
 }

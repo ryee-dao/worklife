@@ -15,6 +15,8 @@ import {
   startBreak,
   getTimerState,
   emitTimerStatus,
+  AvailableActions,
+  Source,
 } from "./timer/timerState";
 
 import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
@@ -24,7 +26,7 @@ import { resetTodayLimits } from "./limit/limitState";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 import { getAllDayScores, getCurrentDayScore, recordCheckpointAdjusted, takeUnseenSummaryDate } from "./stats/stats";
-import { isTourSeen, markTourSeen } from "./tour/tourState";
+import { getTour, startTour, tourAction, tourEmitter, tourNext, tourSkip, tourTimerState } from "./tour/tour";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -42,8 +44,20 @@ export const broadcastStateToRendererWindows = (
 const onTimerUpdate = (state: TimerState) => {
   const todayScore = getCurrentDayScore();
   updateTray(tray!, state, todayScore);
-  broadcastStateToRendererWindows(state, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
+  // While a tour is on, the windows show its clock in place of the real timer
+  broadcastStateToRendererWindows(tourTimerState() ?? state, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
   broadcastStateToRendererWindows(todayScore, [settingsWindow], EVENTS.IPC_CHANNELS.STATS_TODAY);
+};
+
+// The break window belongs to the tour while one is on. The real timer's window comes back when it ends
+const unlessTour = <T,>(handle: (arg: T) => void) => (arg: T) => {
+  if (!getTour()) handle(arg);
+};
+
+// A window's buttons go to the tour while one is on, where only the button its card names does anything
+const fromWindow = (action: AvailableActions, act: (source: Source) => void) => () => {
+  if (getTour()) tourAction(action);
+  else act("WINDOW");
 };
 
 export const initEventListeners = () => {
@@ -61,13 +75,11 @@ export const initEventListeners = () => {
     );
   });
 
-  timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, (timerState: TimerState) => {
-    resizeBreakWindow(timerState);
-  });
+  timerEmitter.on(EVENTS.TIMER.ON_OVERDUE, unlessTour(resizeBreakWindow));
   timerEmitter.on(EVENTS.TIMER.WARNING, showTimerOnTop);
-  timerEmitter.on(EVENTS.TIMER.START_OVERDUE, createBreakWindow);
-  timerEmitter.on(EVENTS.TIMER.START_BREAK, activateKioskModeForBreakWindow);
-  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, closeBreakWindow);
+  timerEmitter.on(EVENTS.TIMER.START_OVERDUE, unlessTour(() => createBreakWindow()));
+  timerEmitter.on(EVENTS.TIMER.START_BREAK, unlessTour(activateKioskModeForBreakWindow));
+  timerEmitter.on(EVENTS.TIMER.STOP_BREAK, unlessTour(closeBreakWindow));
   timerEmitter.on(EVENTS.TIMER.STOP_BREAK, () => {  // Saved configs only take effect after a break
     applyTimerConfigs();
     applyDifficultyConfigs();
@@ -75,19 +87,25 @@ export const initEventListeners = () => {
     setOverdueLevelsArray();
   });
 
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STOP, () => stopTimer("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, () => startTimer("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, () => startBreak("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, () => skipBreak("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_FORWARD, () => forwardToBreak("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, () => snoozeTimer("WINDOW"));
-  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_LUNCH, () => startLunch("WINDOW"));
+  tourEmitter.on(EVENTS.TOUR.UPDATE, (tour) => {
+    broadcastStateToRendererWindows(tour, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TOUR_UPDATE);
+  });
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, getTimerState);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STOP, fromWindow("stop", stopTimer));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_BEGIN, fromWindow("start", startTimer));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_STARTBREAK, fromWindow("breaktime", startBreak));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SKIPBREAK, fromWindow("skip", skipBreak));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_FORWARD, fromWindow("forward", forwardToBreak));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, fromWindow("snooze", snoozeTimer));
+  ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_LUNCH, fromWindow("lunch", startLunch));
+
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, () => tourTimerState() ?? getTimerState());
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_GET_DAYS, getAllDayScores);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_TAKE_UNSEEN_SUMMARY, takeUnseenSummaryDate);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_GET_SEEN, isTourSeen);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_MARK_SEEN, markTourSeen);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_GET, getTour);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_START, startTour);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_NEXT, tourNext);
+  ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_SKIP, tourSkip);
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
   ipcMain.handle(
     EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,

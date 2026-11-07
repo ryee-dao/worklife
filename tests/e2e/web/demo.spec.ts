@@ -1,9 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 // The demo page moves its clock through window.__demo, set by the demo app
 type DemoWindow = Window & { __demo: { fastForward: (seconds: number) => void } };
 
-test("The web demo runs the tour, then goes overdue and takes a break inside the page", async ({ page }) => {
+test("The web demo runs the tour in a real window, then goes overdue and takes a break inside the page", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -11,25 +11,48 @@ test("The web demo runs the tour, then goes overdue and takes a break inside the
   await page.goto("/");
   const app = page.frameLocator("iframe");
   const heading = app.getByTestId("tour-card").getByRole("heading");
-
-  await test.step("The tour plays through the same beats as the app", async () => {
-    const titles = ["Already running.", "One rule.", "Time's up.", "Breaks find you.", "Stats.", "Difficulty.", "That's it."];
-    for (const title of titles) {
-      await expect(heading).toHaveText(title);
-      if (title === "Time's up.") {
-        await app.getByTestId("overdue-window-start-break-button").click();
-      } else {
-        await app.getByTestId("tour-next").click();
-      }
-    }
-    await expect(app.getByTestId("tour")).toBeHidden();
-  });
-
+  const next = app.getByTestId("tour-next");
+  await expect(heading).toHaveText("Already running.");
   const frame = page.frame({ url: /demo/ })!;
-  const host = app.getByTestId("demo-break-host");
   const fastForward = (seconds: number) => frame.evaluate((seconds) => (window as unknown as DemoWindow).__demo.fastForward(seconds), seconds);
 
-  await test.step("Forwarding to the break opens the overdue window inside the page, and it grows", async () => {
+  let popup: Page;
+  await test.step("The overdue beat opens a real window, which grows, and only its palm moves on", async () => {
+    await next.click();
+    await expect(heading).toHaveText("One rule.");
+    await next.click();
+    await expect(heading).toHaveText("Time's up.");
+    [popup] = await Promise.all([page.waitForEvent("popup"), fastForward(3)]);
+    await expect(popup.getByTestId("overdue-window-title")).toBeVisible();
+    await expect(popup.getByTestId("tour-pulse")).toBeVisible();
+    await expect(app.getByTestId("demo-break-host")).toBeHidden();
+
+    await popup.getByTestId("overdue-window-stop-button").click();
+    await expect(heading).toHaveText("Time's up.");
+    await popup.getByTestId("overdue-window-start-break-button").click();
+  });
+
+  await test.step("The break's card is in the window, with the browser's caveat, and the window closes after it", async () => {
+    await expect(popup.getByTestId("break-window-title")).toBeVisible();
+    await expect(popup.getByTestId("tour-card").getByRole("heading")).toHaveText("Breaks find you.");
+    await expect(popup.getByRole("link", { name: "Download the app" })).toBeVisible();
+    await fastForward(15);
+    await expect.poll(() => popup.isClosed()).toBe(true);
+  });
+
+  await test.step("Stats, Difficulty, then the start prompt starts the demo's timer", async () => {
+    await expect(heading).toHaveText("Stats.");
+    await next.click();
+    await expect(heading).toHaveText("Difficulty.");
+    await next.click();
+    await expect(heading).toHaveText("Press start.");
+    await app.getByTestId("tour-advance").click();
+    await expect(app.getByTestId("tour")).toBeHidden();
+    await expect(app.getByTestId("toggle-timer-button")).toHaveAttribute("title", "Stop (costs a checkpoint)");
+  });
+
+  const host = app.getByTestId("demo-break-host");
+  await test.step("After the tour, forwarding opens the overdue window inside the page, and it grows", async () => {
     await app.getByTestId("timer-buttons-container").getByTestId("forward-button").click();
     await expect(host.getByTestId("overdue-window-title")).toBeVisible();
     const before = (await host.getByTestId("demo-break-window").boundingBox())!;

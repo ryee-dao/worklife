@@ -11,6 +11,9 @@ export const EVENTS = {
     WARNING: "timer_warning",
     TRANSITION: "timer_transition",
   },
+  TOUR: {
+    UPDATE: "tour_update",
+  },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
     TIMER_STOP: "timer:stop",
@@ -29,8 +32,11 @@ export const EVENTS = {
     DEV_APPLY_WORKDAY: "dev:apply_workday",
     DEV_RESET_DAY: "dev:reset_day",
     DEV_ADJUST_CHECKPOINT: "dev:adjust_checkpoint",
-    TOUR_GET_SEEN: "tour:get_seen",
-    TOUR_MARK_SEEN: "tour:mark_seen",
+    TOUR_UPDATE: "tour:update",
+    TOUR_GET: "tour:get",
+    TOUR_START: "tour:start",
+    TOUR_NEXT: "tour:next",
+    TOUR_SKIP: "tour:skip",
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",
