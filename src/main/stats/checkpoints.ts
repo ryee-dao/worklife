@@ -10,6 +10,7 @@ export interface Segment {
   end: number;
   activity: Activity;
   adjustBy?: number; // Dev only: the level moves by this much where the segment starts
+  closedAt?: number; // For a closed stretch the app entered during lunch: when it actually closed
 }
 
 export interface DayScore {
@@ -64,21 +65,31 @@ const toEpochMs = (localDate: string, time: string, tzOffsetMin: number) => {
 
 const buildSegments = (sortedEvents: StatsEvent[], now: number): Segment[] => {
   const segments: Segment[] = [];
-  const switchTo = (at: number, activity: Activity, adjustBy?: number) => {
+  const switchTo = (at: number, activity: Activity, extra: Partial<Segment> = {}) => {
     const last = segments.at(-1);
     if (last) last.end = at;
-    segments.push({ start: at, end: at, activity, ...(adjustBy !== undefined && { adjustBy }) });
+    segments.push({ start: at, end: at, activity, ...extra });
+  };
+
+  // Quitting during lunch: the lunch runs on while the app is closed, and only once it has run out is the time closed
+  let quitDuringLunch: { at: number; lunchEndsAt: number } | null = null;
+  const closeAfterLunch = (until: number) => {
+    if (quitDuringLunch && until > quitDuringLunch.lunchEndsAt) switchTo(quitDuringLunch.lunchEndsAt, "CLOSED", { closedAt: quitDuringLunch.at });
   };
 
   for (const event of sortedEvents) {
-    const activity = activityAfter[event.type];
+    closeAfterLunch(event.at);
+    const resumesLunch = event.type === "APP_STARTED" && quitDuringLunch !== null && event.at <= quitDuringLunch.lunchEndsAt;
+    quitDuringLunch = event.type === "APP_QUIT" && event.status === "LUNCH" ? { at: event.at, lunchEndsAt: event.at + event.countdownMs } : null;
+    const activity = quitDuringLunch || resumesLunch ? "LUNCH" : activityAfter[event.type];
     if (event.type === "CHECKPOINT_ADJUSTED") {
       // Split here, so scoring meets the adjustment at the right moment
-      switchTo(event.at, segments.at(-1)?.activity ?? "WORKING", event.by);
+      switchTo(event.at, segments.at(-1)?.activity ?? "WORKING", { adjustBy: event.by });
     } else if (activity && activity !== segments.at(-1)?.activity) {
       switchTo(event.at, activity);
     }
   }
+  closeAfterLunch(now);
 
   const last = segments.at(-1);
   if (last) last.end = now;
@@ -157,8 +168,8 @@ const scoreDay = (dayEvents: StatsEvent[], segments: Segment[], now: number): Da
         if (runStart !== null) stopRun(start);
         break;
       case "CLOSED": {
-        // Reopening quickly is a restart. Closed for longer counts as a stop from when it closed
-        const isRestart = segment.end - segment.start <= CHECKPOINTS.RESTART_GRACE_MS;
+        // Reopening quickly is a restart. Closed for longer counts as a stop from when it closed, or from when a lunch it was closed through ran out
+        const isRestart = segment.end - (segment.closedAt ?? segment.start) <= CHECKPOINTS.RESTART_GRACE_MS;
         if (runStart !== null && !isRestart) stopRun(start);
         break;
       }

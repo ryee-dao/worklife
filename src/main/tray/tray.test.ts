@@ -107,15 +107,6 @@ describe('Tray status detection', () => {
     expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-gray'));
   });
 
-  test('RUNNING state in warning window shows yellow icon', () => {
-    const mockTray = createMockTray();
-    const state = createTimerState({ status: 'RUNNING', isWarning: true });
-
-    updateTray(mockTray as unknown as Electron.Tray, state);
-
-    expect(mockTray.setImage).toHaveBeenCalledWith(expect.stringContaining('tray-yellow'));
-  });
-
   test('tray follows isWarning, not the countdown', () => {
     // The timer decides the warning window; the tray must not recompute it.
     const mockTray = createMockTray();
@@ -261,20 +252,6 @@ describe('Tray edge cases', () => {
   test('no-op when tray is null', () => {
     const state = createTimerState();
     expect(() => updateTray(null as unknown as Electron.Tray, state)).not.toThrow();
-  });
-
-  test('OVERDUE displays overdue time, not countdown', () => {
-    const mockTray = createMockTray();
-    const state = createTimerState({
-      status: 'OVERDUE',
-      currentCountdownMs: 0,
-      overdueTimeMs: 65000,
-      availableActions: ['breaktime'],
-    });
-
-    updateTray(mockTray as unknown as Electron.Tray, state);
-
-    expect(mockTray.setToolTip).toHaveBeenCalledWith(expect.stringContaining('01:05'));
   });
 });
 

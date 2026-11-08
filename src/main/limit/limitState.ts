@@ -22,7 +22,7 @@ const getFreshLimitState = (): LimitState => ({
 
 export const initLimits = () => {
   loadLimitStateFromFile();
-  resetDailyLimits();
+  resetLimitsIfNewDay();
 }
 
 export function loadLimitStateFromFile() {
@@ -31,7 +31,7 @@ export function loadLimitStateFromFile() {
   setLimitState({ ...getFreshLimitState(), ...limitStateData.fileContent });
 }
 
-export function resetDailyLimits() {
+export function resetLimitsIfNewDay() {
   // If the last reset date is not today, start the day's counts over
   if (getLimitState().lastResetDate !== getTodayDateAsString()) {
     resetTodayLimits();
@@ -49,7 +49,7 @@ export function increasePowerupsUsed() {
 
 // Checks the date first, so the counts come back right at midnight
 export function calculateRemainingPowerups() {
-  resetDailyLimits();
+  resetLimitsIfNewDay();
   return getAllottedPowerups() - limitState.powerupsUsed;
 }
 
@@ -58,7 +58,7 @@ export function increaseLunchesUsed() {
 }
 
 export function calculateRemainingLunches() {
-  resetDailyLimits();
+  resetLimitsIfNewDay();
   return LUNCHES_PER_DAY - limitState.lunchesUsed;
 }
 

@@ -16,38 +16,15 @@ describe('createOverdueLevelsArray', () => {
     windowRatioCap: 1.0,
   };
 
-  test('produces one entry per level', () => {
-    const levels = createOverdueLevelsArray(configs);
-    expect(levels).toHaveLength(configs.windowLevelCap);
-  });
-
-  test('first level starts at 0ms with a non-zero ratio', () => {
-    const levels = createOverdueLevelsArray(configs);
-    expect(levels[0].levelStartMs).toBe(0);
-    expect(levels[0].levelWindowRatio).toBeGreaterThan(0);
-  });
-
-  test('each ratio is derived from (level+1)/total * cap, not accumulated', () => {
-    // Accumulating would compound toFixed(2) rounding errors across levels.
-    // Direct derivation keeps each level independent.
-    const levels = createOverdueLevelsArray(configs);
-    expect(levels[0].levelWindowRatio).toBe(0.2);  // (1/5) * 1.0
-    expect(levels[1].levelWindowRatio).toBe(0.4);  // (2/5) * 1.0
-    expect(levels[2].levelWindowRatio).toBe(0.6);  // (3/5) * 1.0
-    expect(levels[3].levelWindowRatio).toBe(0.8);  // (4/5) * 1.0
-    expect(levels[4].levelWindowRatio).toBe(1.0);  // (5/5) * 1.0
-  });
-
-  test('thresholds are evenly spaced by levelThresholdMs', () => {
-    const levels = createOverdueLevelsArray(configs);
-    for (let i = 0; i < levels.length; i++) {
-      expect(levels[i].levelStartMs).toBe(i * configs.levelThresholdMs);
-    }
-  });
-
-  test('last level ratio equals the cap', () => {
-    const levels = createOverdueLevelsArray(configs);
-    expect(levels[levels.length - 1].levelWindowRatio).toBe(configs.windowRatioCap);
+  test('one level per threshold, each a step of the cap, derived as (level+1)/total * cap rather than accumulated', () => {
+    // Accumulating would compound toFixed(2) rounding errors across levels
+    expect(createOverdueLevelsArray(configs)).toEqual([
+      { levelIdx: 0, levelStartMs: 0, levelWindowRatio: 0.2 },
+      { levelIdx: 1, levelStartMs: 10000, levelWindowRatio: 0.4 },
+      { levelIdx: 2, levelStartMs: 20000, levelWindowRatio: 0.6 },
+      { levelIdx: 3, levelStartMs: 30000, levelWindowRatio: 0.8 },
+      { levelIdx: 4, levelStartMs: 40000, levelWindowRatio: 1.0 },
+    ]);
   });
 
   test('ratios scale proportionally with a non-1.0 cap', () => {
@@ -162,23 +139,6 @@ describe('convertOverdueLevelObjectToScreenSize', () => {
     expect(result.width).toBe(1920);
     expect(result.height).toBe(1080);
   });
-
-  test('preserves the screen aspect ratio', () => {
-    const level: OverdueLevelObject = { levelIdx: 0, levelStartMs: 0, levelWindowRatio: 0.5 };
-    const result = convertOverdueLevelObjectToScreenSize(screen, level);
-    const inputRatio = screen.width / screen.height;
-    const outputRatio = result.width / result.height;
-    expect(outputRatio).toBeCloseTo(inputRatio);
-  });
-
-  test('scales correctly for a non-standard screen size', () => {
-    const ultrawide = { width: 2560, height: 1440 };
-    // ratio 0.64 → sqrt = 0.8
-    const level: OverdueLevelObject = { levelIdx: 0, levelStartMs: 0, levelWindowRatio: 0.64 };
-    const result = convertOverdueLevelObjectToScreenSize(ultrawide, level);
-    expect(result.width).toBe(2048);   // 2560 × 0.8
-    expect(result.height).toBe(1152);  // 1440 × 0.8
-  });
 });
 
 describe('clampRectToWorkArea', () => {
@@ -234,8 +194,7 @@ describe('clampRectToWorkArea', () => {
     expect(result.y).toBe(0);
   });
 
-  test('size passes through even when window exceeds work area', () => {
-    // clampRectToWorkArea is position-only — size is never modified
+  test('only the position is clamped, the size is kept', () => {
     const rect = { x: 9999, y: 9999, width: 400, height: 300 };
     const result = clampRectToWorkArea(rect, workArea);
     expect(result.width).toBe(400);

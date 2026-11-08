@@ -3,7 +3,7 @@ import { EVENTS } from "@shared/constants";
 import { createOverdueLevelsArray, OverdueLevelObject } from "@main/overdue/overdueGeometry";
 import { getAppliedOverdueConfigs } from "@main/overdue/overdueConfigs";
 import {
-  AvailableActions, emitTimerStatus, getAvailableActions, getTimerState, holdForFirstRun, holdTimer, releaseTimer, startTimer, TimerState, TimerStatus,
+  AvailableActions, emitTimerStatus, getTimerState, holdForFirstRun, holdTimer, releaseTimer, startTimer, timerStateFor, TimerState, TimerStatus,
 } from "@main/timer/timerState";
 import { activateKioskModeForBreakWindow, closeBreakWindow, createBreakWindow, moveBreakWindowAwayFrom, resizeBreakWindow } from "@main/windows/breakWindow";
 import { settingsWindow } from "@main/windows/settingsWindow";
@@ -19,15 +19,10 @@ let levels: OverdueLevelObject[] = [];
 
 export const getTour = () => (session ? tourUpdateOf(session) : null);
 
-const clockState = (): TimerState => ({
-  ...getTimerState(),
-  ...session!.clock,
-  availableActions: getAvailableActions(session!.clock.status),
-  isWarning: false,
-});
+const clockState = (): TimerState => ({ ...timerStateFor(session!.clock), isWarning: false });
 
-// The timer state the windows see while a tour is on: its clock, until the last card hands the real timer back
-export const tourTimerState = (): TimerState | null => (session && !showsRealTimer(session) ? clockState() : null);
+// The timer state the windows see: a tour's clock while one is on, until the last card hands the real timer back
+export const shownTimerState = (): TimerState => (session && !showsRealTimer(session) ? clockState() : getTimerState());
 
 // The day the Stats tab shows while a tour is on, where a beat has one
 export const tourTodayScore = () => (session ? tourScore(currentBeat(session), Date.now()) : null);

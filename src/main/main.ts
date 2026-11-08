@@ -8,6 +8,7 @@ import { setWorkArea } from "./display";
 import { loadOverdueConfigs } from "./overdue/overdueConfigs";
 import { loadDifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { loadWorkdayConfigs } from "./workday/workdayConfigs";
+import { loadSoundConfigs } from "./sound/soundConfigs";
 import { destroyWorkday, initWorkday } from "./workday/workday";
 import { loadTimerConfigs } from "./timer/timerConfigs";
 import { buildStatusIcons, createTray, tray } from "./tray/tray";
@@ -30,6 +31,7 @@ function initConfigs() {
   loadDifficultyConfigs();
   loadOverdueConfigs();
   loadWorkdayConfigs();
+  loadSoundConfigs();
 }
 
 // Pops up the end-of-day card once the workday is over
@@ -79,11 +81,8 @@ if (!firstAppInstance) {
   // Another instance exists, exit this one. Not app.quit(), since before-quit expects an app that has started
   app.exit();
 } else {
-  // This is the first instance, continue normally
 
-  // When a second instance is opened
   app.on("second-instance", () => {
-    // Focus the existing window instead
     if (settingsWindow) {
       if (settingsWindow.isMinimized()) settingsWindow.restore();
       settingsWindow.show();
@@ -91,8 +90,7 @@ if (!firstAppInstance) {
     }
   });
 
-  // Start app
-  app.whenReady().then(() => {
+    app.whenReady().then(() => {
     initApp()
   });
 }

@@ -1,10 +1,9 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
-import { TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, forwardToBreak, snoozeTimer, startLunch } from '@main/timer/timerState';
-import { convertMsToMinutes } from '@shared/utils/time';
+import { AvailableActions, TimerState, TimerStatus, stopTimer, startTimer, startBreak, skipBreak, forwardToBreak, snoozeTimer, startLunch } from '@main/timer/timerState';
 import { DayScore } from '@main/stats/checkpoints';
 import { CHECKPOINTS } from '@shared/constants';
-import { formatClockTime, formatMsToMMSS } from '@shared/utils/time';
+import { convertMsToMinutes, formatClockTime, formatMsToMMSS } from '@shared/utils/time';
 import { settingsWindow } from '@main/windows/settingsWindow';
 import { IS_TEST } from '@main/testEnv';
 import { ASSETS_DIR } from '@main/env';
@@ -46,6 +45,19 @@ function describeTodayScore(score: DayScore) {
   return today;
 }
 
+const SEPARATOR: Electron.MenuItemConstructorOptions = { type: 'separator' };
+
+// The menu offers exactly the buttons the timer allows right now, in the timer's order
+const MENU_ITEMS: Record<AvailableActions, (state: TimerState) => Electron.MenuItemConstructorOptions> = {
+  stop: () => ({ label: 'Stop', click: () => stopTimer('TRAY') }),
+  start: (state) => ({ label: state.status === 'LUNCH' ? 'Back from Lunch' : 'Resume', click: () => startTimer('TRAY') }),
+  forward: () => ({ label: 'Forward to Break', click: () => forwardToBreak('TRAY') }),
+  breaktime: () => ({ label: 'Start Break', click: () => startBreak('TRAY') }),
+  skip: () => ({ label: 'Skip Break', click: () => skipBreak('TRAY') }),
+  snooze: (state) => ({ label: `Snooze +${convertMsToMinutes(state.snoozeDurationMs)} min`, click: () => snoozeTimer('TRAY') }),
+  lunch: (state) => ({ label: `Lunch (${convertMsToMinutes(state.lunchDurationMs)} min)`, click: () => startLunch('TRAY') }),
+};
+
 function getStatusKey(state: TimerState): StatusKey {
   return state.isWarning ? 'WARNING' : state.status;
 }
@@ -76,51 +88,14 @@ export function updateTray(tray: Electron.Tray, state: TimerState, todayScore: D
   const todayText = todayScore ? describeTodayScore(todayScore) : null;
   tray.setToolTip(todayText ? `WorkLife — ${displayTime} · ${todayText}` : `WorkLife — ${displayTime}`);
 
-  const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
-  if (todayText) {
-    menuTemplate.push({ label: todayText, enabled: false });
-    menuTemplate.push({ type: 'separator' });
-  }
-  menuTemplate.push({ label: 'Show Settings', click: () => settingsWindow?.show() });
-  menuTemplate.push({ type: 'separator' });
-
-  switch (state.status) {
-    case 'RUNNING':
-      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
-      menuTemplate.push({ label: 'Forward to Break', click: () => forwardToBreak('TRAY') });
-      if (state.availableActions.includes('snooze')) {
-        menuTemplate.push({ label: `Snooze +${convertMsToMinutes(state.snoozeDurationMs)} min`, click: () => snoozeTimer('TRAY') });
-      }
-      if (state.availableActions.includes('lunch')) {
-        menuTemplate.push({ label: `Lunch (${convertMsToMinutes(state.lunchDurationMs)} min)`, click: () => startLunch('TRAY') });
-      }
-      break;
-    case 'STOPPED':
-      menuTemplate.push({ label: 'Resume', click: () => startTimer('TRAY') });
-      break;
-    case 'OVERDUE':
-      menuTemplate.push({ label: 'Start Break', click: () => startBreak('TRAY') });
-      if (state.availableActions.includes('lunch')) {
-        menuTemplate.push({ label: `Lunch (${convertMsToMinutes(state.lunchDurationMs)} min)`, click: () => startLunch('TRAY') });
-      }
-      if (state.availableActions.includes('skip')) {
-        menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
-      }
-      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
-      break;
-    case 'BREAK':
-      if (state.availableActions.includes('skip')) {
-        menuTemplate.push({ label: 'Skip Break', click: () => skipBreak('TRAY') });
-      }
-      menuTemplate.push({ label: 'Stop', click: () => stopTimer('TRAY') });
-      break;
-    case 'LUNCH':
-      menuTemplate.push({ label: 'Back from Lunch', click: () => startTimer('TRAY') });
-      break;
-  }
-
-  menuTemplate.push({ type: 'separator' });
-  menuTemplate.push({ label: 'Quit', click: () => app.quit() });
+  const menuTemplate: Electron.MenuItemConstructorOptions[] = [
+    ...(todayText ? [{ label: todayText, enabled: false }, SEPARATOR] : []),
+    { label: 'Show Settings', click: () => settingsWindow?.show() },
+    SEPARATOR,
+    ...state.availableActions.map((action) => MENU_ITEMS[action](state)),
+    SEPARATOR,
+    { label: 'Quit', click: () => app.quit() },
+  ];
 
   const menuLabels = menuTemplate.map((item) => item.label).join(",");
   if (isNewTray || menuLabels !== lastMenuLabels) {
@@ -136,7 +111,6 @@ export function createTray(width: number = 16, height: number = 16) {
     return;
   }
 
-  // Set icon for app
   const trayImage = nativeImage.createFromPath(
     path.join(ASSETS_DIR, "dog.png")
   );

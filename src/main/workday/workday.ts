@@ -18,11 +18,11 @@ export const isInWorkday = (now: Date, configs: WorkdayConfigs) => {
   );
 };
 
-const checkWorkday = () => {
+const checkWorkday = (now = new Date()) => {
   applyWorkdayConfigsOnNewDay();
 
   const configs = getAppliedWorkdayConfigs();
-  const inWorkday = isInWorkday(new Date(), configs);
+  const inWorkday = isInWorkday(now, configs);
   const workdayStarted = inWorkday && !wasInWorkday;
   const workdayEnded = !inWorkday && wasInWorkday;
 
@@ -51,3 +51,8 @@ export const initWorkday = (onEnd: () => void = () => {}) => {
 export const destroyWorkday = () => {
   clearInterval(workdayCheckTimer);
 };
+
+// Lets end to end tests move the schedule's clock, as they do the timer's
+if (IS_TEST) {
+  global.__test_checkWorkday = (nowMs: number) => checkWorkday(new Date(nowMs));
+}

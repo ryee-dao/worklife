@@ -13,7 +13,6 @@ import {
   snoozeTimer,
   startLunch,
   startBreak,
-  getTimerState,
   emitTimerStatus,
   AvailableActions,
   Source,
@@ -21,12 +20,13 @@ import {
 
 import { applyOverdueConfigs, getOverdueConfigs, OverdueConfigs, setOverdueConfigs } from "./overdue/overdueConfigs";
 import { applyWorkdayConfigs, getWorkdayConfigs, setWorkdayConfigs, WorkdayConfigs } from "./workday/workdayConfigs";
+import { getSoundConfigs, setSoundConfigs, SoundConfigs } from "./sound/soundConfigs";
 import { IS_DEV } from "./env";
 import { resetTodayLimits } from "./limit/limitState";
 import { breakWindow, resizeBreakWindow, createBreakWindow, closeBreakWindow, setOverdueLevelsArray, activateKioskModeForBreakWindow } from "./windows/breakWindow";
 import { settingsWindow, showTimerOnTop } from "./windows/settingsWindow";
 import { getAllDayScores, getCurrentDayScore, recordCheckpointAdjusted, takeUnseenSummaryDate } from "./stats/stats";
-import { getTour, startTour, tourAction, tourEmitter, tourNext, tourPrev, tourSkip, tourTimerState, tourTodayScore } from "./tour/tour";
+import { getTour, startTour, tourAction, tourEmitter, tourNext, tourPrev, tourSkip, shownTimerState, tourTodayScore } from "./tour/tour";
 
 export const broadcastStateToRendererWindows = (
   state: unknown,
@@ -44,8 +44,7 @@ export const broadcastStateToRendererWindows = (
 const onTimerUpdate = (state: TimerState) => {
   const todayScore = getCurrentDayScore();
   updateTray(tray!, state, todayScore);
-  // While a tour is on, the windows show its clock in place of the real timer
-  broadcastStateToRendererWindows(tourTimerState() ?? state, [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
+  broadcastStateToRendererWindows(shownTimerState(), [settingsWindow, breakWindow], EVENTS.IPC_CHANNELS.TIMER_UPDATE);
   broadcastStateToRendererWindows(tourTodayScore() ?? todayScore, [settingsWindow], EVENTS.IPC_CHANNELS.STATS_TODAY);
 };
 
@@ -99,7 +98,7 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_SNOOZE, fromWindow("snooze", snoozeTimer));
   ipcMain.on(EVENTS.IPC_CHANNELS.TIMER_LUNCH, fromWindow("lunch", startLunch));
 
-  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, () => tourTimerState() ?? getTimerState());
+  ipcMain.handle(EVENTS.IPC_CHANNELS.TIMER_GETSTATE, shownTimerState);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_GET_DAYS, getAllDayScores);
   ipcMain.handle(EVENTS.IPC_CHANNELS.STATS_TAKE_UNSEEN_SUMMARY, takeUnseenSummaryDate);
   ipcMain.handle(EVENTS.IPC_CHANNELS.TOUR_GET, getTour);
@@ -107,37 +106,17 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_NEXT, tourNext);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_PREV, tourPrev);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_SKIP, tourSkip);
+  // Settings pages read and write the saved configs; most only take effect after a break, see STOP_BREAK above
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
-  ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER,
-    (event, configs: TimerConfigs) => {
-      setTimerConfigs(configs)
-    }
-  );
-
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, (event, configs: TimerConfigs) => setTimerConfigs(configs));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.DIFFICULTY, getDifficultyConfigs);
-  ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY,
-    (event, configs: DifficultyConfigs) => {
-      setDifficultyConfigs(configs);
-    }
-  );
-
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY, (event, configs: DifficultyConfigs) => setDifficultyConfigs(configs));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE, getOverdueConfigs);
-  ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE,
-    (event, configs: OverdueConfigs) => {
-      setOverdueConfigs(configs);
-    }
-  );
-
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, (event, configs: OverdueConfigs) => setOverdueConfigs(configs));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.WORKDAY, getWorkdayConfigs);
-  ipcMain.handle(
-    EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY,
-    (event, configs: WorkdayConfigs) => {
-      setWorkdayConfigs(configs);
-    }
-  );
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, (event, configs: WorkdayConfigs) => setWorkdayConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.SOUND, getSoundConfigs);
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.SOUND, (event, configs: SoundConfigs) => setSoundConfigs(configs));
 
   // The admin settings apply the workday right away so it can be tested without waiting a day
   if (IS_DEV) {

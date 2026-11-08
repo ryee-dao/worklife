@@ -1,10 +1,12 @@
 import type { ElectronAPI } from "@shared/types/electron";
 import type { AvailableActions, TimerState, TimerStatus, TimerTransition } from "@main/timer/timerState";
+import { act, availableActions, tick as tickTimer, timerStateOf, TimerCore, TimerRules, TimerStep } from "@main/timer/timerRules";
 import type { StatsEvent } from "@main/stats/stats";
 import type { TimerConfigs } from "@main/timer/timerConfigs";
 import type { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
 import type { OverdueConfigs } from "@main/overdue/overdueConfigs";
 import type { WorkdayConfigs } from "@main/workday/workdayConfigs";
+import type { SoundConfigs } from "@main/sound/soundConfigs";
 import { getDayScores, getTodayScore } from "@main/stats/checkpoints";
 import { createOverdueLevelsArray } from "@main/overdue/overdueGeometry";
 import { getPresetConfigs } from "@shared/utils/difficulty";
@@ -19,6 +21,7 @@ interface DemoConfigs {
   difficulty: DifficultyConfigs;
   overdue: OverdueConfigs;
   workday: WorkdayConfigs;
+  sound: SoundConfigs;
 }
 
 // Short enough to see a whole cycle in a couple of minutes
@@ -30,6 +33,7 @@ export const DEMO_CONFIGS: DemoConfigs = {
   },
   overdue: { levelThresholdMs: 10 * 1000, windowLevelCap: 5, windowRatioCap: 0.9 },
   workday: { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59", autoStopAtEnd: false }, // Any time the page is opened is a workday in progress
+  sound: { volume: 0.5 },
 };
 
 // Past days are scored on ordinary settings, so a ten-minute stop costs a checkpoint rather than ten
@@ -121,14 +125,15 @@ interface DemoOptions {
   autoTick?: boolean; // Off in tests, which move time with fastForward
 }
 
-// The main process, simulated in the page: the same timer states, actions and stats scoring, with nothing saved.
-// shortcut: a copy of timerState.ts's rules rather than the module itself, which is tied to Electron and files
+// The main process, simulated in the page: the app's timer rules and stats scoring, with nothing saved.
+// shortcut: the glue around the rules (rules(), apply(), the tour's advance/action routing) mirrors timerState.ts and tour.ts
+// by hand; lift the counters a step changes into timerRules if the two drift
 export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true }: DemoOptions = {}) {
   let saved = structuredClone(DEMO_CONFIGS);
   let applied = structuredClone(DEMO_CONFIGS);
   // A fresh page is a first run: it opens on the tour, with the timer waiting for the tour's start prompt
-  const timer = { status: "STOPPED" as TimerStatus, currentCountdownMs: applied.timer.timerDurationMs, overdueTimeMs: 0 };
-  let tour: TourSession | null = startSession(true);
+  let timer: TimerCore = { status: "STOPPED", currentCountdownMs: applied.timer.timerDurationMs, overdueTimeMs: 0 };
+  let tour: TourSession | null = startSession(/* firstRun */ true);
   let powerupsUsed = 0;
   let lunchesUsed = 0;
   const events = seedHistory(now());
@@ -137,38 +142,27 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
   const tourListeners = new Set<(update: TourUpdate | null) => void>();
 
   const values = () => difficultyValues(applied);
-  const remainingPowerups = () => values().allottedPowerups - powerupsUsed;
-  const remainingLunches = () => LUNCHES_PER_DAY - lunchesUsed;
   const record = (transition: DemoTransition) => events.push(makeEvent(transition, now(), applied));
   record({ type: "APP_STARTED", previousStatus: null });
 
-  const availableActions = (status: TimerStatus): AvailableActions[] => {
-    const hasPowerups = remainingPowerups() > 0;
-    const hasLunch = remainingLunches() > 0;
-    switch (status) {
-      case "RUNNING": return ["stop", "forward", ...(hasPowerups ? ["snooze" as const] : []), ...(hasLunch ? ["lunch" as const] : [])];
-      case "STOPPED":
-      case "LUNCH": return ["start"];
-      case "OVERDUE": return ["breaktime", ...(hasPowerups ? ["skip" as const] : []), ...(hasLunch ? ["lunch" as const] : []), "stop"];
-      case "BREAK": return [...(hasPowerups ? ["skip" as const] : []), "stop"];
-    }
-  };
-
-  const realState = (): TimerState => ({
-    ...timer,
-    availableActions: availableActions(timer.status),
-    remainingPowerups: Math.max(0, remainingPowerups()),
-    allottedPowerups: values().allottedPowerups,
-    remainingLunches: Math.max(0, remainingLunches()),
-    snoozeDurationMs: values().snoozeDurationMs,
-    lunchDurationMs: values().lunchDurationMs,
-    isWarning: timer.status === "RUNNING" && timer.currentCountdownMs > 0 && timer.currentCountdownMs <= applied.timer.warningThresholdMs,
+  const rules = (): TimerRules => ({
+    workMs: applied.timer.timerDurationMs,
+    nextWorkMs: saved.timer.timerDurationMs,
+    breakMs: values().breakDurationMs,
+    snoozeMs: values().snoozeDurationMs,
+    lunchMs: values().lunchDurationMs,
+    warningMs: applied.timer.warningThresholdMs,
+    powerups: values().allottedPowerups,
+    powerupsLeft: values().allottedPowerups - powerupsUsed,
+    lunchesLeft: LUNCHES_PER_DAY - lunchesUsed,
   });
+
+  const realState = (): TimerState => timerStateOf(timer, rules());
 
   // While the tour is on, the page shows its clock in place of the timer, until the last card hands the timer back
   const getState = (): TimerState => {
     if (!tour || showsRealTimer(tour)) return realState();
-    return { ...realState(), ...tour.clock, availableActions: availableActions(tour.clock.status), isWarning: false };
+    return { ...realState(), ...tour.clock, availableActions: availableActions(tour.clock.status, rules()), isWarning: false };
   };
 
   // The demo's break beat says what a browser can't do, and where the app is
@@ -197,12 +191,17 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     tourListeners.forEach((listener) => listener(update));
   };
 
-  // Back to work with a full timer. Saved settings take effect here, like the app
-  const endBreak = () => {
-    applied = structuredClone(saved);
-    timer.status = "RUNNING";
-    timer.currentCountdownMs = applied.timer.timerDurationMs;
-    timer.overdueTimeMs = 0;
+  // Takes a step as the app does, minus its windows and sound: the page draws the state it's sent
+  const apply = (step: TimerStep | null) => {
+    if (!step) return;
+    if (step.transition) record(step.transition);
+    timer = step.core;
+    for (const effect of step.effects) {
+      if (effect === "CLOSE_BREAK") applied = structuredClone(saved); // Saved settings take effect here, like the app
+      if (effect === "SPEND_POWERUP") powerupsUsed += 1;
+      if (effect === "SPEND_LUNCH") lunchesUsed += 1;
+    }
+    emit();
   };
 
   const tick = () => {
@@ -214,139 +213,33 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
       emit();
       return;
     }
-    switch (timer.status) {
-      case "RUNNING":
-        timer.currentCountdownMs -= 1000;
-        if (timer.currentCountdownMs <= 0) {
-          record({ type: "OVERDUE_STARTED", cause: "COUNTDOWN_ENDED" });
-          timer.status = "OVERDUE";
-          timer.currentCountdownMs = 0;
-          timer.overdueTimeMs = 0;
-        }
-        break;
-      case "OVERDUE":
-        timer.overdueTimeMs += 1000;
-        break;
-      case "BREAK":
-        timer.currentCountdownMs -= 1000;
-        if (timer.currentCountdownMs <= 0) {
-          record({ type: "BREAK_COMPLETED" });
-          endBreak();
-        }
-        break;
-      case "LUNCH":
-        timer.currentCountdownMs -= 1000;
-        if (timer.currentCountdownMs <= 0) {
-          record({ type: "LUNCH_ENDED", cause: "TIME_UP" });
-          timer.status = "RUNNING";
-          timer.currentCountdownMs = applied.timer.timerDurationMs;
-        }
-        break;
-      case "STOPPED":
-        break;
-    }
-    emit();
+    apply(tickTimer(timer, rules()));
   };
 
-  const stop = () => {
-    const from = timer.status;
-    if (from === "STOPPED" || from === "LUNCH") return;
-    record({ type: "STOPPED", source: "WINDOW", from, countdownMs: timer.currentCountdownMs });
-    if (from !== "RUNNING") endBreak();
-    timer.status = "STOPPED";
-    emit();
-  };
-
-  const start = () => {
-    if (timer.status === "LUNCH") {
-      record({ type: "LUNCH_ENDED", cause: "ENDED_EARLY", source: "WINDOW", lunchLeftMs: timer.currentCountdownMs });
-      timer.status = "RUNNING";
-      timer.currentCountdownMs = applied.timer.timerDurationMs;
-      emit();
-      return;
-    }
-    if (timer.status !== "STOPPED") return;
-    record({ type: "RESUMED", source: "WINDOW", countdownMs: timer.currentCountdownMs });
-    timer.status = "RUNNING";
-    emit();
-  };
-
-  const startBreak = () => {
-    if (timer.status !== "OVERDUE") return;
-    record({ type: "BREAK_STARTED", source: "WINDOW", overdueMs: timer.overdueTimeMs });
-    timer.status = "BREAK";
-    timer.currentCountdownMs = values().breakDurationMs;
-    timer.overdueTimeMs = 0;
-    emit();
-  };
-
-  const skipBreak = () => {
-    if (remainingPowerups() <= 0) return;
-    if (timer.status !== "BREAK" && timer.status !== "OVERDUE") return;
-    powerupsUsed += 1;
-    record({
-      type: "BREAK_SKIPPED",
-      source: "WINDOW",
-      from: timer.status,
-      overdueMs: timer.overdueTimeMs,
-      breakElapsedMs: timer.status === "BREAK" ? values().breakDurationMs - timer.currentCountdownMs : 0,
-      powerupsLeft: remainingPowerups(),
-    });
-    endBreak();
-    emit();
-  };
-
-  const forwardToBreak = () => {
-    if (timer.status !== "RUNNING") return;
-    record({ type: "OVERDUE_STARTED", cause: "FORWARDED", source: "WINDOW", countdownMs: timer.currentCountdownMs });
-    timer.status = "OVERDUE";
-    timer.currentCountdownMs = 0;
-    timer.overdueTimeMs = 0;
-    emit();
-  };
-
-  const snooze = () => {
-    if (timer.status !== "RUNNING" || remainingPowerups() <= 0) return;
-    powerupsUsed += 1;
-    const snoozeMs = values().snoozeDurationMs;
-    record({ type: "SNOOZED", source: "WINDOW", snoozeMs, countdownMs: timer.currentCountdownMs, powerupsLeft: remainingPowerups() });
-    timer.currentCountdownMs += snoozeMs;
-    emit();
-  };
-
-  const startLunch = () => {
-    const from = timer.status;
-    if ((from !== "RUNNING" && from !== "OVERDUE") || remainingLunches() <= 0) return;
-    lunchesUsed += 1;
-    const lunchMs = values().lunchDurationMs;
-    record({ type: "LUNCH_STARTED", source: "WINDOW", from, lunchMs });
-    if (from === "OVERDUE") applied = structuredClone(saved); // Lunch closes the overdue window, which applies saved settings
-    timer.status = "LUNCH";
-    timer.currentCountdownMs = lunchMs;
-    timer.overdueTimeMs = 0;
-    emit();
-  };
+  const run = (action: AvailableActions) => apply(act(action, timer, "WINDOW", rules()));
 
   // The tour, as the app runs it: a mock scenario where only the button a card names does anything
-  const endTour = () => {
-    tour = null;
+  const set = (next: TourSession | null) => {
+    tour = next;
     emit();
   };
-  const advance = (next: TourSession | null) => (next ? ((tour = next), emit()) : endTour());
+  const endTour = () => set(null);
+  const advance = (next: TourSession | null) => (next ? set(next) : endTour());
   const realStopped = () => timer.status === "STOPPED";
   const tourAction = (action: AvailableActions) => {
     if (!tour || !namesAction(tour, action)) return;
     advance(nextSession(tour, realStopped()));
-    if (action === "start") start(); // The first run's last card: the real start, once the tour is out of the way
+    if (action === "start") run("start"); // The first run's last card: the real start, once the tour is out of the way
   };
-  const fromWindow = (action: AvailableActions, real: () => void) => () => (tour ? tourAction(action) : real());
+  const fromWindow = (action: AvailableActions) => () => (tour ? tourAction(action) : run(action));
 
   if (autoTick) setInterval(tick, 1000);
 
   const api: ElectronAPI = {
+    // Each subscribe answers at once, where the app's push can land before a window subscribes, so the app's windows fetch as well
     onTimerUpdate: (callback) => {
       timerListeners.add(callback);
-      callback(getState()); // The app sends the state as soon as a window loads
+      callback(getState());
       return () => timerListeners.delete(callback);
     },
     onWarning: () => () => {}, // No warning sound: browsers block audio the visitor didn't ask for
@@ -359,17 +252,18 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     onShowDay: () => () => {},
     getDayScores: async () => getDayScores(events, now()),
     takeUnseenDaySummary: async () => null,
-    stop: fromWindow("stop", stop),
-    start: fromWindow("start", start),
-    startBreak: fromWindow("breaktime", startBreak),
-    skipBreak: fromWindow("skip", skipBreak),
-    forwardToBreak: fromWindow("forward", forwardToBreak),
-    snooze: fromWindow("snooze", snooze),
-    startLunch: fromWindow("lunch", startLunch),
+    stop: fromWindow("stop"),
+    start: fromWindow("start"),
+    startBreak: fromWindow("breaktime"),
+    skipBreak: fromWindow("skip"),
+    forwardToBreak: fromWindow("forward"),
+    snooze: fromWindow("snooze"),
+    startLunch: fromWindow("lunch"),
     saveTimerConfigs: async (configs) => { saved = { ...saved, timer: configs }; },
     saveDifficultyConfigs: async (configs) => { saved = { ...saved, difficulty: configs }; },
     saveOverdueConfigs: async (configs) => { saved = { ...saved, overdue: configs }; },
     saveWorkdayConfigs: async (configs) => { saved = { ...saved, workday: configs }; },
+    saveSoundConfigs: async (configs) => { saved = { ...saved, sound: configs }; },
     devApplyWorkday: async () => {},
     devResetDay: async () => {},
     devAdjustCheckpoint: async () => {},
@@ -377,6 +271,7 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     loadDifficultyConfigs: async () => saved.difficulty,
     loadOverdueConfigs: async () => saved.overdue,
     loadWorkdayConfigs: async () => saved.workday,
+    loadSoundConfigs: async () => saved.sound,
     onTourUpdate: (callback) => {
       tourListeners.add(callback);
       callback(tourUpdate());
@@ -384,22 +279,16 @@ export function createDemoElectronAPI({ now = () => Date.now(), autoTick = true 
     },
     getTour: async () => tourUpdate(),
     startTour: () => {
-      if (tour) return;
-      tour = startSession(false);
-      emit();
+      if (!tour) set(startSession(/* firstRun */ false));
     },
     tourNext: () => {
       if (tour) advance(nextSession(tour, realStopped()));
     },
     tourPrev: () => {
-      if (!tour) return;
-      tour = prevSession(tour);
-      emit();
+      if (tour) set(prevSession(tour));
     },
     tourSkip: () => {
-      if (!tour) return;
-      tour = skipSession(tour, realStopped());
-      emit();
+      if (tour) set(skipSession(tour, realStopped()));
     },
   };
 

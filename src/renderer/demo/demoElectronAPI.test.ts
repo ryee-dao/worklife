@@ -27,7 +27,7 @@ describe('demo timer', () => {
     expect(state()).toMatchObject({ status: 'RUNNING', currentCountdownMs: DEMO_CONFIGS.timer.timerDurationMs });
 
     fastForward(DEMO_CONFIGS.timer.timerDurationMs / 1000);
-    expect(state()).toMatchObject({ status: 'OVERDUE', overdueTimeMs: 0, availableActions: ['breaktime', 'skip', 'lunch', 'stop'] });
+    expect(state()).toMatchObject({ status: 'OVERDUE', overdueTimeMs: 0, availableActions: ['breaktime', 'lunch', 'skip', 'stop'] });
 
     fastForward(3);
     expect(state().overdueTimeMs).toBe(3000);
@@ -159,6 +159,17 @@ describe('demo stats', () => {
     const pastLevels = new Set(Object.values(scores).filter((score) => !score.inProgress).map((score) => score.level));
     expect(pastLevels.size).toBeGreaterThan(1);
     expect(Object.keys(scores).some((localDate) => localDate.startsWith('2026-10'))).toBe(true);
+  });
+
+  // The four shapes are meant to read differently on the calendar, so each is pinned to the level the scorer gives it
+  test('each history shape scores as it is meant to: a full day, a short stop, a lunch, and a late start', async () => {
+    const { api } = afterTour();
+    const scores = await api.getDayScores();
+
+    expect(scores['2026-11-04'].level).toBe(4); // Radiant: the date is a multiple of 4, a full day
+    expect(scores['2026-11-01'].level).toBe(2); // Glow: a ten-minute stop at midday costs one checkpoint and restarts the climb
+    expect(scores['2026-11-02'].level).toBe(4); // Radiant: lunch doesn't break the run
+    expect(scores['2026-11-03'].level).toBe(3); // Shine: an 80-minute late start is past the grace, so the climb starts late
   });
 
   test('history covers every day of the week, since the demo workday is every day', () => {
