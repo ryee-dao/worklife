@@ -10,7 +10,7 @@ import type { SoundConfigs } from "@main/sound/soundConfigs";
 import { getDayScores, getTodayScore } from "@main/stats/checkpoints";
 import { createOverdueLevelsArray } from "@main/overdue/overdueGeometry";
 import { getPresetConfigs } from "@shared/utils/difficulty";
-import { LUNCHES_PER_DAY } from "@shared/constants";
+import { DEFAULTS, LUNCHES_PER_DAY } from "@shared/constants";
 import { tourScore } from "@shared/tour/score";
 import { currentBeat, hasTimedOut, namesAction, nextSession, prevSession, showsRealTimer, skipSession, startSession, tickSession, TOUR, TourSession, TourUpdate, tourUpdateOf } from "@shared/tour/session";
 
@@ -31,7 +31,7 @@ export const DEMO_CONFIGS: DemoConfigs = {
     level: "CUSTOM",
     custom: { breakDurationMs: 30 * 1000, snoozeDurationMs: 60 * 1000, allottedPowerups: 3, lunchDurationMs: 5 * 60 * 1000, checkpointDecayMs: 60 * 1000 },
   },
-  overdue: { levelThresholdMs: 10 * 1000, windowLevelCap: 5, windowRatioCap: 0.9 },
+  overdue: { levelThresholdMs: 10 * 1000, windowLevelCap: 5, windowRatioCap: DEFAULTS.DEFAULT_WINDOW_RATIO_CAP },
   workday: { days: [0, 1, 2, 3, 4, 5, 6], start: "00:00", end: "23:59", autoStopAtEnd: false }, // Any time the page is opened is a workday in progress
   sound: { volume: 0.5 },
 };

@@ -8,7 +8,7 @@ const MAXIMUM_WINDOW_RATIO = CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO;
 const defaultOverdueConfigs: OverdueConfigs = {
   levelThresholdMs: DEFAULTS.DEFAULT_LEVEL_THRESHOLD_MS,
   windowLevelCap: MAXIMUM_WINDOW_LEVEL,
-  windowRatioCap: MAXIMUM_WINDOW_RATIO,
+  windowRatioCap: DEFAULTS.DEFAULT_WINDOW_RATIO_CAP,
 };
 
 export interface OverdueConfigs {

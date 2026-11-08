@@ -66,6 +66,7 @@ export const DEFAULTS = {
   DEFAULT_LUNCH_DURATION_MS: 45 * 60 * 1000, // 45 minutes, the starting value for the custom difficulty
   DEFAULT_CHECKPOINT_DECAY_MS: 15 * 60 * 1000, // 15 minutes, the starting value for the custom difficulty
   DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
+  DEFAULT_WINDOW_RATIO_CAP: 0.4, // The overdue window grows to at most this much of the screen
 } as const;
 
 export const FILENAMES = {
