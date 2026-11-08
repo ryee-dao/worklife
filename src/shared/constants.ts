@@ -44,12 +44,14 @@ export const EVENTS = {
         DIFFICULTY: "configs:save:difficulty",
         OVERDUE: "configs:save:overdue",
         WORKDAY: "configs:save:workday",
+        SOUND: "configs:save:sound",
       },
       LOAD: {
         TIMER: "configs:load:timer",
         DIFFICULTY: "configs:load:difficulty",
         OVERDUE: "configs:load:overdue",
         WORKDAY: "configs:load:workday",
+        SOUND: "configs:load:sound",
       },
     },
   },
@@ -72,6 +74,7 @@ export const FILENAMES = {
   DIFFICULTY: { CONFIGS: "difficultyConfigs.json" },
   WORKDAY: { CONFIGS: "workdayConfigs.json", STATE: "workdayState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
+  SOUND: { CONFIGS: "soundConfigs.json" },
   STATS: { EVENTS: "events.jsonl", STATE: "statsState.json" },
   TOUR: { STATE: "tourState.json" },
 } as const;

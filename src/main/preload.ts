@@ -4,6 +4,7 @@ import { TimerState } from "./timer/timerState";
 import { TimerConfigs } from "./timer/timerConfigs";
 import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "./workday/workdayConfigs";
+import { SoundConfigs } from "./sound/soundConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "@shared/types/electron";
 import { DayScore } from "./stats/checkpoints";
@@ -83,6 +84,12 @@ const electronAPI: ElectronAPI = {
   },
   saveWorkdayConfigs: async (configs: WorkdayConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, configs);
+  },
+  loadSoundConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.SOUND);
+  },
+  saveSoundConfigs: async (configs: SoundConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.SOUND, configs);
   },
   devApplyWorkday: async () => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY);
