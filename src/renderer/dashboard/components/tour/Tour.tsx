@@ -34,6 +34,8 @@ export default function Tour({ tour }: { tour: TourUpdate }) {
 
   const placement = placeCard(target, screen.height, card?.height ?? CARD_BAND_PX);
 
+  const dimsWholeTab = (beat.demo || beat.target) && !target;
+
   return (
     <div
       ref={root}
@@ -42,7 +44,7 @@ export default function Tour({ tour }: { tour: TourUpdate }) {
       className={`fixed inset-0 z-50 select-none pointer-events-none transition-opacity ${tour.fading ? "opacity-0 duration-[5000ms]" : "duration-150"}`}
     >
       {/* The spotlight dims the tab around its target. Without one on screen (a demo beat, or a replay mid-break) the whole tab is dimmed */}
-      {(beat.demo || beat.target) && !target && (
+      {dimsWholeTab && (
         <div className={`absolute inset-0 pointer-events-auto ${beat.demo ? "bg-slate-900/85" : "bg-slate-900/60"}`} />
       )}
       {beat.target && (

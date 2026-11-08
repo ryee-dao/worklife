@@ -27,7 +27,7 @@ export default function Stats({ todayScore }: StatsProps) {
     <div data-testid="stats" className="grow flex flex-col gap-3 p-3 sm:p-4 overflow-auto">
       <TodayPanel score={todayScore} />
       <div className="flex flex-col sm:flex-row gap-3 items-start">
-        <MonthCalendar scores={allScores} selectedDate={selectedDate} />
+        <MonthCalendar key={selectedDate} scores={allScores} selectedDate={selectedDate} />
         <DayCard score={selectedDate ? allScores[selectedDate] : undefined} localDate={selectedDate} />
       </div>
     </div>

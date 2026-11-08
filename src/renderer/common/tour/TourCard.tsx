@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { TourUpdate } from "@shared/tour/session";
 
 interface TourCardProps {
@@ -9,6 +10,9 @@ interface TourCardProps {
 export default function TourCard({ tour, className = "" }: TourCardProps) {
   const { beat, step, total } = tour;
   const isEnd = step >= total;
+  // The page behind the card is inert, so the keyboard starts on the card's button rather than at the top of the document
+  const action = useRef<HTMLButtonElement>(null);
+  useEffect(() => action.current?.focus(), [beat]);
 
   return (
     <div
@@ -24,7 +28,7 @@ export default function TourCard({ tour, className = "" }: TourCardProps) {
       <p className="text-sm text-slate-700 leading-snug">{beat.body}</p>
       <div className="flex items-center gap-4 pt-1.5 min-h-9">
         {!isEnd && (
-          <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${total}`}>
+          <div className="flex gap-1.5" role="img" aria-label={`Step ${step + 1} of ${total}`}>
             {Array.from({ length: total }, (_, index) => (
               <i key={index} className={`size-1.5 rounded-full ${index === step ? "bg-slate-900" : "bg-slate-300"}`} />
             ))}
@@ -43,6 +47,7 @@ export default function TourCard({ tour, className = "" }: TourCardProps) {
           )}
           {beat.action && (
             <button
+              ref={action}
               data-testid="tour-next"
               onClick={() => window.electronAPI.tourNext()}
               className="h-9 px-4 rounded-lg bg-slate-900 text-white text-sm font-semibold cursor-pointer hover:bg-slate-700"

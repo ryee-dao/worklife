@@ -4,10 +4,11 @@ import TopTabs from "./TopTabs";
 import Timer from "./timer/Timer";
 import Settings from "./settings/Settings";
 import { TimerState } from "@main/timer/timerState";
-import TimeSettings from "./settings/TimerSettings";
+import TimerSettings from "./settings/TimerSettings";
 import WorkdaySettings from "./settings/WorkdaySettings";
 import DifficultySettings from "./settings/DifficultySettings";
-import OverdueConfigsForm from "./settings/OverdueConfigsForm";
+import OverdueSettings from "./settings/OverdueSettings";
+import SoundSettings from "./settings/SoundSettings";
 import { playWarningSound } from "@renderer/common/utils/sound";
 import { DayScore } from "@main/stats/checkpoints";
 import Stats from "./stats/Stats";
@@ -22,13 +23,13 @@ const showDay = (localDate: string) => {
 };
 
 export default function Dashboard() {
-  const [timerStateObject, setTimerStateObject] = useState<TimerState>();
+  const [timerState, setTimerState] = useState<TimerState>();
   const [todayScore, setTodayScore] = useState<DayScore | null>(null);
   const [tour, setTour] = useState<TourUpdate | null>(); // Undefined until the app has said whether one is on
   // Fetched as well as subscribed: the update sent as the page loads can land before this subscribes, as the break window found
   useEffect(() => {
-    window.electronAPI.getTimerState().then(setTimerStateObject);
-    return window.electronAPI.onTimerUpdate(setTimerStateObject);
+    window.electronAPI.getTimerState().then(setTimerState);
+    return window.electronAPI.onTimerUpdate(setTimerState);
   }, []);
   useEffect(() => {
     window.electronAPI.getTour().then(setTour);
@@ -41,7 +42,8 @@ export default function Dashboard() {
     if (tour === null) window.electronAPI.takeUnseenDaySummary().then((localDate) => localDate && showDay(localDate));
   }, [tour]);
 
-  useEffect(() => window.electronAPI.onWarning(playWarningSound), []);
+  // The volume is read as it plays, so a change in Settings applies at once
+  useEffect(() => window.electronAPI.onWarning(() => window.electronAPI.loadSoundConfigs().then(({ volume }) => playWarningSound(volume))), []);
   useEffect(() => window.electronAPI.onTodayScore(setTodayScore), []);
   useEffect(() => window.electronAPI.onShowDay(showDay), []);
 
@@ -60,14 +62,15 @@ export default function Dashboard() {
           ?
         </button>
         <Routes>
-          <Route path="/timer" element={<Timer timerState={timerStateObject} />}></Route>
+          <Route path="/timer" element={<Timer timerState={timerState} />}></Route>
           <Route path="/stats/:localDate?" element={<Stats todayScore={todayScore} />} />
           <Route path="/settings" element={<Settings />}>
             <Route index element={<Navigate replace to="/settings/timer" />} />
-            <Route path="timer" element={<TimeSettings />} />
+            <Route path="timer" element={<TimerSettings />} />
             <Route path="workday" element={<WorkdaySettings />} />
             <Route path="difficulty" element={<DifficultySettings />} />
-            <Route path="overdue" element={<OverdueConfigsForm />} />
+            <Route path="overdue" element={<OverdueSettings />} />
+            <Route path="sound" element={<SoundSettings />} />
             {IS_DEV && <Route path="admin" element={<AdminSettings />} />}
           </Route>
 

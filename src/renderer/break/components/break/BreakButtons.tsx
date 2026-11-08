@@ -16,7 +16,7 @@ export default function BreakButtons({ timerState }: BreakButtonProps) {
       <CircularButton
         testId="break-window-skip-break-button"
         title="Skip break (uses a power-up)"
-        onClick={() => canSkip && window.electronAPI.skipBreak()}
+        onClick={() => window.electronAPI.skipBreak()}
         disabled={!canSkip}
         className={`h-full ${canSkip
           ? "bg-blue-200 text-slate-600 hover:bg-slate-300"

@@ -1,7 +1,4 @@
-import { Activity } from "@main/stats/checkpoints";
-import { CHECKPOINTS } from "@shared/constants";
-
-const maxLevel = CHECKPOINTS.NAMES.length - 1;
+import { Activity, MAX_LEVEL } from "@main/stats/checkpoints";
 
 // Sunrise shades, one per checkpoint, from Dim's white up to Radiant's orange
 export const LEVEL_COLORS = ["#ffffff", "#f3e8d6", "#e9cf9c", "#f4b942", "#f08c1a"];
@@ -27,18 +24,9 @@ export const diagonalFor = (share: number) => (share <= 0.5 ? Math.sqrt(share / 
 // Fills a day's square diagonally from its bottom-left corner, covering a quarter of it per checkpoint, so Radiant fills it all
 export const getLevelFill = (level: number) => {
   const color = LEVEL_COLORS[level];
-  const diagonalPercent = diagonalFor(level / maxLevel) * 100;
+  const diagonalPercent = diagonalFor(level / MAX_LEVEL) * 100;
   return {
     background: `linear-gradient(to top right, ${color} ${diagonalPercent}%, #fff ${diagonalPercent}%)`,
     borderColor: level ? color : "#e2e8f0",
   };
-};
-
-// "H:MM:SS", or "M:SS" under an hour
-export const formatCountdown = (ms: number) => {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds / 60) % 60;
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}` : `${minutes}:${seconds}`;
 };

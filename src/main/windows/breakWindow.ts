@@ -1,44 +1,43 @@
 import { BrowserWindow, Rectangle, Size, screen } from "electron";
-import { setWorkArea, workArea } from "@main/display";
 import { PRELOAD_PATH, IS_DEV, IS_TEST, RENDERER_PATH } from "@main/env";
-import { getWorkArea, refreshWorkAreaForBounds } from "@main/display";
+import { getWorkArea, refreshWorkAreaForBounds, setWorkArea } from "@main/display";
 import { clampRectToWorkArea, convertOverdueLevelObjectToScreenSize, convertOverdueTimeToOverdueLevelObject, createOverdueLevelsArray, OverdueLevelObject } from "@main/overdue/overdueGeometry";
 import { emitTimerStatus, TimerState, TimerStatus, getTimerState } from "@main/timer/timerState";
 import { getAppliedOverdueConfigs } from "@main/overdue/overdueConfigs";
 import path from "path";
 
 // Constants related to overdue resizing logic
+// Kiosk and always-on-top get in the way of dev tools and test runners
+const PINS_WINDOWS = !IS_DEV && !IS_TEST;
+const RESTORE_AFTER_MINIMIZE_MS = 250;
+
 let lastAppliedOverdueLevelIdx: number = -1;
-export let currentOverdueSize: Size | undefined;
+let currentOverdueSize: Size | undefined;
 
 export let breakWindow: BrowserWindow | null = null;
 // The status the window opens on: the timer's, or the tour's clock while a tour owns the window
 export function createBreakWindow(status: () => TimerStatus = () => getTimerState().status) {
-  // Init break/overdue window
   breakWindow = new BrowserWindow({
     show: false,
     backgroundColor: '#000000',
     minimizable: false,
     maximizable: false,
-    resizable: false, // Comment this back out if window ever needs to be resizable again
+    resizable: false, // Kiosk mode turns it back on, see activateKioskModeForBreakWindow
     closable: false,
     webPreferences: {
       preload: PRELOAD_PATH, // Compiled preload file
     },
   });
 
-  // Render the break window html
-  if (!IS_DEV) {
-    breakWindow.loadFile(path.join(RENDERER_PATH, "break/index.html"));
-  } else if (IS_DEV) {
+  if (IS_DEV) {
     breakWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/break/`);
+  } else {
+    breakWindow.loadFile(path.join(RENDERER_PATH, "break/index.html"));
   }
 
-  // Render the break window once it's ready
   breakWindow.once('ready-to-show', () => {
     breakWindow!.show();
-    // Make this into "if !!IS_DEV" if you are developing and want the overdue window to always be on top
-    if (!IS_DEV && !IS_TEST) {
+    if (PINS_WINDOWS) {
       breakWindow!.setAlwaysOnTop(true, "pop-up-menu");
     }
 
@@ -47,73 +46,52 @@ export function createBreakWindow(status: () => TimerStatus = () => getTimerStat
     }
   });
 
-  // Emit the timer status when the break window loads
+  // So the window doesn't wait a tick for its first state
   breakWindow.webContents.once('did-finish-load', () => {
     emitTimerStatus();
   });
 
-  // Keep the overdue window inside the screen when dragged toward an edge (a "wall")
+  // The window can't be dragged off the screen. The move is only touched when it went out of bounds, so dragging stays smooth
   breakWindow.on("will-move", (event, newBounds) => {
-    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
-
-    // Clamp using our stored TRUE size, not newBounds' size. On Windows/DPI scaling,
-    // setBounds rounds sub-pixel sizes, and reading that back each move would let the
-    // window grow a pixel at a time. Using the authoritative size breaks that feedback loop.
-    const trueBounds = {
-      x: newBounds.x,
-      y: newBounds.y,
-      width: currentOverdueSize.width,
-      height: currentOverdueSize.height,
-    };
-    const clamped = clampRectToWorkArea(trueBounds, workArea);
-
-    // Only intervene if the move actually went out of bounds — otherwise let the
-    // native drag proceed so it feels smooth
-    if (clamped.x !== newBounds.x || clamped.y !== newBounds.y) {
-      event.preventDefault();          // cancel the OS's out-of-bounds move
-      breakWindow.setBounds(clamped);  // re-assert position AND known-good size
+    const clamped = clampedMove(newBounds);
+    if (clamped) {
+      event.preventDefault();
+      breakWindow!.setBounds(clamped);
     }
   });
 
-  // For Mac
+  // Mac doesn't fire will-move, so there the correction comes after the move
   breakWindow.on("move", () => {
-    if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return;
-
-    const bounds = breakWindow.getBounds();
-    const trueBounds = {
-      x: bounds.x,
-      y: bounds.y,
-      width: currentOverdueSize.width,
-      height: currentOverdueSize.height,
-    };
-    const clamped = clampRectToWorkArea(trueBounds, workArea);
-
-    if (clamped.x !== bounds.x || clamped.y !== bounds.y) {
-      breakWindow.setBounds(clamped);
-    }
+    const clamped = clampedMove(breakWindow!.getBounds());
+    if (clamped) breakWindow!.setBounds(clamped);
   });
 
-  // If minimized, bring it back to screen
+  // Minimizing it is not a way out
   breakWindow.on('minimize', () => {
     setTimeout(() => {
       if (breakWindow && !breakWindow.isDestroyed()) {
         breakWindow.restore();
         breakWindow.focus();
       }
-    }, 250);
+    }, RESTORE_AFTER_MINIMIZE_MS);
   });
 
 }
 
+// Where a move must be put back, or null when it stayed on screen. Clamped with the size this module set rather than the one read
+// back: on Windows with DPI scaling setBounds rounds, and re-reading each move would let the window grow a pixel at a time
+const clampedMove = ({ x, y }: { x: number; y: number }) => {
+  const workArea = getWorkArea();
+  if (!breakWindow || breakWindow.isDestroyed() || !workArea || !currentOverdueSize) return null;
+  const clamped = clampRectToWorkArea({ x, y, ...currentOverdueSize }, workArea);
+  return clamped.x !== x || clamped.y !== y ? clamped : null;
+};
+
 export function activateKioskModeForBreakWindow() {
-  // Make this into "if !!IS_DEV" if you are developing and want the break window to be full screen
-  if (!IS_DEV && !IS_TEST) {
-    // setTimeout(() => {
-    if (breakWindow) {
-      breakWindow.setResizable(true)
-      breakWindow.setKiosk(true)
-    }
-    // }, 0);
+  // shortcut: an earlier build wrapped this in setTimeout(0) against a flash on Mac; restore it with a why if a Mac test shows the flash
+  if (PINS_WINDOWS && breakWindow) {
+    breakWindow.setResizable(true)
+    breakWindow.setKiosk(true)
   }
 }
 
@@ -138,13 +116,14 @@ export const resizeBreakWindow = (timerState: TimerState, levels: OverdueLevelOb
 
   // Only resize when crossing into a new level — not every tick
   if (lastAppliedOverdueLevelIdx < overdueLevelObject.levelIdx) {
+    const workArea = getWorkArea()!;
     const resizedScreenSize = convertOverdueLevelObjectToScreenSize(
-      { height: workArea!.height, width: workArea!.width },
+      { height: workArea.height, width: workArea.width },
       overdueLevelObject
     )
     const windowCoords = breakWindow!.getBounds()
     const desiredBounds = { x: windowCoords.x, y: windowCoords.y, ...resizedScreenSize };
-    const clampedBounds = clampRectToWorkArea(desiredBounds, workArea!);
+    const clampedBounds = clampRectToWorkArea(desiredBounds, workArea);
     breakWindow!.setBounds(clampedBounds);
     // Store the size we intended, so the clamp handler can re-assert it instead of
     // reading back the window's (DPI-rounding-drifted) size — prevents growth on repeated moves
@@ -155,6 +134,7 @@ export const resizeBreakWindow = (timerState: TimerState, levels: OverdueLevelOb
 
 // Puts the window in the corner of the work area farthest from another window, so what that window shows stays readable as this one grows
 export const moveBreakWindowAwayFrom = (other: Rectangle) => {
+  const workArea = getWorkArea();
   if (!breakWindow || breakWindow.isDestroyed() || !workArea) return;
   const { width, height } = breakWindow.getBounds();
   const otherOnTheLeft = other.x + other.width / 2 < workArea.x + workArea.width / 2;

@@ -9,8 +9,6 @@ interface OverdueViewProps {
 // Sizes follow the box it's in (container queries), so it looks the same in its own window and in a demo box.
 // Letter-spacing trails the last letter, so the same amount of left padding keeps the text centered
 export default function OverdueView({ timerState }: OverdueViewProps) {
-  if (!timerState) return null;
-
   return (
     <div className="[container-type:size] flex flex-col items-center justify-between py-[8cqh] h-full bg-yellow-200">
       <span

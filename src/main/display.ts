@@ -1,6 +1,6 @@
 import { screen } from "electron";
 
-export let workArea: Electron.Rectangle | undefined;
+let workArea: Electron.Rectangle | undefined;
 
 export function setWorkArea() {
   workArea = screen.getPrimaryDisplay().workArea;

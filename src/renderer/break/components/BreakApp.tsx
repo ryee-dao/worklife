@@ -8,16 +8,16 @@ import { useElementRect } from "@renderer/common/tour/useElementRect";
 
 const PULSE_GAP_PX = 6;
 
-export default function BreakWindow() {
-  const [timerStateObject, setTimerStateObject] = useState<TimerState>();
+export default function BreakApp() {
+  const [timerState, setTimerState] = useState<TimerState>();
   const [tour, setTour] = useState<TourUpdate | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // In the tour's overdue beat the palm is the one live button, so it gets the ring
   const palm = useElementRect(tour?.beat.advanceOn === "breaktime" ? "overdue-window-start-break-button" : undefined, root);
 
   useEffect(() => {
-    window.electronAPI.getTimerState().then(setTimerStateObject);
-    return window.electronAPI.onTimerUpdate(setTimerStateObject);
+    window.electronAPI.getTimerState().then(setTimerState);
+    return window.electronAPI.onTimerUpdate(setTimerState);
   }, []);
   useEffect(() => {
     window.electronAPI.getTour().then(setTour);
@@ -26,12 +26,8 @@ export default function BreakWindow() {
 
   return (
     <div ref={root} className="relative h-full">
-      {
-        timerStateObject?.status === "OVERDUE" && <OverdueView timerState={timerStateObject} />
-      }
-      {
-        timerStateObject?.status === "BREAK" && <BreakView timerState={timerStateObject} />
-      }
+      {timerState?.status === "OVERDUE" && <OverdueView timerState={timerState} />}
+      {timerState?.status === "BREAK" && <BreakView timerState={timerState} />}
       {tour && (
         <div className={`absolute inset-0 pointer-events-none select-none transition-opacity ${tour.fading ? "opacity-0 duration-[5000ms]" : "duration-150"}`}>
           {palm && (
@@ -41,9 +37,9 @@ export default function BreakWindow() {
               style={{ left: palm.left - PULSE_GAP_PX, top: palm.top - PULSE_GAP_PX, width: palm.width + 2 * PULSE_GAP_PX, height: palm.height + 2 * PULSE_GAP_PX }}
             />
           )}
-          {/* The overdue window starts small, so it repeats the dashboard's card, which goes by fast, as one strip over its title */}
+          {/* The overdue window starts small, so it repeats the dashboard's card, which goes by fast, as one strip in the gap between the buttons and the clock */}
           {tour.beat.demo === "OVERDUE" && (
-            <p data-testid="tour-note" className="absolute inset-x-3 top-3 rounded-xl bg-white px-4 py-2 text-sm text-slate-700 shadow-2xl">
+            <p data-testid="tour-note" className="absolute inset-x-3 top-[62%] rounded-xl bg-white px-4 py-2 text-sm text-slate-700 shadow-2xl">
               {tour.beat.windowBody}
             </p>
           )}

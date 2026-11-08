@@ -16,34 +16,33 @@ export function createSettingsWindow() {
     show: false,
   });
 
-  // Only show window when everything is loaded
   settingsWindow.once('ready-to-show', () => settingsWindow!.show());
 
-  // Emit the timer status initially when the setting window first loads 
-  // so it doesn't have to wait for first interval
+  // So the window doesn't wait a tick for its first state
   settingsWindow.webContents.once('did-finish-load', () => {
     emitTimerStatus();
   });
 
-  if (!IS_DEV) {
-    settingsWindow.loadFile(path.join(RENDERER_PATH, "dashboard/index.html"));
-  } else if (IS_DEV) {
+  if (IS_DEV) {
     settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}/dashboard/`);
+  } else {
+    settingsWindow.loadFile(path.join(RENDERER_PATH, "dashboard/index.html"));
   }
 
   return settingsWindow;
 }
+
+const ON_TOP_MS = 1000; // Long enough to be seen, then the window goes back to being ordinary
 
 export function showTimerOnTop() {
   settingsWindow!.setAlwaysOnTop(true);
   settingsWindow!.show();
   settingsWindow!.focus();
   setTimeout(() => {
-    // Set a second grace period so the window issue automatically clicked off
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.setAlwaysOnTop(false);
     }
-  }, 1000);
+  }, ON_TOP_MS);
 }
 
 export function showDaySummary(localDate: string) {
@@ -53,11 +52,10 @@ export function showDaySummary(localDate: string) {
 }
 
 export function registerSettingsWindowListeners(isForceQuitting: () => boolean) {
-  // Use a getter callback for isForceQuitting as passing the boolean alone won't get updated values
+  // A getter, since the flag flips after this is registered
   settingsWindow!.on("close", (event) => {
     if (!isForceQuitting()) {
-      // On close, don't actually close, just hide
-      event.preventDefault();
+      event.preventDefault(); // Closing hides the window; the app lives in the tray
       settingsWindow!.hide();
     }
   });

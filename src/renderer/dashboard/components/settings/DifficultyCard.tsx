@@ -1,3 +1,4 @@
+import { formatDuration } from "@shared/utils/time";
 import { AlarmClockPlus, Hourglass, Sandwich, TreePalm, Zap } from "lucide-react";
 import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
 import { LEVEL_COLORS } from "@renderer/dashboard/components/stats/checkpointStyles";
@@ -20,14 +21,6 @@ const sunByLevel: Record<PresetLevel, { y: number; r: number; color: string; sky
   EASY: { y: 82, r: 11, color: LEVEL_COLORS[2], sky: "#ffedd5" },
   NORMAL: { y: 56, r: 13, color: LEVEL_COLORS[3], sky: "#fef3c7" },
   HARD: { y: 28, r: 16, color: LEVEL_COLORS[4], sky: "#fde68a" },
-};
-
-export const formatDuration = (ms: number) => {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) return `${seconds}s`;
-  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
 };
 
 function Emblem({ level }: { level: PresetLevel }) {

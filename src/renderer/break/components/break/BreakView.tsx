@@ -19,16 +19,12 @@ export default function BreakView({ timerState }: BreakViewProps) {
         <span>BREAK</span>
       </div>
       <div className="h-2/3 flex flex-col items-center">
-        {timerState && (
-          <>
-            <div className="h-1/2 flex justify-center pt-4">
-              <BreakButtons timerState={timerState} />
-            </div>
-            <div className="h-1/2 flex justify-center">
-              <BreakTimeDisplay timerState={timerState} />
-            </div>
-          </>
-        )}
+        <div className="h-1/2 flex justify-center pt-4">
+          <BreakButtons timerState={timerState} />
+        </div>
+        <div className="h-1/2 flex justify-center">
+          <BreakTimeDisplay timerState={timerState} />
+        </div>
       </div>
     </div>
   );

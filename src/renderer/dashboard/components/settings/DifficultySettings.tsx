@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { AlarmClockPlus, Hourglass, Sandwich, TreePalm, Wrench, Zap } from "lucide-react";
 import { DifficultyConfigs, DifficultyLevel } from "@main/difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "@main/workday/workdayConfigs";
@@ -6,7 +6,7 @@ import { getPresetConfigs } from "@shared/utils/difficulty";
 import { convertMinutesToMs, convertMsToMinutes, convertMsToSeconds, convertSecondsToMs } from "@shared/utils/time";
 import { IS_DEV } from "@renderer/common/constants";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "@renderer/common/components/NumberInput";
+import NumberInput, { inRange } from "@renderer/common/components/NumberInput";
 import DifficultyCard, { DifficultyValues, PresetLevel } from "./DifficultyCard";
 
 const presetNames: Record<PresetLevel, string> = {
@@ -28,19 +28,14 @@ export default function DifficultySettings() {
   const [lunchDurationInMinutes, setLunchDurationInMinutes] = useState(0);
   const [decayInMinutes, setDecayInMinutes] = useState(0);
 
-  // Break and snooze scale with the saved timer length, and the checkpoint drain with the workday
-  useEffect(() => {
-    window.electronAPI.loadTimerConfigs().then((configs) => setTimerDurationMs(configs.timerDurationMs));
-    window.electronAPI.loadWorkdayConfigs().then(setWorkday);
-  }, []);
-
-  const breakMinSeconds = IS_DEV ? 1 : 10;
-  const powerupsMaxLimit = IS_DEV ? 9999999 : 5;
-  const breakValid = breakDurationInSeconds >= breakMinSeconds && breakDurationInSeconds <= 600;
-  const allottedPowerupsValid = allottedPowerups >= 0 && allottedPowerups <= powerupsMaxLimit;
-  const snoozeValid = snoozeDurationInMinutes >= 1 && snoozeDurationInMinutes <= 60;
-  const lunchValid = lunchDurationInMinutes >= 1 && lunchDurationInMinutes <= 120;
-  const decayValid = decayInMinutes >= 1 && decayInMinutes <= 120;
+  // Dev gets room to make breaks and power-ups trivial for testing
+  const customFields = [
+    { testId: "break-duration", icon: <TreePalm className="size-5 text-green-700" />, label: "Break", unit: "sec", range: { min: IS_DEV ? 1 : 10, max: 600 }, value: breakDurationInSeconds, set: setBreakDurationInSeconds },
+    { testId: "allowed-powerup-count", icon: <Zap className="size-5 text-amber-500 fill-amber-400" />, label: "Power-ups", unit: "a day", range: { min: 0, max: IS_DEV ? 9999999 : 5, step: 1 as const }, value: allottedPowerups, set: setAllottedPowerups },
+    { testId: "snooze-duration", icon: <AlarmClockPlus className="size-5 text-slate-600" />, label: "Snooze", unit: "min", range: { min: 1, max: 60 }, value: snoozeDurationInMinutes, set: setSnoozeDurationInMinutes },
+    { testId: "lunch-duration", icon: <Sandwich className="size-5 text-orange-500" />, label: "Lunch", unit: "min", range: { min: 1, max: 120 }, value: lunchDurationInMinutes, set: setLunchDurationInMinutes },
+    { testId: "checkpoint-decay", icon: <Hourglass className="size-5 text-red-600" />, label: "Stopped, lose a checkpoint every", unit: "min", range: { min: 1, max: 120 }, value: decayInMinutes, set: setDecayInMinutes },
+  ];
   const isCustom = level === "CUSTOM";
 
   const presets = timerDurationMs === undefined || !workday ? []
@@ -57,9 +52,15 @@ export default function DifficultySettings() {
   return (
     <SettingsPanel<DifficultyConfigs>
       title="Difficulty"
-      isValid={!isCustom || (breakValid && allottedPowerupsValid && snoozeValid && lunchValid && decayValid)}
+      isValid={!isCustom || customFields.every(({ value, range }) => inRange(value, range))}
       successMessage="Settings saved successfully. Changes will reflect after next break"
-      load={() => window.electronAPI.loadDifficultyConfigs()}
+      // Break and snooze scale with the saved timer length, and the checkpoint drain with the workday, so the page waits for all three
+      load={async () => {
+        const [difficulty, timer, workday] = await Promise.all([window.electronAPI.loadDifficultyConfigs(), window.electronAPI.loadTimerConfigs(), window.electronAPI.loadWorkdayConfigs()]);
+        setTimerDurationMs(timer.timerDurationMs);
+        setWorkday(workday);
+        return difficulty;
+      }}
       save={(configs) => window.electronAPI.saveDifficultyConfigs(configs)}
       buildConfig={() => ({
         level,
@@ -119,50 +120,17 @@ export default function DifficultySettings() {
 
       {isCustom && (
         <div className="mt-2 grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-1 items-center justify-center text-slate-700 tracking-wider px-2">
-          <TreePalm className="size-5 text-green-700" />
-          <label data-testid="break-duration" className="col-span-2">
-            Break{" "}
-            <NumberInput min={breakMinSeconds} max={600} value={breakDurationInSeconds}
-              onChange={(e) => setBreakDurationInSeconds(Number(e.target.value))} />{" "}
-            sec
-            {!breakValid && <span className="ml-2 text-sm text-red-600">{breakMinSeconds} to 600</span>}
-          </label>
-
-          <Zap className="size-5 text-amber-500 fill-amber-400" />
-          <label data-testid="allowed-powerup-count" className="col-span-2">
-            Power-ups{" "}
-            <NumberInput min={0} max={powerupsMaxLimit} value={allottedPowerups}
-              onChange={(e) => setAllottedPowerups(Number(e.target.value))} />{" "}
-            a day
-            {!allottedPowerupsValid && <span className="ml-2 text-sm text-red-600">0 to {powerupsMaxLimit}</span>}
-          </label>
-
-          <AlarmClockPlus className="size-5 text-slate-600" />
-          <label data-testid="snooze-duration" className="col-span-2">
-            Snooze{" "}
-            <NumberInput min={1} max={60} value={snoozeDurationInMinutes}
-              onChange={(e) => setSnoozeDurationInMinutes(Number(e.target.value))} />{" "}
-            min
-            {!snoozeValid && <span className="ml-2 text-sm text-red-600">1 to 60</span>}
-          </label>
-
-          <Sandwich className="size-5 text-orange-500" />
-          <label data-testid="lunch-duration" className="col-span-2">
-            Lunch{" "}
-            <NumberInput min={1} max={120} value={lunchDurationInMinutes}
-              onChange={(e) => setLunchDurationInMinutes(Number(e.target.value))} />{" "}
-            min
-            {!lunchValid && <span className="ml-2 text-sm text-red-600">1 to 120</span>}
-          </label>
-
-          <Hourglass className="size-5 text-red-600" />
-          <label data-testid="checkpoint-decay" className="col-span-2">
-            Stopped, lose a checkpoint every{" "}
-            <NumberInput min={1} max={120} value={decayInMinutes}
-              onChange={(e) => setDecayInMinutes(Number(e.target.value))} />{" "}
-            min
-            {!decayValid && <span className="ml-2 text-sm text-red-600">1 to 120</span>}
-          </label>
+          {customFields.map(({ testId, icon, label, unit, range, value, set }) => (
+            <Fragment key={testId}>
+              {icon}
+              <label data-testid={testId} className="col-span-2">
+                {label}{" "}
+                <NumberInput {...range} value={value} onValueChange={set} />{" "}
+                {unit}
+                {!inRange(value, range) && <span className="ml-2 text-sm text-red-600">{range.min} to {range.max}</span>}
+              </label>
+            </Fragment>
+          ))}
         </div>
       )}
     </SettingsPanel>

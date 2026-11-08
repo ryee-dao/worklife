@@ -1,16 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { DayScore } from "@main/stats/checkpoints";
+import { DayScore, MAX_LEVEL } from "@main/stats/checkpoints";
 import { CHECKPOINTS } from "@shared/constants";
 import { getLevelFill, LEVEL_COLORS } from "./checkpointStyles";
 import { getTodayDateAsString } from "@shared/utils/date";
 
 interface MonthCalendarProps {
   scores: Record<string, DayScore>;
-  selectedDate?: string;
+  selectedDate?: string; // Keyed on by the parent, so a newly picked day opens on its month
 }
-
-const maxLevel = CHECKPOINTS.NAMES.length - 1;
 const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // "YYYY-MM", the month a local date is in
@@ -35,15 +33,10 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
   const today = getTodayDateAsString();
   const [month, setMonth] = useState(toMonth(selectedDate ?? today));
 
-  // Show the month of the day picked, like a past day's end-of-day card
-  useEffect(() => {
-    if (selectedDate) setMonth(toMonth(selectedDate));
-  }, [selectedDate]);
-
   // Radiant counts as a whole day, Shine as ¾, and so on. Today counts once it's over
   const monthTotal = Object.values(scores)
     .filter((score) => toMonth(score.localDate) === month && !score.inProgress)
-    .reduce((total, score) => total + score.level / maxLevel, 0);
+    .reduce((total, score) => total + score.level / MAX_LEVEL, 0);
   const monthName = new Date(`${month}-01T12:00:00`).toLocaleDateString([], { month: "long", year: "numeric" });
 
   return (
@@ -70,7 +63,8 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
           if (!localDate) return <div key={`blank-${index}`} />;
           const score = scores[localDate];
           const isFuture = localDate > today;
-          const outline = localDate === selectedDate ? "outline-2 outline-slate-800" : localDate === today ? "outline-1 outline-slate-400" : "";
+          const outline = localDate === selectedDate ? "outline-2 outline-slate-800" : "";
+          const todayRing = localDate === today && !outline ? "outline-1 outline-slate-400" : "";
           return (
             <button
               key={localDate}
@@ -79,7 +73,7 @@ export default function MonthCalendar({ scores, selectedDate }: MonthCalendarPro
               disabled={isFuture}
               onClick={() => navigate(`/stats/${localDate}`)}
               className={`relative h-9 border rounded-md outline-offset-1 text-left text-[10px] leading-none p-1 text-stone-700
-                enabled:cursor-pointer disabled:opacity-35 ${score?.inProgress ? "opacity-60" : ""} ${outline}`}
+                enabled:cursor-pointer disabled:opacity-35 ${score?.inProgress ? "opacity-60" : ""} ${outline} ${todayRing}`}
               style={score ? getLevelFill(score.level) : { borderColor: "#e2e8f0" }}
             >
               <span className="absolute top-0.5 left-1">{Number(localDate.slice(8))}</span>

@@ -2,15 +2,17 @@ import { useState } from "react";
 import { convertMinutesToMs, convertMsToMinutes } from "@shared/utils/time";
 import { TimerConfigs } from "@main/timer/timerConfigs";
 import SettingsPanel from "./SettingsPanel";
-import NumberInput from "@renderer/common/components/NumberInput";
+import NumberInput, { inRange } from "@renderer/common/components/NumberInput";
+
+const BLOCK_MINUTES = { min: 1, max: 600 };
 
 export default function TimerSettings() {
   const [timerDurationInMinutes, setTimerDurationInMinutes] = useState(0);
   const [warningThresholdInMinutes, setWarningThresholdInMinutes] = useState(0);
 
-  const timerValid = timerDurationInMinutes >= 1 && timerDurationInMinutes <= 600;
-  const warningMax = Math.max(1, timerDurationInMinutes - 1);
-  const warningValid = warningThresholdInMinutes >= 1 && warningThresholdInMinutes <= warningMax;
+  const timerValid = inRange(timerDurationInMinutes, BLOCK_MINUTES);
+  const warningMinutes = { min: 1, max: Math.max(1, timerDurationInMinutes - 1) }; // The warning comes before the end of the block
+  const warningValid = inRange(warningThresholdInMinutes, warningMinutes);
 
   return (
     <SettingsPanel<TimerConfigs>
@@ -31,25 +33,23 @@ export default function TimerSettings() {
       <div data-testid="timer-duration" className="tracking-wider p-2">
         <label>
           I want to take a break every{" "}
-          <NumberInput min={1} max={600} value={timerDurationInMinutes}
-            onChange={(e) => setTimerDurationInMinutes(Number(e.target.value))} />{" "}
+          <NumberInput {...BLOCK_MINUTES} value={timerDurationInMinutes} onValueChange={setTimerDurationInMinutes} />{" "}
           minutes
         </label>
         {!timerValid && (
-          <p className="text-sm text-red-600 mt-1">Must be between 1 and 600 minutes</p>
+          <p className="text-sm text-red-600 mt-1">Must be between {BLOCK_MINUTES.min} and {BLOCK_MINUTES.max} minutes</p>
         )}
       </div>
 
       <div data-testid="warning-threshold" className="tracking-wider p-2">
         <label>
           I want a warning{" "}
-          <NumberInput min={1} max={warningMax} value={warningThresholdInMinutes}
-            onChange={(e) => setWarningThresholdInMinutes(Number(e.target.value))} />{" "}
+          <NumberInput {...warningMinutes} value={warningThresholdInMinutes} onValueChange={setWarningThresholdInMinutes} />{" "}
           minutes before the break starts
         </label>
         {!warningValid && (
           <p className="text-sm text-red-600 mt-1">
-            Must be between 1 and {warningMax} minutes
+            Must be between {warningMinutes.min} and {warningMinutes.max} minutes
           </p>
         )}
       </div>

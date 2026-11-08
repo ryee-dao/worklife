@@ -48,8 +48,7 @@ export default function SettingsPanel<T>({
         <button
           disabled={!isValid}
           onClick={saveChanges}
-          className={`px-3 py-0.5 border rounded bg-blue-300 w-3/4 sm:w-48 ${!isValid ? "cursor-not-allowed bg-slate-400" : "active:bg-blue-500"
-            }`}
+          className={`px-3 py-0.5 border rounded w-3/4 sm:w-48 ${isValid ? "bg-blue-300 active:bg-blue-500" : "bg-slate-400 cursor-not-allowed"}`}
         >
           SAVE CHANGES
         </button>
