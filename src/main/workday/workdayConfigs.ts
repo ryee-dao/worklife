@@ -1,6 +1,8 @@
 import { FILENAMES } from "@shared/constants";
 import { getTodayDateAsString } from "@shared/utils/date";
 import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
+import { fromSaved } from "@shared/utils/configs";
+import { isValidWorkdayHours } from "@shared/utils/time";
 
 export interface WorkdayConfigs {
   days: number[];   // 0 = Sunday, matching Date.getDay()
@@ -28,7 +30,15 @@ let workdayState: WorkdayState;
 
 export const loadWorkdayConfigs = () => {
   const workdayConfigsData = getUserDataFromFile<WorkdayConfigs>(FILENAMES.WORKDAY.CONFIGS);
-  workdayConfigs = { ...defaultWorkdayConfigs, ...workdayConfigsData?.fileContent };
+  const saved = workdayConfigsData?.fileContent;
+  const isTime = (value: unknown) => typeof value === "string" && /^\d\d:\d\d$/.test(value);
+  const hoursValid = isTime(saved?.start) && isTime(saved?.end) && isValidWorkdayHours(saved!.start, saved!.end); // Start and end only make sense together
+  workdayConfigs = fromSaved(defaultWorkdayConfigs, saved, {
+    days: (value) => Array.isArray(value) && value.length > 0 && value.every((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+    start: () => hoursValid,
+    end: () => hoursValid,
+    autoStopAtEnd: (value) => typeof value === "boolean",
+  });
   writeToUserDataFile(FILENAMES.WORKDAY.CONFIGS, workdayConfigs);
 
   const savedWorkdayState = getUserDataFromFile<WorkdayState>(FILENAMES.WORKDAY.STATE).fileContent;

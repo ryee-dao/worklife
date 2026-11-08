@@ -1,5 +1,6 @@
 import { DEFAULTS, DIFFICULTY_PRESETS, FILENAMES } from "@shared/constants";
 import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
+import { fromSaved, isCount, isPositiveMs } from "@shared/utils/configs";
 
 export type DifficultyLevel = keyof typeof DIFFICULTY_PRESETS | "CUSTOM";
 
@@ -26,8 +27,12 @@ let appliedDifficultyConfigs: DifficultyConfigs;
 
 export const loadDifficultyConfigs = () => {
   const difficultyConfigsData = getUserDataFromFile<DifficultyConfigs>(FILENAMES.DIFFICULTY.CONFIGS);
-  const savedConfigs = difficultyConfigsData?.fileContent;
-  difficultyConfigs = { ...defaultDifficultyConfigs, ...savedConfigs };
+  const saved = difficultyConfigsData?.fileContent;
+  const { custom } = defaultDifficultyConfigs;
+  difficultyConfigs = {
+    ...fromSaved(defaultDifficultyConfigs, saved, { level: (value) => typeof value === "string" && value in DIFFICULTY_PRESETS || value === "CUSTOM", custom: () => false }),
+    custom: fromSaved(custom, saved?.custom, { breakDurationMs: isPositiveMs, snoozeDurationMs: isPositiveMs, allottedPowerups: isCount, lunchDurationMs: isPositiveMs, checkpointDecayMs: isPositiveMs }),
+  };
   writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
   applyDifficultyConfigs();
 }

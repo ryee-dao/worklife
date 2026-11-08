@@ -16,11 +16,23 @@ export function getUserDataFromFile<T>(fileName: string) {
   return { filePath, fileContent };
 }
 
+// A write that fails (disk full, a file held open on Windows) is logged, not thrown: writes come from inside the timer's
+// interval, where a throw would take the app down while the state in memory was fine. The next write tries again
+const attempt = (fileName: string, write: () => void) => {
+  try {
+    write();
+  } catch (error) {
+    console.warn(`Could not save ${fileName}:`, error);
+  }
+};
+
 export function writeToUserDataFile(fileName: string, fileContent: unknown) {
   const filePath = path.join(app.getPath("userData"), fileName);
   // Write then rename, so a crash mid-write never leaves a half-written file
-  fs.writeFileSync(`${filePath}.tmp`, JSON.stringify(fileContent));
-  fs.renameSync(`${filePath}.tmp`, filePath);
+  attempt(fileName, () => {
+    fs.writeFileSync(`${filePath}.tmp`, JSON.stringify(fileContent));
+    fs.renameSync(`${filePath}.tmp`, filePath);
+  });
 }
 
 export function readUserDataTextFile(fileName: string) {
@@ -29,5 +41,5 @@ export function readUserDataTextFile(fileName: string) {
 }
 
 export function appendToUserDataFile(fileName: string, content: string) {
-  fs.appendFileSync(path.join(app.getPath("userData"), fileName), content);
+  attempt(fileName, () => fs.appendFileSync(path.join(app.getPath("userData"), fileName), content));
 }

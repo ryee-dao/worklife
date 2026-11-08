@@ -1,5 +1,6 @@
 import { DEFAULTS, FILENAMES } from "@shared/constants";
 import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
+import { fromSaved, isPositiveMs } from "@shared/utils/configs";
 
 const defaultTimerConfigs: TimerConfigs = {
   timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
@@ -17,7 +18,7 @@ let appliedTimerConfigs: TimerConfigs;
 
 export const loadTimerConfigs = () => {
   const timerConfigsData = getUserDataFromFile<TimerConfigs>(FILENAMES.TIMER.CONFIGS);
-  timerConfigs = { ...defaultTimerConfigs, ...timerConfigsData?.fileContent };
+  timerConfigs = fromSaved(defaultTimerConfigs, timerConfigsData?.fileContent, { timerDurationMs: isPositiveMs, warningThresholdMs: isPositiveMs });
   writeToUserDataFile(FILENAMES.TIMER.CONFIGS, timerConfigs);
   applyTimerConfigs();
 }

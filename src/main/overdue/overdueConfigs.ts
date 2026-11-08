@@ -1,5 +1,6 @@
 import { DEFAULTS, FILENAMES, CONSTRAINTS } from "@shared/constants";
 import { getUserDataFromFile, writeToUserDataFile } from "@shared/utils/files";
+import { fromSaved, isBetween, isPositiveMs } from "@shared/utils/configs";
 
 const MAXIMUM_WINDOW_LEVEL = CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_LEVEL;
 const MAXIMUM_WINDOW_RATIO = CONSTRAINTS.OVERDUE.MAXIMUM_WINDOW_RATIO;
@@ -22,7 +23,11 @@ let appliedOverdueConfigs: OverdueConfigs;
 
 export const loadOverdueConfigs = () => {
   const overdueConfigsData = getUserDataFromFile<OverdueConfigs>(FILENAMES.OVERDUE.CONFIGS);
-  overdueConfigs = { ...defaultOverdueConfigs, ...overdueConfigsData?.fileContent };
+  overdueConfigs = fromSaved(defaultOverdueConfigs, overdueConfigsData?.fileContent, {
+    levelThresholdMs: isPositiveMs,
+    windowLevelCap: (value) => Number.isInteger(value) && isBetween(1, MAXIMUM_WINDOW_LEVEL)(value), // Zero levels would leave the window with no size
+    windowRatioCap: isBetween(0.1, MAXIMUM_WINDOW_RATIO),
+  });
   writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, overdueConfigs);
   applyOverdueConfigs();
 }
