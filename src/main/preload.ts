@@ -4,9 +4,11 @@ import { TimerState } from "./timer/timerState";
 import { TimerConfigs } from "./timer/timerConfigs";
 import { DifficultyConfigs } from "./difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "./workday/workdayConfigs";
+import { SoundConfigs } from "./sound/soundConfigs";
 import { OverdueConfigs } from "./overdue/overdueConfigs";
 import { ElectronAPI } from "@shared/types/electron";
 import { DayScore } from "./stats/checkpoints";
+import { TourUpdate } from "@shared/tour/session";
 
 const electronAPI: ElectronAPI = {
   onTimerUpdate: (callback: (arg0: TimerState) => void) => {
@@ -83,6 +85,12 @@ const electronAPI: ElectronAPI = {
   saveWorkdayConfigs: async (configs: WorkdayConfigs) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, configs);
   },
+  loadSoundConfigs: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.SOUND);
+  },
+  saveSoundConfigs: async (configs: SoundConfigs) => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.SOUND, configs);
+  },
   devApplyWorkday: async () => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_APPLY_WORKDAY);
   },
@@ -91,6 +99,26 @@ const electronAPI: ElectronAPI = {
   },
   devAdjustCheckpoint: async (by: number) => {
     return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.DEV_ADJUST_CHECKPOINT, by);
+  },
+  onTourUpdate: (callback: (tour: TourUpdate | null) => void) => {
+    const listener = (_event: unknown, tour: TourUpdate | null) => callback(tour);
+    ipcRenderer.on(EVENTS.IPC_CHANNELS.TOUR_UPDATE, listener);
+    return () => ipcRenderer.removeListener(EVENTS.IPC_CHANNELS.TOUR_UPDATE, listener);
+  },
+  getTour: async () => {
+    return ipcRenderer.invoke(EVENTS.IPC_CHANNELS.TOUR_GET);
+  },
+  startTour: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_START);
+  },
+  tourNext: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_NEXT);
+  },
+  tourPrev: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_PREV);
+  },
+  tourSkip: () => {
+    ipcRenderer.send(EVENTS.IPC_CHANNELS.TOUR_SKIP);
   },
 }
 

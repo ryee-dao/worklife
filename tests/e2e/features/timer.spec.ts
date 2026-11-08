@@ -35,6 +35,11 @@ test("App launches the overdue window properly when the timer countdown is reach
     await testClock.fastForward(5);
     await expect(breakWindow.getByTestId('overdue-window-time-display').getByText("00 : 10")).toBeVisible()
   });
+
+  await test.step("The dashboard shows the same count-up, with nothing to press", async () => {
+    await expect(settingsWindow.getByTestId("timer-time-digits")).toHaveText("00 : 10");
+    await expect(settingsWindow.getByTestId("timer-buttons-container").locator("button")).toHaveCount(0);
+  });
 });
 
 test("App stops properly", async ({ launchElectron }) => {
@@ -161,6 +166,12 @@ test("Break window is unable to skip after all power-ups are used", async ({ lau
       await expect(powerupCount).toHaveText(`${totalNumberOfSkips - loopIdx - 1}`);
     });
   }
+
+  await test.step("The dashboard no longer offers a snooze either", async () => {
+    await expect(powerupCount).toHaveText("0");
+    await expect(settingsWindow.getByTestId("timer-buttons-container").getByTestId("forward-button")).toBeVisible();
+    await expect(settingsWindow.getByTestId("timer-buttons-container").getByTestId("snooze-button")).toBeHidden();
+  });
 
   await test.step("Verify skip is disabled on overdue and break screens after exhaustion", async () => {
     // Open a new overdue window with all skips exhausted

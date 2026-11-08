@@ -12,6 +12,7 @@ export default function WorkdaySettings() {
   const [autoStopAtEnd, setAutoStopAtEnd] = useState(false);
 
   const hoursValid = isValidWorkdayHours(start, end);
+  const daysValid = days.length > 0;
 
   const toggleDay = (day: number) => {
     const newDays = days.includes(day) ? days.filter((d) => d !== day) : [...days, day];
@@ -21,7 +22,7 @@ export default function WorkdaySettings() {
   return (
     <SettingsPanel<WorkdayConfigs>
       title="Workday Settings"
-      isValid={hoursValid}
+      isValid={hoursValid && daysValid}
       successMessage="Settings saved successfully. Changes will reflect starting tomorrow"
       load={() => window.electronAPI.loadWorkdayConfigs()}
       save={(configs) => window.electronAPI.saveWorkdayConfigs(configs)}
@@ -33,6 +34,7 @@ export default function WorkdaySettings() {
         setAutoStopAtEnd(configs.autoStopAtEnd);
       }}
     >
+      <div data-testid="workday-schedule">
       <div data-testid="workday-days" className="tracking-wider p-2">
         I work on{" "}
         {dayNames.map((dayName, day) => (
@@ -41,6 +43,9 @@ export default function WorkdaySettings() {
             {dayName}
           </label>
         ))}
+        {!daysValid && (
+          <p className="text-sm text-red-600 mt-1">Pick at least one day</p>
+        )}
       </div>
 
       <div data-testid="workday-hours" className="tracking-wider p-2">
@@ -57,6 +62,7 @@ export default function WorkdaySettings() {
         {!hoursValid && (
           <p className="text-sm text-red-600 mt-1">The workday must end after it starts</p>
         )}
+      </div>
       </div>
 
       <div data-testid="workday-auto-stop" className="tracking-wider p-2">

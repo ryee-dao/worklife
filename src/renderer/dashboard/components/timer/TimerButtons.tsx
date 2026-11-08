@@ -16,6 +16,7 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
   const canForward = timerState.availableActions.includes("forward");
   const canSnooze = timerState.availableActions.includes("snooze");
 
+  const resumeTitle = timerStatus === "LUNCH" ? "Back from lunch" : "Resume";
   const toggleTimer = () => {
     if (canStop && canStart) throw new Error("Invalid state");
     if (canStop) window.electronAPI.stop();
@@ -30,7 +31,7 @@ export default function TimerButtons({ timerState }: TimerButtonProps) {
             {(canStop || canStart) && (
               <CircularButton
                 testId="toggle-timer-button"
-                title={canStop ? "Stop (costs a checkpoint)" : timerStatus === "LUNCH" ? "Back from lunch" : "Resume"}
+                title={canStop ? "Stop (costs a checkpoint)" : resumeTitle}
                 onClick={toggleTimer}
                 // Stopping costs a checkpoint, so it's the one red button
                 className={`h-2/3 ${canStop ? "bg-red-100 border-red-400 hover:bg-red-200" : "bg-slate-200 hover:bg-slate-300"}`}

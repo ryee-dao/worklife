@@ -33,7 +33,8 @@ export default function SettingsPanel<T>({
       setSaveMessage(successMessage);
     } catch (err) {
       setSaveStatus("error");
-      setSaveMessage(String(err));
+      setSaveMessage("Not saved. The settings file could not be written. Try again.");
+      console.warn(err);
     }
   }
 
@@ -43,13 +44,12 @@ export default function SettingsPanel<T>({
     <div className="p-3 flex flex-col h-full">
       <h2 className="font-semibold text-lg md:text-2xl">{title}</h2>
       <hr className="text-slate-400 my-1" />
-      <div className="grow text-sm md:text-lg">{children}</div>
+      <div data-testid="settings-fields" className="grow text-sm md:text-lg">{children}</div>
       <div className="w-3/4 self-center text-xs lg:text-base text-slate-800 tracking-wider font-medium flex flex-col items-center">
         <button
           disabled={!isValid}
           onClick={saveChanges}
-          className={`px-3 py-0.5 border rounded bg-blue-300 w-3/4 sm:w-48 ${!isValid ? "cursor-not-allowed bg-slate-400" : "active:bg-blue-500"
-            }`}
+          className={`px-3 py-0.5 border rounded w-3/4 sm:w-48 ${isValid ? "bg-blue-300 active:bg-blue-500" : "bg-slate-400 cursor-not-allowed"}`}
         >
           SAVE CHANGES
         </button>

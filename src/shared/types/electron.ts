@@ -4,6 +4,8 @@ import { DifficultyConfigs } from "@main/difficulty/difficultyConfigs";
 import { WorkdayConfigs } from "@main/workday/workdayConfigs";
 import { DayScore } from "@main/stats/checkpoints";
 import { OverdueConfigs } from "@main/overdue/overdueConfigs";
+import { SoundConfigs } from "@main/sound/soundConfigs";
+import { TourUpdate } from "@shared/tour/session";
 
 export interface ElectronAPI {
   onTimerUpdate: (callback: (data: TimerState) => void) => () => void;
@@ -24,6 +26,7 @@ export interface ElectronAPI {
   saveDifficultyConfigs: (arg0: DifficultyConfigs) => Promise<void>;
   saveOverdueConfigs: (arg0: OverdueConfigs) => Promise<void>;
   saveWorkdayConfigs: (arg0: WorkdayConfigs) => Promise<void>;
+  saveSoundConfigs: (arg0: SoundConfigs) => Promise<void>;
   devApplyWorkday: () => Promise<void>; // Only answered in dev
   devResetDay: () => Promise<void>;     // Only answered in dev
   devAdjustCheckpoint: (by: number) => Promise<void>; // Only answered in dev
@@ -31,6 +34,13 @@ export interface ElectronAPI {
   loadDifficultyConfigs: () => Promise<DifficultyConfigs>
   loadOverdueConfigs: () => Promise<OverdueConfigs>
   loadWorkdayConfigs: () => Promise<WorkdayConfigs>
+  loadSoundConfigs: () => Promise<SoundConfigs>
+  onTourUpdate: (callback: (tour: TourUpdate | null) => void) => () => void;
+  getTour: () => Promise<TourUpdate | null>;
+  startTour: () => void;
+  tourNext: () => void;
+  tourPrev: () => void;
+  tourSkip: () => void;
 }
 
 declare global {

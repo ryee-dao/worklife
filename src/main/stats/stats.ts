@@ -83,7 +83,7 @@ export const initStats = () => {
   statsState = getUserDataFromFile<StatsState>(FILENAMES.STATS.STATE).fileContent ?? {};
   lastSeenDate = getTodayDateAsString();
 
-  // Without a quit at the end, the app last ran until it crashed
+  // Without a quit at the end, the app last ran until it crashed. The latest by time, since a crash is recorded late with an earlier time
   const latest = events.reduce<StatsEvent | undefined>((latest, event) => (latest && latest.at > event.at ? latest : event), undefined);
   if (latest && latest.type !== "APP_QUIT") {
     recordEvent({ type: "APP_CRASHED" }, Math.max(statsState.lastAliveAt ?? 0, latest.at));
@@ -139,8 +139,10 @@ export const parseEvents = (text: string): StatsEvent[] => {
   return events;
 };
 
-export const readEvents = () => {
-  return parseEvents(readUserDataTextFile(FILENAMES.STATS.EVENTS));
+// The bar's last piece is the one still going, so it grows to now
+const stretchLivePiece = (score: DayScore | null, computedAt: number, now: number) => {
+  const live = score?.pieces.at(-1);
+  if (live && score?.inProgress && computedAt > score.workStart) live.end = now;
 };
 
 // Runs every second, so the score is kept until a new event, a new day, or the next moment it changes on its own
@@ -150,12 +152,10 @@ export const getCurrentDayScore = () => {
   const now = Date.now();
   const key = `${events.length} ${events.at(-1)?.id} ${getTodayDateAsString()}`;
   const cache = todayScoreCache;
-  if (cache && cache.key === key && now >= cache.computedAt && now < cache.changesAt) {
-    // The bar's last piece is the one still going, so it grows to now
-    const { score } = cache;
-    const live = score?.pieces.at(-1);
-    if (live && score?.inProgress && cache.computedAt > score.workStart) live.end = now;
-    return score;
+  const cacheIsFresh = cache && cache.key === key && now >= cache.computedAt && now < cache.changesAt;
+  if (cacheIsFresh) {
+    stretchLivePiece(cache.score, cache.computedAt, now);
+    return cache.score;
   }
 
   const score = getTodayScore(events.filter((event) => event.at > now - todayScoringWindowMs), now);

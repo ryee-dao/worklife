@@ -11,6 +11,9 @@ export const EVENTS = {
     WARNING: "timer_warning",
     TRANSITION: "timer_transition",
   },
+  TOUR: {
+    UPDATE: "tour_update",
+  },
   IPC_CHANNELS: {
     TIMER_UPDATE: "timer:update",
     TIMER_STOP: "timer:stop",
@@ -29,18 +32,26 @@ export const EVENTS = {
     DEV_APPLY_WORKDAY: "dev:apply_workday",
     DEV_RESET_DAY: "dev:reset_day",
     DEV_ADJUST_CHECKPOINT: "dev:adjust_checkpoint",
+    TOUR_UPDATE: "tour:update",
+    TOUR_GET: "tour:get",
+    TOUR_START: "tour:start",
+    TOUR_NEXT: "tour:next",
+    TOUR_PREV: "tour:prev",
+    TOUR_SKIP: "tour:skip",
     CONFIGS: {
       SAVE: {
         TIMER: "configs:save:timer",
         DIFFICULTY: "configs:save:difficulty",
         OVERDUE: "configs:save:overdue",
         WORKDAY: "configs:save:workday",
+        SOUND: "configs:save:sound",
       },
       LOAD: {
         TIMER: "configs:load:timer",
         DIFFICULTY: "configs:load:difficulty",
         OVERDUE: "configs:load:overdue",
         WORKDAY: "configs:load:workday",
+        SOUND: "configs:load:sound",
       },
     },
   },
@@ -55,6 +66,7 @@ export const DEFAULTS = {
   DEFAULT_LUNCH_DURATION_MS: 45 * 60 * 1000, // 45 minutes, the starting value for the custom difficulty
   DEFAULT_CHECKPOINT_DECAY_MS: 15 * 60 * 1000, // 15 minutes, the starting value for the custom difficulty
   DEFAULT_LEVEL_THRESHOLD_MS: 3 * 60 * 1000,
+  DEFAULT_WINDOW_RATIO_CAP: 0.4, // The overdue window grows to at most this much of the screen
 } as const;
 
 export const FILENAMES = {
@@ -63,7 +75,9 @@ export const FILENAMES = {
   DIFFICULTY: { CONFIGS: "difficultyConfigs.json" },
   WORKDAY: { CONFIGS: "workdayConfigs.json", STATE: "workdayState.json" },
   OVERDUE: { CONFIGS: "overdueConfigs.json" },
+  SOUND: { CONFIGS: "soundConfigs.json" },
   STATS: { EVENTS: "events.jsonl", STATE: "statsState.json" },
+  TOUR: { STATE: "tourState.json" },
 } as const;
 
 // Break and snooze lengths are a share of the timer, so they scale with longer work sessions.

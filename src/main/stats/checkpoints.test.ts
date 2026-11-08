@@ -190,6 +190,34 @@ describe('The app closing', () => {
     expect(scoreMonday(events).level).toBe(GLIMMER);
   });
 
+  test('quitting during lunch lets the lunch run on, and reopening before it ends keeps the run going', () => {
+    const events = workdayWith(
+      createEvent('LUNCH_STARTED', '12:00'),
+      createEvent('APP_QUIT', '12:10', { status: 'LUNCH', countdownMs: 50 * 60 * 1000 }),
+      createEvent('APP_STARTED', '12:40'),
+      createEvent('LUNCH_ENDED', '13:00'),
+    );
+
+    expect(scoreMonday(events).level).toBe(RADIANT);
+    expect(scoreMonday(events).pieces.slice(1, 3)).toEqual([
+      { start: onMonday('12:00'), end: onMonday('13:00'), activity: 'LUNCH' },
+      { start: onMonday('13:00'), end: onMonday('17:00'), activity: 'WORKING' },
+    ]);
+  });
+
+  test('a lunch that runs out while closed is a stop from when it ran out, unless the app reopens within 5 minutes of quitting', () => {
+    const quitAt = (countdownMinutes: number) => createEvent('APP_QUIT', '12:10', { status: 'LUNCH', countdownMs: countdownMinutes * 60 * 1000 });
+    const quickReturn = workdayWith(createEvent('LUNCH_STARTED', '12:00'), quitAt(2), createEvent('APP_STARTED', '12:14'));
+    const slowReturn = workdayWith(createEvent('LUNCH_STARTED', '12:00'), quitAt(4), createEvent('APP_STARTED', '12:17'));
+
+    expect(scoreMonday(quickReturn).level).toBe(RADIANT);
+    expect(scoreMonday(slowReturn).level).toBe(GLOW); // Glimmer, down to Dim at 12:14, then 4h43m unbroken
+    expect(scoreMonday(slowReturn).pieces.slice(1, 3)).toEqual([
+      { start: onMonday('12:00'), end: onMonday('12:14'), activity: 'LUNCH' },
+      { start: onMonday('12:14'), end: onMonday('12:17'), activity: 'CLOSED', closedAt: onMonday('12:10') },
+    ]);
+  });
+
   test('a crash counts as closed from the last moment the app was alive', () => {
     const events = workdayWith(createEvent('APP_CRASHED', '13:00'), createEvent('APP_STARTED', '13:40'));
 
@@ -246,6 +274,15 @@ describe('Today, while the workday is still going', () => {
     expect(score.nextLossAt).toBe(onMonday('15:30'));
   });
 
+  test('while stopped, the best still possible counts a resume right now', () => {
+    const events = [createEvent('APP_STARTED', '08:30'), createEvent('STOPPED', '13:01')];
+    const score = scoreMonday(events, onMonday('13:02'));
+
+    // Glow at 13:00, down to Glimmer, and 3h58m left climbs one more
+    expect(score.level).toBe(GLIMMER);
+    expect(score.bestPossible).toBe(GLOW);
+  });
+
   test('once at Dim there is nothing left to lose, but it still shows as losing', () => {
     const events = [createEvent('APP_STARTED', '08:30'), createEvent('STOPPED', '10:00')];
     const score = scoreMonday(events, onMonday('10:30'));
@@ -268,6 +305,23 @@ describe('Today, while the workday is still going', () => {
 
     expect(getTodayScore(events, onMonday('12:00'))?.localDate).toBe(monday);
     expect(getTodayScore([], onMonday('12:00'))).toBeNull();
+  });
+});
+
+describe('The log itself', () => {
+  test('events out of order are scored by time', () => {
+    const events = workdayWith(createEvent('STOPPED', '13:00'), createEvent('RESUMED', '13:10'));
+
+    expect(scoreMonday([...events].reverse())).toEqual(scoreMonday(events));
+  });
+
+  test('a morning east of UTC belongs to its own local date, not the UTC one', () => {
+    // 08:00 in Tokyo is 23:00 UTC the day before
+    const tokyo = { ...createEvent('APP_STARTED', '08:00'), at: Date.parse('2026-10-26T08:00:00+09:00'), tzOffsetMin: 540 };
+    const scores = getDayScores([tokyo], Date.parse('2026-10-26T12:00:00+09:00'));
+
+    expect(Object.keys(scores)).toEqual([monday]);
+    expect(scores[monday].level).toBe(GLIMMER);
   });
 });
 

@@ -115,6 +115,16 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     expect(workdayConfigs).toEqual({ days: [1, 2, 3, 4, 5, 6], start: "08:30", end: "23:59", autoStopAtEnd: true });
   });
 
+  await test.step("Verify a workday with no days can't be saved", async () => {
+    for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
+      await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: day }).uncheck();
+    }
+    await expect(settingsWindow.getByText("Pick at least one day")).toBeVisible();
+    await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeDisabled();
+    await settingsWindow.getByTestId("workday-days").getByRole('checkbox', { name: 'Mon' }).check();
+    await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeEnabled();
+  });
+
   await test.step("Verify an end before the start can't be saved", async () => {
     await settingsWindow.getByTestId("workday-hours").locator('input').last().fill("08:00");
     await expect(settingsWindow.getByText("The workday must end after it starts")).toBeVisible();
@@ -127,4 +137,17 @@ test("Workday settings are saved", async ({ launchElectron, userDataDir }) => {
     await settingsWindow.getByTestId("workday-hours").locator('input').first().fill("");
     await expect(settingsWindow.getByRole('button', { name: 'SAVE CHANGES' })).toBeDisabled();
   });
+});
+
+test("Sound volume is saved", async ({ launchElectron, userDataDir }) => {
+  const { settingsWindow } = await launchElectron();
+  await settingsWindow.getByTestId("tabs-navbar").getByRole('link', { name: 'Settings' }).click();
+  await settingsWindow.getByRole('link', { name: 'Sound' }).click();
+  const slider = settingsWindow.getByTestId("sound-volume").getByRole('slider');
+  await expect(slider).toHaveValue("50");
+  await slider.fill("20");
+  await expect(settingsWindow.getByTestId("sound-volume")).toContainText("20%");
+  await settingsWindow.getByRole('button', { name: 'SAVE CHANGES' }).click();
+  await settingsWindow.getByText('Settings saved successfully').waitFor();
+  expect(JSON.parse(fs.readFileSync(path.join(userDataDir.path, FILENAMES.SOUND.CONFIGS), "utf-8"))).toEqual({ volume: 0.2 });
 });

@@ -5,7 +5,6 @@ interface SettingsTabProps {
   to: string;
   text: string;
   icon: ComponentType<{ className?: string }>
-  additionalClassNames?: string;
 }
 
 export default function SettingsTab({ to, text, icon: Icon }: SettingsTabProps) {

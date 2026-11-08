@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { getUserDataFromFile, writeToUserDataFile } from './files';
+import { appendToUserDataFile, getUserDataFromFile, writeToUserDataFile } from './files';
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp/x' },
@@ -13,6 +13,7 @@ vi.mock('fs', () => ({
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     renameSync: vi.fn(),
+    appendFileSync: vi.fn(),
   },
 }));
 
@@ -32,6 +33,18 @@ describe('getUserDataFromFile', () => {
     vi.mocked(fs.readFileSync).mockReturnValue('{"a": 1}');
 
     expect(getUserDataFromFile('configs.json').fileContent).toEqual({ a: 1 });
+  });
+});
+
+describe('a write that fails', () => {
+  test('is logged and swallowed, since the state in memory is still right', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(fs.writeFileSync).mockImplementationOnce(() => { throw new Error('ENOSPC'); });
+    vi.mocked(fs.appendFileSync).mockImplementationOnce(() => { throw new Error('ENOSPC'); });
+
+    expect(writeToUserDataFile('state.json', {})).toBe(false);
+    expect(() => appendToUserDataFile('events.jsonl', '{}\n')).not.toThrow();
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 });
 

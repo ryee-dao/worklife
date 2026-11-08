@@ -79,12 +79,12 @@ export default function AdminSettings() {
       }}
     >
       <div className="tracking-wider p-2 flex flex-col gap-1">
-        <label>Timer <NumberInput min={5} max={36000} value={timerSeconds} onChange={(e) => setTimerSeconds(Number(e.target.value))} /> seconds</label>
-        <label>Break <NumberInput min={1} max={600} value={breakSeconds} onChange={(e) => setBreakSeconds(Number(e.target.value))} /> seconds</label>
-        <label>Power-ups <NumberInput min={0} max={999} value={allottedPowerups} onChange={(e) => setAllottedPowerups(Number(e.target.value))} /> per day</label>
-        <label>Snooze <NumberInput min={1} max={60} value={snoozeMinutes} onChange={(e) => setSnoozeMinutes(Number(e.target.value))} /> minutes</label>
-        <label>Lunch <NumberInput min={1} max={120} value={lunchMinutes} onChange={(e) => setLunchMinutes(Number(e.target.value))} /> minutes</label>
-        <label>Checkpoint drain <NumberInput min={1} max={120} value={decayMinutes} onChange={(e) => setDecayMinutes(Number(e.target.value))} /> minutes</label>
+        <label>Timer <NumberInput min={5} max={36000} value={timerSeconds} onValueChange={setTimerSeconds} /> seconds</label>
+        <label>Break <NumberInput min={1} max={600} value={breakSeconds} onValueChange={setBreakSeconds} /> seconds</label>
+        <label>Power-ups <NumberInput min={0} max={999} value={allottedPowerups} onValueChange={setAllottedPowerups} /> per day</label>
+        <label>Snooze <NumberInput min={1} max={60} value={snoozeMinutes} onValueChange={setSnoozeMinutes} /> minutes</label>
+        <label>Lunch <NumberInput min={1} max={120} value={lunchMinutes} onValueChange={setLunchMinutes} /> minutes</label>
+        <label>Checkpoint drain <NumberInput min={1} max={120} value={decayMinutes} onValueChange={setDecayMinutes} /> minutes</label>
         <label>
           Workday{" "}
           <input type="time" className="border rounded px-1" value={workStart} onChange={(e) => setWorkStart(e.target.value)} />{" "}

@@ -24,7 +24,8 @@ export default function TimerTimeDisplay({ timerState }: TimerTimeDisplayProps) 
   return (
     // Top padding is the power-up bar's height (see PowerupBar) plus a gap, so the time always sits below it
     <div data-testid="timer-time-display" className={`h-2/3 pt-6 xsm:pt-11 sm:pt-13 md:pt-15 font-bold flex flex-col justify-center items-center ${timerColor}`}>
-      <div data-testid="timer-time-digits" className="whitespace-nowrap tracking-widest leading-none text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
+      {/* Letter-spacing trails the last digit, so the same left padding keeps the digits centered */}
+      <div data-testid="timer-time-digits" className="whitespace-nowrap tracking-widest pl-[0.1em] leading-none text-[2rem] xsm:text-[4rem] sm:text-[7rem] md:text-[10rem] lg:text-[14rem]">
         <span>{minutes}</span> : <span>{seconds}</span>
       </div>
       {timerState.status === "LUNCH" && (

@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { DEFAULTS, EVENTS, FILENAMES } from "@shared/constants";
-import { getAppliedTimerConfigs } from "@main/timer/timerConfigs";
+import { getAppliedTimerConfigs, getTimerConfigs } from "@main/timer/timerConfigs";
 import {
   getUserDataFromFile,
   writeToUserDataFile,
@@ -8,53 +8,32 @@ import {
 import { calculateRemainingLunches, calculateRemainingPowerups, increaseLunchesUsed, increasePowerupsUsed } from "@main/limit/limitState";
 import { getAllottedPowerups, getBreakDurationMs, getLunchDurationMs, getSnoozeDurationMs } from "@main/difficulty/difficulty";
 import { IS_TEST } from "@main/testEnv";
+import { act, tick, TICK_MS, timerStateOf, TimerCore, TimerEffect, TimerRules, TimerStep } from "./timerRules";
+import type { AvailableActions, Source, TimerStatus, TimerTransition } from "./timerRules";
 
-export type TimerStatus = "RUNNING" | "OVERDUE" | "STOPPED" | "BREAK" | "LUNCH";
-export type Source = "WINDOW" | "TRAY" | "SCHEDULE"; // Where an action came from, SCHEDULE being the workday
+export type { AvailableActions, Source, TimerState, TimerStatus, TimerTransition } from "./timerRules";
 
-// What happened in the timer, emitted on EVENTS.TIMER.TRANSITION for the stats log
-export type TimerTransition =
-  | { type: "APP_STARTED"; previousStatus: TimerStatus | null } // null = first run ever
-  | { type: "STOPPED"; source: Source; from: "RUNNING" | "OVERDUE" | "BREAK" | "LUNCH"; countdownMs: number }
-  | { type: "RESUMED"; source: Source; countdownMs: number }
-  | { type: "OVERDUE_STARTED"; cause: "COUNTDOWN_ENDED" }
-  | { type: "OVERDUE_STARTED"; cause: "FORWARDED"; source: Source; countdownMs: number }
-  | { type: "BREAK_STARTED"; source: Source; overdueMs: number }
-  | { type: "BREAK_SKIPPED"; source: Source; from: "OVERDUE" | "BREAK"; overdueMs: number; breakElapsedMs: number; powerupsLeft: number }
-  | { type: "BREAK_COMPLETED" }
-  | { type: "SNOOZED"; source: Source; snoozeMs: number; countdownMs: number; powerupsLeft: number }
-  | { type: "LUNCH_STARTED"; source: Source; from: "RUNNING" | "OVERDUE"; lunchMs: number }
-  | { type: "LUNCH_ENDED"; cause: "TIME_UP" }
-  | { type: "LUNCH_ENDED"; cause: "ENDED_EARLY"; source: Source; lunchLeftMs: number };
-export type AvailableActions = "start" | "stop" | "forward" | "skip" | "breaktime" | "snooze" | "lunch";
-export interface TimerState {
-  overdueTimeMs: number;
-  currentCountdownMs: number;
-  status: TimerStatus;
-  availableActions: AvailableActions[];
-  remainingPowerups: number,
-  allottedPowerups: number,
-  remainingLunches: number,
-  snoozeDurationMs: number,
-  lunchDurationMs: number,
-  isWarning: boolean;
-  _bypassThreshold?: boolean
-}
-
-export interface StoredTimerState {
-  overdueTimeMs: number;
-  currentCountdownMs: number;
-  status: TimerStatus;
-  _bypassThreshold?: boolean // Only used in unit tests to bypass the {thresholdTimeMs} fallback
+export interface StoredTimerState extends TimerCore {
+  savedAt?: number;          // So a relaunch knows how long the app was closed
+  _bypassThreshold?: boolean // Only used in unit tests to bypass the {startupGraceMs} fallback
 }
 
 const writeIntervalMs = 30 * 1000; // 30 seconds
 let tickCount = 0;
-const tickIntervalMs = 1 * 1000; // 1 second
 let timerState: StoredTimerState;
 
 let tickTimer: NodeJS.Timeout
-const thresholdTimeMs = 1 * 60 * 1000; // Fallback delay time in case timeTilBreakMs is 0 immediately on startup
+let heldTick: (() => void) | null = null; // The tour's clock, run in the timer's place while a tour holds it
+
+// The one interval: the timer's tick, or the tour's while it holds the timer
+const startTicking = () => {
+  clearInterval(tickTimer);
+  // When running e2e tests, there's no interval, so the tests control the timing themselves
+  if (!IS_TEST) {
+    tickTimer = setInterval(heldTick ?? onTick, TICK_MS);
+  }
+};
+const startupGraceMs = 1 * 60 * 1000; // A relaunch gets at least this long before the overdue window
 const defaultTimerData: StoredTimerState = {
   currentCountdownMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
   status: "RUNNING",
@@ -66,332 +45,150 @@ const emitTransition = (transition: TimerTransition) => {
   timerEmitter.emit(EVENTS.TIMER.TRANSITION, transition);
 };
 
-export const initTimer = () => {
-  const previousStatus = loadTimerStateFromFile();
-  emitTransition({ type: "APP_STARTED", previousStatus });
-  // A restart ends lunch, back to work with a full timer
-  if (timerState.status === "LUNCH") {
-    timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
+// The settings in force and what's left of the day's power-ups and lunch
+const rules = (): TimerRules => ({
+  workMs: getAppliedTimerConfigs().timerDurationMs,
+  nextWorkMs: getTimerConfigs().timerDurationMs,
+  breakMs: getBreakDurationMs(),
+  snoozeMs: getSnoozeDurationMs(),
+  lunchMs: getLunchDurationMs(),
+  warningMs: getAppliedTimerConfigs().warningThresholdMs,
+  powerups: getAllottedPowerups(),
+  powerupsLeft: calculateRemainingPowerups(),
+  lunchesLeft: calculateRemainingLunches(),
+});
+
+const STATUS_EVENTS: Record<TimerStatus, string> = {
+  RUNNING: EVENTS.TIMER.RUNNING,
+  BREAK: EVENTS.TIMER.ON_BREAK,
+  STOPPED: EVENTS.TIMER.STOPPED,
+  OVERDUE: EVENTS.TIMER.ON_OVERDUE,
+  LUNCH: EVENTS.TIMER.ON_LUNCH,
+};
+
+const EFFECT_EVENTS: Partial<Record<TimerEffect, string>> = {
+  OPEN_OVERDUE: EVENTS.TIMER.START_OVERDUE,
+  OPEN_BREAK: EVENTS.TIMER.START_BREAK,
+  CLOSE_BREAK: EVENTS.TIMER.STOP_BREAK, // Closes the window, and applies saved configs: the step already used them for the next work block
+  WARNING: EVENTS.TIMER.WARNING,
+};
+
+// Takes a step. The stats log hears the transition first, with the configs of its moment
+const apply = (step: TimerStep | null) => {
+  if (!step) return false;
+  if (step.transition) emitTransition(step.transition);
+  timerState = { ...timerState, ...step.core };
+  for (const effect of step.effects) {
+    if (effect === "SPEND_POWERUP") increasePowerupsUsed();
+    else if (effect === "SPEND_LUNCH") increaseLunchesUsed();
+    else timerEmitter.emit(EFFECT_EVENTS[effect]!);
   }
-  if (!timerState._bypassThreshold) {
-    fallbackTimer();
+  return true;
+};
+
+export const initTimer = () => {
+  const saved = loadTimerStateFromFile();
+  emitTransition({ type: "APP_STARTED", previousStatus: saved?.status ?? null });
+  if (timerState.status === "LUNCH") {
+    // Lunch goes on while the app is closed. Once it has run out, it's back to work with a full timer
+    const lunchLeftMs = timerState.currentCountdownMs - (Date.now() - (saved?.savedAt ?? Date.now()));
+    if (lunchLeftMs > 0) timerState.currentCountdownMs = lunchLeftMs;
+    else timerState = { status: "RUNNING", currentCountdownMs: getAppliedTimerConfigs().timerDurationMs, overdueTimeMs: 0 };
+  } else {
+    if (!timerState._bypassThreshold) applyStartupGrace();
+    timerState.status = "RUNNING";
   }
   timerState.overdueTimeMs = 0;
   tickCount = 0;
-  runTimer();
+  startTicking();
+  emitTimerStatus();
+  save();
 };
 
+// Saves on the way out, since ticks only save every 30 seconds
 export const destroyTimers = () => {
   clearInterval(tickTimer);
+  if (timerState) save();
 };
 
-const fallbackTimer = () => {
-  // Fallback time delay so break time doesn't start too soon on startup
-  if (
-    timerState.currentCountdownMs <= thresholdTimeMs ||
-    timerState.status === "BREAK"
-  ) {
-    timerState.currentCountdownMs = thresholdTimeMs;
-    timerState.status = "RUNNING";
+// shortcut: a crash leaves savedAt up to 30 seconds stale, like the countdown it was saved with; fine unless lunch relaunches need to be exact
+const save = () => writeToUserDataFile(FILENAMES.TIMER.STATE, { ...timerState, savedAt: Date.now() });
+
+// A tour holds the timer: no ticks and nothing logged, with the tour's own clock in the interval's place
+export const holdTimer = (tick: () => void) => {
+  heldTick = tick;
+  startTicking();
+};
+
+export const releaseTimer = () => {
+  heldTick = null;
+  startTicking();
+};
+
+// The first run waits for the tour's start prompt. Nothing is logged: no work was interrupted
+export const holdForFirstRun = () => {
+  timerState.status = "STOPPED";
+  save();
+};
+
+// A relaunch always runs (see initTimer), and a break or a countdown about to end gets the grace minute first
+const applyStartupGrace = () => {
+  if (timerState.currentCountdownMs <= startupGraceMs || timerState.status === "BREAK") {
+    timerState.currentCountdownMs = startupGraceMs;
   }
 }
 
-// Stop is offered on the break screens too, as an escape hatch. It costs a checkpoint like any stop
-const getAvailableActions = (status: TimerStatus): AvailableActions[] => {
-  const availableActions: AvailableActions[] = [];
-  const hasPowerups = calculateRemainingPowerups() > 0;
-  const hasLunch = calculateRemainingLunches() > 0;
-  switch (status) {
-    case "RUNNING":
-      availableActions.push("stop");
-      availableActions.push("forward");
-      if (hasPowerups) {
-        availableActions.push("snooze");
-      }
-      if (hasLunch) {
-        availableActions.push("lunch");
-      }
-      return availableActions;
-    case "STOPPED":
-    case "LUNCH": // Starting during lunch ends it early
-      availableActions.push("start");
-      return availableActions;
-    case "OVERDUE":
-      availableActions.push("breaktime");
-      if (hasPowerups) {
-        availableActions.push("skip");
-      }
-      if (hasLunch) {
-        availableActions.push("lunch");
-      }
-      availableActions.push("stop");
-      return availableActions;
-    case "BREAK":
-      if (hasPowerups) {
-        availableActions.push("skip");
-      }
-      availableActions.push("stop");
-      return availableActions;
-  }
-};
-
+// Always sends the state with the status event, so a window never hears a status it can't draw.
+// The rules are read fresh: a step may just have spent a power-up or applied saved settings, and the tray draws what it's sent
 export const emitTimerStatus = () => {
-  /*
-    NOTE: 
-      Use this function to emit the timer state if its in {TimerStatus},
-      otherwise, the timer status may be emitted to the UI without the state itself,
-      which may cause bugs
-  */
-
-  // Given the status, emit the event and the state itself
-  const statusMapper: Record<TimerStatus, string> = {
-    RUNNING: EVENTS.TIMER.RUNNING,
-    BREAK: EVENTS.TIMER.ON_BREAK,
-    STOPPED: EVENTS.TIMER.STOPPED,
-    OVERDUE: EVENTS.TIMER.ON_OVERDUE,
-    LUNCH: EVENTS.TIMER.ON_LUNCH,
-  };
-
-  // Emit along additional data along with the timer state
-  const stateWithActions = getTimerState();
-  timerEmitter.emit(statusMapper[timerState.status], stateWithActions);
+  timerEmitter.emit(STATUS_EVENTS[timerState.status], getTimerState());
 };
 
 const onTick = () => {
-  // Using ticks to count down, otherwise stopped status will also count down timer
   tickCount++;
-  checkTimer();
+  const step = tick(timerState, rules());
+  apply(step);
   emitTimerStatus();
 
-  // Write to file every {writeIntervalMs} seconds - based on number of ticks (1 tick = 1000ms = 1 second)
-  if (writeIntervalMs / 1000 === tickCount) {
-    writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+  // Saved on every transition, and otherwise every {writeIntervalMs}
+  if (step.transition || tickCount >= writeIntervalMs / TICK_MS) {
+    save();
     tickCount = 0;
   }
 };
 
-const checkTimer = () => {
-  // Perform logic on timerState based on status
-  switch (timerState.status) {
-    case "STOPPED":
-      break;
-    case "RUNNING":
-      timerState.currentCountdownMs -= tickIntervalMs;
-      if (timerState.currentCountdownMs === getAppliedTimerConfigs().warningThresholdMs) {
-        timerEmitter.emit(EVENTS.TIMER.WARNING);
-      }
-      if (timerState.currentCountdownMs <= 0) {
-        emitTransition({ type: "OVERDUE_STARTED", cause: "COUNTDOWN_ENDED" });
-        transitionToNextState();
-      }
-      break;
-    case "BREAK":
-      timerState.currentCountdownMs -= tickIntervalMs;
-      if (timerState.currentCountdownMs <= 0) {
-        emitTransition({ type: "BREAK_COMPLETED" });
-        transitionToNextState();
-      }
-      break;
-    case "OVERDUE":
-      timerState.overdueTimeMs += tickIntervalMs;
-      break;
-    case "LUNCH":
-      timerState.currentCountdownMs -= tickIntervalMs;
-      if (timerState.currentCountdownMs <= 0) {
-        emitTransition({ type: "LUNCH_ENDED", cause: "TIME_UP" });
-        transitionToNextState();
-      }
-      break;
-  }
-};
-
-const transitionToNextState = () => {
-  switch (timerState.status) {
-    case "RUNNING":
-      timerState.status = "OVERDUE";
-      timerState.currentCountdownMs = 0;
-      timerState.overdueTimeMs = 0;
-      timerEmitter.emit(EVENTS.TIMER.START_OVERDUE);
-      break;
-    case "OVERDUE":
-      timerState.status = "BREAK";
-      timerState.currentCountdownMs = getBreakDurationMs();
-      timerState.overdueTimeMs = 0;
-      timerEmitter.emit(EVENTS.TIMER.START_BREAK);
-      break;
-    case "BREAK":
-      timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Place before changes so the configs update before status change
-      timerState.status = "RUNNING";
-      timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
-      timerState.overdueTimeMs = 0;
-      break;
-    case "LUNCH": // Back to work with a full timer
-      timerState.status = "RUNNING";
-      timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
-      timerState.overdueTimeMs = 0;
-      break;
-    default:
-      console.warn(`Unexpected transition from: ${timerState.status}`);
-  }
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-};
-
-export const stopTimer = (source: Source) => {
-  const from = timerState.status;
-  // A stale menu or window can send this after the status changed. Only the end of the workday can stop lunch
-  if (from === "STOPPED" || (from === "LUNCH" && source !== "SCHEDULE")) return;
-  emitTransition({ type: "STOPPED", source, from, countdownMs: timerState.currentCountdownMs });
-  // Stopping from a break screen closes it, and resuming later starts a fresh work session, as it does after lunch
-  if (from !== "RUNNING") {
-    timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Before the countdown resets, so it uses the configs applied after the break
-    timerState.currentCountdownMs = getAppliedTimerConfigs().timerDurationMs;
-    timerState.overdueTimeMs = 0;
-  }
-  timerState.status = "STOPPED";
+// A button, from a window, the tray or the workday schedule. Nothing happens when the state doesn't allow it
+const run = (action: AvailableActions, source: Source) => {
+  if (!apply(act(action, timerState, source, rules()))) return;
   emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
+  save();
 };
 
-export const startTimer = (source: Source) => {
-  if (timerState.status === "LUNCH" && source !== "SCHEDULE") { // The workday starting doesn't cut lunch short
-    emitTransition({ type: "LUNCH_ENDED", cause: "ENDED_EARLY", source, lunchLeftMs: timerState.currentCountdownMs });
-    transitionToNextState();
-    emitTimerStatus();
-    return;
-  }
-  if (timerState.status !== "STOPPED") return; // A stale menu or window can send this after the status changed
-  emitTransition({ type: "RESUMED", source, countdownMs: timerState.currentCountdownMs });
-  runTimer();
-};
-
-const runTimer = () => {
-  clearInterval(tickTimer);
-  // When running e2e tests, we don't set an interval to control the timing
-  // This is to prevent flakiness in tests
-  if (!IS_TEST) {
-    tickTimer = setInterval(onTick, tickIntervalMs);
-  }
-  timerState.status = "RUNNING";
-  emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-};
-
-export const startBreak = (source: Source) => {
-  if (timerState.status !== "OVERDUE") {
-    return;
-  }
-  emitTransition({ type: "BREAK_STARTED", source, overdueMs: timerState.overdueTimeMs });
-  clearInterval(tickTimer); // Clear any existing tick intervals
-
-  // When running e2e tests, we don't set an interval to control the timing
-  // This is to prevent flakiness in tests
-  if (!IS_TEST) {
-    tickTimer = setInterval(onTick, tickIntervalMs);
-  }
-  transitionToNextState();
-  emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-};
-
-export const skipBreak = (source: Source) => {
-  if (calculateRemainingPowerups() <= 0) return;
-  if (timerState.status !== "BREAK" && timerState.status !== "OVERDUE") return; // Guard against wrong state
-  increasePowerupsUsed();
-  const isBreak = timerState.status === "BREAK";
-  emitTransition({
-    type: "BREAK_SKIPPED",
-    source,
-    from: timerState.status,
-    overdueMs: timerState.overdueTimeMs,
-    breakElapsedMs: isBreak ? getBreakDurationMs() - timerState.currentCountdownMs : 0,
-    powerupsLeft: calculateRemainingPowerups(),
-  });
-  timerState.status = "BREAK";
-  transitionToNextState();
-  emitTimerStatus();
-};
-
-export const forwardToBreak = (source: Source) => {
-  if (timerState.status !== "RUNNING") return; // A stale menu or window can send this after the status changed
-  emitTransition({ type: "OVERDUE_STARTED", cause: "FORWARDED", source, countdownMs: timerState.currentCountdownMs });
-  timerState.currentCountdownMs = 0;
-  transitionToNextState();
-  emitTimerStatus();
-};
-
-export const snoozeTimer = (source: Source) => {
-  if (timerState.status !== "RUNNING") return; // Once overdue, a skip is the way out
-  if (calculateRemainingPowerups() <= 0) return;
-  increasePowerupsUsed();
-  const snoozeMs = getSnoozeDurationMs();
-  emitTransition({
-    type: "SNOOZED",
-    source,
-    snoozeMs,
-    countdownMs: timerState.currentCountdownMs,
-    powerupsLeft: calculateRemainingPowerups(),
-  });
-  timerState.currentCountdownMs += snoozeMs;
-  emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-};
-
-// Lunch pauses the day without breaking the checkpoint climb. Taking it while overdue counts as taking the break
-export const startLunch = (source: Source) => {
-  const from = timerState.status;
-  if (from !== "RUNNING" && from !== "OVERDUE") return;
-  if (calculateRemainingLunches() <= 0) return;
-  increaseLunchesUsed();
-  const lunchMs = getLunchDurationMs();
-  emitTransition({ type: "LUNCH_STARTED", source, from, lunchMs });
-  if (from === "OVERDUE") {
-    timerEmitter.emit(EVENTS.TIMER.STOP_BREAK); // Closes the overdue window
-  }
-  timerState.status = "LUNCH";
-  timerState.currentCountdownMs = lunchMs;
-  timerState.overdueTimeMs = 0;
-  emitTimerStatus();
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-};
-
-const isInWarning = () => {
-  const { warningThresholdMs } = getAppliedTimerConfigs();
-  return (
-    timerState.status === "RUNNING" &&
-    !!warningThresholdMs &&
-    timerState.currentCountdownMs > 0 &&
-    timerState.currentCountdownMs <= warningThresholdMs
-  );
-};
+export const stopTimer = (source: Source) => run("stop", source);
+export const startTimer = (source: Source) => run("start", source);
+export const startBreak = (source: Source) => run("breaktime", source);
+export const skipBreak = (source: Source) => run("skip", source);
+export const forwardToBreak = (source: Source) => run("forward", source);
+export const snoozeTimer = (source: Source) => run("snooze", source);
+export const startLunch = (source: Source) => run("lunch", source);
 
 // Returns the status saved by the last run, or null on the first run ever
-const loadTimerStateFromFile = (): TimerStatus | null => {
-  const timerData = getUserDataFromFile<StoredTimerState>(FILENAMES.TIMER.STATE);
-
-  // If no timer data is returned, set new state in file
-  timerState = { ...defaultTimerData, ...timerData?.fileContent }
-  writeToUserDataFile(FILENAMES.TIMER.STATE, timerState);
-
-  console.log("init timer", JSON.stringify(timerState));
-  return timerData?.fileContent?.status ?? null;
+const loadTimerStateFromFile = (): StoredTimerState | undefined => {
+  const saved = getUserDataFromFile<StoredTimerState>(FILENAMES.TIMER.STATE).fileContent;
+  timerState = { ...defaultTimerData, ...saved };
+  delete timerState.savedAt; // Only meaningful at the moment of saving
+  return saved;
 };
 
-export const getTimerState = (): TimerState => ({
-  ...timerState,
-  availableActions: getAvailableActions(timerState.status),
-  remainingPowerups: Math.max(0, calculateRemainingPowerups()),
-  allottedPowerups: getAllottedPowerups(),
-  remainingLunches: Math.max(0, calculateRemainingLunches()),
-  snoozeDurationMs: getSnoozeDurationMs(),
-  lunchDurationMs: getLunchDurationMs(),
-  isWarning: isInWarning(),
-});
+// The state the windows draw, for the real timer or for a clock shown in its place
+export const timerStateFor = (core: TimerCore) => timerStateOf(core, rules());
+export const getTimerState = () => timerStateFor(timerState);
 
-// Expose a function that allows end to end tests to manually speed up timers 
+// Expose a function that allows end to end tests to manually speed up timers
 if (IS_TEST) {
   global.__test_fastForwardTimerOneSecond = () => {
-    // Can only fast forward one second/tick at a time 
+    // Can only fast forward one second/tick at a time
     // because for some reason, the event loop doesn't allow batches (not sure why)
-    onTick();
+    (heldTick ?? onTick)();
   };
 }

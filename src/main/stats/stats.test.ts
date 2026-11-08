@@ -10,7 +10,7 @@ vi.mock('@shared/utils/files', () => ({
 }));
 
 vi.mock('@main/limit/limitState', () => ({
-  calculateRemainingPowerups: vi.fn(() => 2),
+  calculateRemainingPowerups: vi.fn(() => 3), // Events record what is left after the spend
   increasePowerupsUsed: vi.fn(),
   calculateRemainingLunches: vi.fn(() => 1),
   increaseLunchesUsed: vi.fn(),
@@ -37,12 +37,10 @@ vi.mock('@main/overdue/overdueConfigs', () => ({
   getAppliedOverdueConfigs: vi.fn(() => ({ levelThresholdMs: 180000, windowLevelCap: 5, windowRatioCap: 0.9 })),
 }));
 
-vi.mock('@main/timer/timerConfigs', () => ({
-  getAppliedTimerConfigs: vi.fn(() => ({
-    timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS,
-    warningThresholdMs: 5000,
-  })),
-}));
+vi.mock('@main/timer/timerConfigs', () => {
+  const configs = { timerDurationMs: DEFAULTS.DEFAULT_TIMER_DURATION_MS, warningThresholdMs: 5000 };
+  return { getAppliedTimerConfigs: vi.fn(() => configs), getTimerConfigs: vi.fn(() => configs) };
+});
 
 import { destroyStats, getCurrentDayScore, getEvents, initStats, parseEvents, recordAppQuit, StatsEvent, takeUnseenSummaryDate } from './stats';
 import { initTimer, destroyTimers, stopTimer, startTimer, forwardToBreak, startBreak, skipBreak, snoozeTimer, startLunch, timerEmitter, StoredTimerState } from '@main/timer/timerState';
@@ -517,6 +515,16 @@ describe('End-of-day card', () => {
     initStats();
 
     expect(takeUnseenSummaryDate()).toBeNull();
+  });
+
+  test('a day still in progress has no card yet', () => {
+    vi.setSystemTime(new Date('2026-10-26T12:00:00-04:00'));
+    vi.mocked(readUserDataTextFile).mockReturnValueOnce(cleanMondayLog.split('\n')[0]);
+    initStats();
+    vi.mocked(writeToUserDataFile).mockClear();
+
+    expect(takeUnseenSummaryDate()).toBeNull();
+    expect(writeToUserDataFile).not.toHaveBeenCalled();
   });
 
   test('returns the latest finished workday once, then nothing', () => {

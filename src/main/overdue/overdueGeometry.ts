@@ -1,5 +1,5 @@
-import { Size, Rectangle } from "electron";
-import { OverdueConfigs } from "./overdueConfigs";
+import type { Size, Rectangle } from "electron"; // Types only, so the renderer can import the geometry too
+import type { OverdueConfigs } from "./overdueConfigs";
 
 export interface OverdueLevelObject {
   levelIdx: number,

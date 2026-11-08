@@ -8,6 +8,7 @@ import path from "path";
 import { TimerState } from "@main/timer/timerState"
 import { StatsEvent } from "@main/stats/stats"
 import { convertMinutesToMs } from "@shared/utils/time"
+import { clickAndWaitForClose } from "./helpers";
 
 test.describe.configure({ mode: 'parallel' });
 
@@ -166,4 +167,24 @@ test("Data persists when app is closed", async ({ launchElectron, userDataDir })
     );
     expect(newTimerState.currentCountdownMs).toBe(savedTimerState.currentCountdownMs);
   });
+});
+
+test("Hand-edited user data files fall back to defaults instead of stalling the app", async ({ userDataDir, launchElectron }) => {
+  userDataDir.seed(FILENAMES.TIMER.CONFIGS, { timerDurationMs: "45", warningThresholdMs: 120000 });
+  userDataDir.seed(FILENAMES.OVERDUE.CONFIGS, { levelThresholdMs: 5000, windowLevelCap: 0, windowRatioCap: 0.9 });
+  fs.writeFileSync(path.join(userDataDir.path, FILENAMES.TIMER.STATE), "");
+  const { settingsWindow, electronApp, testClock } = await launchElectron();
+
+  await testClock.fastForward(1);
+  await expect(settingsWindow.getByTestId("timer-time-digits")).toHaveText("44 : 59");
+
+  // The next work block runs on the default length, not the broken one
+  const [breakWindow] = await Promise.all([
+    electronApp.waitForEvent("window"),
+    settingsWindow.getByTestId("timer-buttons-container").getByTestId("forward-button").click(),
+  ]);
+  await testClock.fastForward(5);
+  await expect(breakWindow.getByTestId("overdue-window-time-display")).toContainText("00 : 05");
+  await clickAndWaitForClose(breakWindow, breakWindow.getByTestId("overdue-window-skip-break-button"));
+  await expect(settingsWindow.getByTestId("timer-time-digits")).toHaveText("45 : 00");
 });
