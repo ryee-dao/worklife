@@ -1,14 +1,16 @@
+import { ReactNode } from "react";
 import { TimerState } from "@main/timer/timerState";
 import OverdueButtons from "./OverdueButtons";
 import OverdueTimeDisplay from "./OverdueTimeDisplay";
 
 interface OverdueViewProps {
   timerState: TimerState;
+  note?: ReactNode; // The tour's strip, laid out between the buttons and the clock so it never covers either
 }
 
 // Sizes follow the box it's in (container queries), so it looks the same in its own window and in a demo box.
 // Letter-spacing trails the last letter, so the same amount of left padding keeps the text centered
-export default function OverdueView({ timerState }: OverdueViewProps) {
+export default function OverdueView({ timerState, note }: OverdueViewProps) {
   return (
     <div className="[container-type:size] flex flex-col items-center justify-between py-[8cqh] h-full bg-yellow-200">
       <span
@@ -19,6 +21,7 @@ export default function OverdueView({ timerState }: OverdueViewProps) {
         OVERDUE
       </span>
       <OverdueButtons timerState={timerState} />
+      {note}
       <OverdueTimeDisplay timerState={timerState} />
     </div>
   );
