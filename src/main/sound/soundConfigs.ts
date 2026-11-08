@@ -21,5 +21,5 @@ export const getSoundConfigs = () => soundConfigs;
 
 export const setSoundConfigs = (newSoundConfigs: SoundConfigs) => {
   soundConfigs = newSoundConfigs;
-  writeToUserDataFile(FILENAMES.SOUND.CONFIGS, soundConfigs);
+  return writeToUserDataFile(FILENAMES.SOUND.CONFIGS, soundConfigs);
 };

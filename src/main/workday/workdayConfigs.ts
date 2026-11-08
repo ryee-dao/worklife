@@ -31,7 +31,7 @@ let workdayState: WorkdayState;
 export const loadWorkdayConfigs = () => {
   const workdayConfigsData = getUserDataFromFile<WorkdayConfigs>(FILENAMES.WORKDAY.CONFIGS);
   const saved = workdayConfigsData?.fileContent;
-  const isTime = (value: unknown) => typeof value === "string" && /^\d\d:\d\d$/.test(value);
+  const isTime = (value: unknown) => typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   const hoursValid = isTime(saved?.start) && isTime(saved?.end) && isValidWorkdayHours(saved!.start, saved!.end); // Start and end only make sense together
   workdayConfigs = fromSaved(defaultWorkdayConfigs, saved, {
     days: (value) => Array.isArray(value) && value.length > 0 && value.every((day) => Number.isInteger(day) && day >= 0 && day <= 6),
@@ -70,5 +70,5 @@ export const getWorkdayConfigs = () => {
 
 export const setWorkdayConfigs = (newWorkdayConfigs: WorkdayConfigs) => {
   workdayConfigs = newWorkdayConfigs;
-  writeToUserDataFile(FILENAMES.WORKDAY.CONFIGS, workdayConfigs);
+  return writeToUserDataFile(FILENAMES.WORKDAY.CONFIGS, workdayConfigs);
 }

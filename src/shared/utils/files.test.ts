@@ -42,7 +42,7 @@ describe('a write that fails', () => {
     vi.mocked(fs.writeFileSync).mockImplementationOnce(() => { throw new Error('ENOSPC'); });
     vi.mocked(fs.appendFileSync).mockImplementationOnce(() => { throw new Error('ENOSPC'); });
 
-    expect(() => writeToUserDataFile('state.json', {})).not.toThrow();
+    expect(writeToUserDataFile('state.json', {})).toBe(false);
     expect(() => appendToUserDataFile('events.jsonl', '{}\n')).not.toThrow();
     expect(warn).toHaveBeenCalledTimes(2);
   });

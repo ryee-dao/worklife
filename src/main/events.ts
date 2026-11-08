@@ -106,17 +106,19 @@ export const initEventListeners = () => {
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_NEXT, tourNext);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_PREV, tourPrev);
   ipcMain.on(EVENTS.IPC_CHANNELS.TOUR_SKIP, tourSkip);
-  // Settings pages read and write the saved configs; most only take effect after a break, see STOP_BREAK above
+  // Settings pages read and write the saved configs; most only take effect after a break, see STOP_BREAK above.
+  // A save that didn't reach the disk rejects, so the page says so instead of showing success
+  const saved = (written: boolean) => { if (!written) throw new Error("The settings file could not be written"); };
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.TIMER, getTimerConfigs);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, (event, configs: TimerConfigs) => setTimerConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.TIMER, (event, configs: TimerConfigs) => saved(setTimerConfigs(configs)));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.DIFFICULTY, getDifficultyConfigs);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY, (event, configs: DifficultyConfigs) => setDifficultyConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.DIFFICULTY, (event, configs: DifficultyConfigs) => saved(setDifficultyConfigs(configs)));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.OVERDUE, getOverdueConfigs);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, (event, configs: OverdueConfigs) => setOverdueConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.OVERDUE, (event, configs: OverdueConfigs) => saved(setOverdueConfigs(configs)));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.WORKDAY, getWorkdayConfigs);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, (event, configs: WorkdayConfigs) => setWorkdayConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.WORKDAY, (event, configs: WorkdayConfigs) => saved(setWorkdayConfigs(configs)));
   ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.LOAD.SOUND, getSoundConfigs);
-  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.SOUND, (event, configs: SoundConfigs) => setSoundConfigs(configs));
+  ipcMain.handle(EVENTS.IPC_CHANNELS.CONFIGS.SAVE.SOUND, (event, configs: SoundConfigs) => saved(setSoundConfigs(configs)));
 
   // The admin settings apply the workday right away so it can be tested without waiting a day
   if (IS_DEV) {

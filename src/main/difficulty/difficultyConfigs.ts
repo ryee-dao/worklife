@@ -30,7 +30,7 @@ export const loadDifficultyConfigs = () => {
   const saved = difficultyConfigsData?.fileContent;
   const { custom } = defaultDifficultyConfigs;
   difficultyConfigs = {
-    ...fromSaved(defaultDifficultyConfigs, saved, { level: (value) => typeof value === "string" && value in DIFFICULTY_PRESETS || value === "CUSTOM", custom: () => false }),
+    ...fromSaved(defaultDifficultyConfigs, saved, { level: (value) => Object.keys(DIFFICULTY_PRESETS).includes(value as string) || value === "CUSTOM", custom: () => false }),
     custom: fromSaved(custom, saved?.custom, { breakDurationMs: isPositiveMs, snoozeDurationMs: isPositiveMs, allottedPowerups: isCount, lunchDurationMs: isPositiveMs, checkpointDecayMs: isPositiveMs }),
   };
   writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
@@ -51,5 +51,5 @@ export const getDifficultyConfigs = () => {
 
 export const setDifficultyConfigs = (newDifficultyConfigs: DifficultyConfigs) => {
   difficultyConfigs = newDifficultyConfigs;
-  writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
+  return writeToUserDataFile(FILENAMES.DIFFICULTY.CONFIGS, difficultyConfigs);
 }

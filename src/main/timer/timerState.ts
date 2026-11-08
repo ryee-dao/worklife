@@ -138,17 +138,17 @@ const applyStartupGrace = () => {
   }
 }
 
-// Always sends the state with the status event, so a window never hears a status it can't draw
-export const emitTimerStatus = (currentRules = rules()) => {
-  timerEmitter.emit(STATUS_EVENTS[timerState.status], timerStateOf(timerState, currentRules));
+// Always sends the state with the status event, so a window never hears a status it can't draw.
+// The rules are read fresh: a step may just have spent a power-up or applied saved settings, and the tray draws what it's sent
+export const emitTimerStatus = () => {
+  timerEmitter.emit(STATUS_EVENTS[timerState.status], getTimerState());
 };
 
 const onTick = () => {
   tickCount++;
-  const currentRules = rules();
-  const step = tick(timerState, currentRules);
+  const step = tick(timerState, rules());
   apply(step);
-  emitTimerStatus(currentRules);
+  emitTimerStatus();
 
   // Saved on every transition, and otherwise every {writeIntervalMs}
   if (step.transition || tickCount >= writeIntervalMs / TICK_MS) {
@@ -159,9 +159,8 @@ const onTick = () => {
 
 // A button, from a window, the tray or the workday schedule. Nothing happens when the state doesn't allow it
 const run = (action: AvailableActions, source: Source) => {
-  const currentRules = rules();
-  if (!apply(act(action, timerState, source, currentRules))) return;
-  emitTimerStatus(currentRules);
+  if (!apply(act(action, timerState, source, rules()))) return;
+  emitTimerStatus();
   save();
 };
 

@@ -10,9 +10,10 @@ interface TourCardProps {
 export default function TourCard({ tour, className = "" }: TourCardProps) {
   const { beat, step, total } = tour;
   const isEnd = step >= total;
-  // The page behind the card is inert, so the keyboard starts on the card's button rather than at the top of the document
+  // The page behind the card is inert, so the keyboard starts on the card's button rather than at the top of the document.
+  // Keyed on the step: the tour is sent again every tick, and refocusing then would pull the keyboard off Back or Skip
   const action = useRef<HTMLButtonElement>(null);
-  useEffect(() => action.current?.focus(), [beat]);
+  useEffect(() => action.current?.focus(), [step]);
 
   return (
     <div

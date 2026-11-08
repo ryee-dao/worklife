@@ -37,5 +37,5 @@ export const getTimerConfigs = () => {
 
 export const setTimerConfigs = (newTimerConfigs: TimerConfigs) => {
   timerConfigs = newTimerConfigs;
-  writeToUserDataFile(FILENAMES.TIMER.CONFIGS, timerConfigs);
+  return writeToUserDataFile(FILENAMES.TIMER.CONFIGS, timerConfigs);
 }

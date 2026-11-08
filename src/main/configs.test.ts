@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { getUserDataFromFile } from '@shared/utils/files';
+import { getUserDataFromFile, writeToUserDataFile } from '@shared/utils/files';
 import { getSoundConfigs, loadSoundConfigs } from './sound/soundConfigs';
 import { applyTimerConfigs, getAppliedTimerConfigs, loadTimerConfigs, setTimerConfigs } from './timer/timerConfigs';
 import { applyDifficultyConfigs, getAppliedDifficultyConfigs, loadDifficultyConfigs, setDifficultyConfigs, DifficultyConfigs } from './difficulty/difficultyConfigs';
@@ -8,7 +8,7 @@ import { applyOverdueConfigs, getAppliedOverdueConfigs, loadOverdueConfigs, setO
 
 vi.mock('@shared/utils/files', () => ({
   getUserDataFromFile: vi.fn(() => ({ fileContent: undefined, filePath: '' })),
-  writeToUserDataFile: vi.fn(),
+  writeToUserDataFile: vi.fn(() => true),
 }));
 
 describe('Saved configs only take effect once applied', () => {
@@ -61,6 +61,14 @@ describe('Saved configs only take effect once applied', () => {
   });
 });
 
+describe('Saving', () => {
+  test('says when the file could not be written, so the page can show it', () => {
+    vi.mocked(writeToUserDataFile).mockReturnValueOnce(false);
+    expect(setTimerConfigs({ timerDurationMs: 60000, warningThresholdMs: 1000 })).toBe(false);
+    expect(setTimerConfigs({ timerDurationMs: 60000, warningThresholdMs: 1000 })).toBe(true);
+  });
+});
+
 describe('A hand-edited config file', () => {
   const seed = (fileContent: object) => vi.mocked(getUserDataFromFile).mockReturnValueOnce({ fileContent, filePath: '' });
 
@@ -76,10 +84,16 @@ describe('A hand-edited config file', () => {
     seed({ level: 'IMPOSSIBLE', custom: { breakDurationMs: 1000, allottedPowerups: 1.5 } });
     loadDifficultyConfigs();
     expect(getAppliedDifficultyConfigs()).toMatchObject({ level: 'NORMAL', custom: { breakDurationMs: 1000, allottedPowerups: 3 } });
+    seed({ level: 'constructor' }); // A name every object answers to, but not a preset
+    loadDifficultyConfigs();
+    expect(getAppliedDifficultyConfigs().level).toBe('NORMAL');
 
     seed({ days: [], start: '17:00', end: '09:00', autoStopAtEnd: 'yes' });
     loadWorkdayConfigs();
     expect(getAppliedWorkdayConfigs()).toEqual({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', autoStopAtEnd: false });
+    seed({ start: '09:00', end: '17:60' }); // Two digits, but not a time
+    loadWorkdayConfigs();
+    expect(getAppliedWorkdayConfigs()).toMatchObject({ start: '09:00', end: '17:00' });
 
     seed({ volume: 5 });
     loadSoundConfigs();

@@ -46,6 +46,13 @@ export default function DemoBreakWindow({ getLevels }: DemoBreakWindowProps) {
     setInPopup(popup.current !== null);
   }, [open]);
 
+  // Replaying the tour reloads this frame, and the popup it opened would otherwise stay up with a timer that no longer runs
+  useEffect(() => {
+    const closePopup = () => popup.current?.close();
+    window.addEventListener("pagehide", closePopup);
+    return () => window.removeEventListener("pagehide", closePopup);
+  }, []);
+
   useEffect(() => {
     const win = popup.current;
     if (!win || win.closed || !timerState) return;

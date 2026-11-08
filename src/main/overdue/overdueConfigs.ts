@@ -46,5 +46,5 @@ export const getOverdueConfigs = () => {
 
 export const setOverdueConfigs = (newOverdueConfigs: OverdueConfigs) => {
   overdueConfigs = newOverdueConfigs;
-  writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, overdueConfigs);
+  return writeToUserDataFile(FILENAMES.OVERDUE.CONFIGS, overdueConfigs);
 }

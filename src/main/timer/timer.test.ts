@@ -741,6 +741,19 @@ describe('Power-ups', () => {
     expect(types).toEqual(['APP_STARTED', 'SNOOZED', 'OVERDUE_STARTED', 'BREAK_SKIPPED']);
   });
 
+  test('the state sent after a snooze already shows the power-up spent, so the tray stops offering it', () => {
+    vi.mocked(increasePowerupsUsed).mockImplementation(() => vi.mocked(calculateRemainingPowerups).mockReturnValue(0));
+    seedTimerState({ currentCountdownMs: 100000, status: 'RUNNING', _bypassThreshold: true });
+
+    const runningHandler = vi.fn();
+    timerEmitter.on(EVENTS.TIMER.RUNNING, runningHandler);
+
+    initTimer();
+    snoozeTimer("WINDOW");
+
+    expect(runningHandler.mock.lastCall![0]).toMatchObject({ remainingPowerups: 0, availableActions: ['stop', 'forward', 'lunch'] });
+  });
+
   test('with no power-ups left, neither a snooze nor a break skip works', () => {
     vi.mocked(calculateRemainingPowerups).mockReturnValue(0);
     seedTimerState({ currentCountdownMs: 1000, status: 'RUNNING', _bypassThreshold: true });

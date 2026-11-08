@@ -33,7 +33,8 @@ export default function SettingsPanel<T>({
       setSaveMessage(successMessage);
     } catch (err) {
       setSaveStatus("error");
-      setSaveMessage(String(err));
+      setSaveMessage("Not saved. The settings file could not be written. Try again.");
+      console.warn(err);
     }
   }
 
