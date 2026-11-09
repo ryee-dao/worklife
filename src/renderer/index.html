@@ -15,6 +15,8 @@
         .actions > * { height: 38px; padding: 0 16px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; font: 600 14px system-ui; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
         .actions > *:hover { background: #f1f5f9; }
         .note { font-size: 14px; color: #64748b; }
+        .unsupported { width: 800px; max-width: 100%; box-sizing: border-box; padding: 40px 24px; border-radius: 10px; background: #fff; text-align: center; }
+        .unsupported h2 { margin: 0 0 8px; font-size: 20px; }
     </style>
 </head>
 
@@ -23,6 +25,10 @@
         <h1>WorkLife</h1>
         <p>A gentle break timer with just one rule: don't click stop.</p>
         <iframe id="app" src="./demo/index.html" title="WorkLife demo"></iframe>
+        <div id="unsupported" class="unsupported" hidden>
+            <h2>This demo needs a newer browser.</h2>
+            <p>Yours is missing things it needs to run. The app itself doesn't depend on your browser.</p>
+        </div>
         <p class="note">
             The app's real screens, with a simulated timer: 2-minute blocks and 30-second breaks.
             On your computer the overdue and break windows open over everything. Here they open as browser windows, so allow popups for this site if your browser blocks them.

@@ -89,3 +89,15 @@ test("The web demo runs the tour in a real window, then goes overdue and takes a
 
   expect(errors).toEqual([]);
 });
+
+test("A browser without the stylesheet's CSS gets a note instead of the demo", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => { CSS.supports = () => false; });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "This demo needs a newer browser." })).toBeVisible();
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Replay the tour" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "Download" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
